@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import type { EventStatus } from "@/lib/eventStatus";
+import type { EventStatus } from "@/modules/events/events.interface";
 
 // The one legitimate decorative-looking dot in the app - it carries real
 // semantic state (see docs/DESIGN.md §8.3), unlike a purely decorative dot.

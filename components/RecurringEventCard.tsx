@@ -2,7 +2,7 @@
 
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { dayOfWeekLabel } from "@/lib/dateFormat";
-import { nextOccurrence, daysUntil } from "@/lib/recurrence";
+import { nextOccurrence, daysUntil } from "@/modules/events/events.interface";
 import type { EventRecord } from "@/types/event";
 
 interface RecurringEventCardProps {

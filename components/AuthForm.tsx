@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Envelope, LockKey } from "@phosphor-icons/react/ssr";
 import { createClient } from "@/lib/supabase/client";
+import { authInterface } from "@/modules/auth/auth.interface";
 import { Button } from "./Button";
 
 interface AuthFormProps {
@@ -45,13 +46,15 @@ export function AuthForm({ mode }: AuthFormProps) {
     setSubmitting(true);
 
     const supabase = createClient();
-    const { error: authError } =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
 
-    if (authError) {
-      setError(authError.message);
+    try {
+      if (mode === "login") {
+        await authInterface.signInWithPassword(supabase, email, password);
+      } else {
+        await authInterface.signUp(supabase, email, password);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
       return;
     }

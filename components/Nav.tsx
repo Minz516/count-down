@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Bell, Plus, UserCircle } from "@phosphor-icons/react/ssr";
 import { createClient } from "@/lib/supabase/client";
+import { authInterface } from "@/modules/auth/auth.interface";
 import { Button } from "./Button";
 
 export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
@@ -10,7 +11,7 @@ export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
 
   async function handleLogout() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await authInterface.signOut(supabase);
     router.push("/login");
     router.refresh();
   }

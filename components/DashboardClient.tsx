@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import { Nav } from "./Nav";
@@ -11,12 +11,14 @@ import { EventForm } from "./EventForm";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { EmptyState } from "./EmptyState";
 import { createClient } from "@/lib/supabase/client";
-import { getEventStatus } from "@/lib/eventStatus";
+import { authInterface } from "@/modules/auth/auth.interface";
+import { eventsInterface } from "@/modules/events/events.interface";
 import type { EventInput, EventRecord } from "@/types/event";
 
 interface DashboardClientProps {
   initialEvents: EventRecord[];
   initialRecurringEvents: EventRecord[];
+  initialNearestEvent: EventRecord | null;
 }
 
 type ModalState =
@@ -25,45 +27,40 @@ type ModalState =
   | { type: "delete"; event: EventRecord }
   | null;
 
-export function DashboardClient({ initialEvents, initialRecurringEvents }: DashboardClientProps) {
+export function DashboardClient({
+  initialEvents,
+  initialRecurringEvents,
+  initialNearestEvent,
+}: DashboardClientProps) {
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
 
-  // The Timeline is already sorted ascending by deadline (server query) - the first
-  // non-past item is the single nearest event, also rendered expanded as the Hero Card.
-  const nearestEvent = useMemo(
-    () => initialEvents.find((event) => getEventStatus(event.deadline).status !== "past"),
-    [initialEvents],
-  );
-
   async function handleCreate(input: EventInput) {
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await authInterface.getCurrentUser(supabase);
     if (!user) return;
 
-    const { error } = await supabase.from("events").insert({ ...input, user_id: user.id });
-    if (error) throw error;
-
+    await eventsInterface.createEvent(supabase, user.id, input);
     setModal(null);
     router.refresh();
   }
 
   async function handleUpdate(id: string, input: EventInput) {
     const supabase = createClient();
-    const { error } = await supabase.from("events").update(input).eq("id", id);
-    if (error) throw error;
+    const user = await authInterface.getCurrentUser(supabase);
+    if (!user) return;
 
+    await eventsInterface.updateEvent(supabase, user.id, id, input);
     setModal(null);
     router.refresh();
   }
 
   async function handleDelete(id: string) {
     const supabase = createClient();
-    const { error } = await supabase.from("events").delete().eq("id", id);
-    if (error) throw error;
+    const user = await authInterface.getCurrentUser(supabase);
+    if (!user) return;
 
+    await eventsInterface.deleteEvent(supabase, user.id, id);
     setModal(null);
     router.refresh();
   }
@@ -79,7 +76,7 @@ export function DashboardClient({ initialEvents, initialRecurringEvents }: Dashb
           <EmptyState onAddEvent={() => setModal({ type: "add" })} />
         ) : (
           <>
-            {nearestEvent && <HeroCountdownCard event={nearestEvent} />}
+            {initialNearestEvent && <HeroCountdownCard event={initialNearestEvent} />}
 
             <section className="flex flex-col gap-4">
               <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>

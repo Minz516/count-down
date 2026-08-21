@@ -13,6 +13,10 @@ export interface EventStatusInfo {
  * Urgency status for a Timeline row, computed client-side from `deadline` vs.
  * `now` (docs/ARCHITECTURE.md "Urgency Color Coding"). Presentational only - it
  * never affects sort order or deletion, which run purely off the raw timestamp.
+ *
+ * Lives in the `events` module (not a generic `lib/` util) because it's events
+ * business logic, not a formatting helper - it belongs next to the data it
+ * describes, per docs/ARCHITECTURE_DESIGN.md's module-boundary rules.
  */
 export function getEventStatus(deadline: string, now: Date = new Date()): EventStatusInfo {
   const deadlineDate = new Date(deadline);

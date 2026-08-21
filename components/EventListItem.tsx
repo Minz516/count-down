@@ -2,7 +2,7 @@
 
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
-import { getEventStatus } from "@/lib/eventStatus";
+import { getEventStatus } from "@/modules/events/events.interface";
 import { formatEventDate } from "@/lib/dateFormat";
 import { StatusDot, StatusLabel } from "./StatusIndicator";
 import type { EventRecord } from "@/types/event";
