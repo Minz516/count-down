@@ -18,15 +18,15 @@ export function RecurringEventCard({ event, onEdit, onDelete }: RecurringEventCa
 
   return (
     // Dashed border distinguishes recurring cards from the Timeline's solid-border rows (docs/UI_SPEC.md).
-    <div className="flex items-center gap-3 rounded-lg border border-dashed border-primary-container/30 bg-surface-container px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-dashed border-primary-container/30 bg-surface-container px-5 py-4 transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated">
       <div className="min-w-0 flex-1">
         <p className="font-mono text-xs tracking-[0.1em] text-secondary uppercase">
           Lặp lại - {dayOfWeekLabel(event.recurrence_day_of_week)} hàng tuần
         </p>
-        <p className="truncate font-body text-base text-on-surface">{event.name}</p>
+        <p className="truncate font-body text-base font-semibold text-on-surface">{event.name}</p>
       </div>
 
-      <span className="font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
+      <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
         còn {days} ngày
       </span>
 
@@ -35,7 +35,7 @@ export function RecurringEventCard({ event, onEdit, onDelete }: RecurringEventCa
           type="button"
           onClick={() => onEdit(event)}
           aria-label={`Sửa ${event.name}`}
-          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-on-surface"
+          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
           <PencilSimple size={16} />
         </button>
@@ -43,7 +43,7 @@ export function RecurringEventCard({ event, onEdit, onDelete }: RecurringEventCa
           type="button"
           onClick={() => onDelete(event)}
           aria-label={`Xóa ${event.name}`}
-          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error"
+          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
           <Trash size={16} />
         </button>

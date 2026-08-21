@@ -4,6 +4,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { X } from "@phosphor-icons/react/ssr";
 import { motion } from "motion/react";
 import { Button } from "./Button";
+import { DateField } from "./DateField";
+import { TimeField } from "./TimeField";
 import { dayOfWeekLabel, fromDateTimeParts, toDateTimeParts } from "@/lib/dateFormat";
 import type { DayOfWeek, EventInput, EventRecord } from "@/types/event";
 
@@ -89,7 +91,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="rounded p-1 text-text-muted hover:text-on-surface"
+            className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <X size={20} />
           </button>
@@ -109,22 +111,10 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Deadline Date">
-              <input
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                required
-                className={inputClass}
-              />
+              <DateField value={date} onChange={setDate} />
             </Field>
             <Field label="Deadline Time">
-              <input
-                type="time"
-                value={time}
-                onChange={(event) => setTime(event.target.value)}
-                required
-                className={inputClass}
-              />
+              <TimeField value={time} onChange={setTime} />
             </Field>
           </div>
 

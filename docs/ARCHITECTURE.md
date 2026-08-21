@@ -58,16 +58,21 @@ Notes:
 ## Sorting & Priority Logic
 1. Fetch all non-recurring events for the logged-in user, ordered by
    `deadline` ascending, plus recurring events fetched separately
-2. Render as a **single continuous timeline** — past, today, and future
-   events together in one list (not split into separate sections)
+2. That one fetched list is split client-side (a render-time filter on the
+   already-presentational `getEventStatus()`, not a second query) into the
+   **Timeline** — today and future events, one continuous list — and the
+   **Past Events section** — anything whose deadline has already passed
 3. The first future/today event in the sorted list is the nearest event ->
    also rendered as the Hero Card above the timeline
-4. Recurring events render in their own pinned section below/beside the
-   main timeline, not mixed into the sort order
+4. Recurring events render in their own pinned section below the main
+   timeline, not mixed into the sort order; the Past Events section is
+   pinned below that, at the bottom of the page
 
 ## Urgency Color Coding
 Computed client-side from `deadline` vs. current time, applied per item in
-the timeline:
+the timeline (the "Past" row below no longer applies to the Timeline itself
+since those rows move to the Past Events section instead - it's kept here
+because the same `getEventStatus()` status enum still classifies them):
 | Status  | Condition                                  | Color        |
 |---------|---------------------------------------------|--------------|
 | Past    | `deadline < now()`                           | Green (muted)|

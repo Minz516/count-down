@@ -7,12 +7,13 @@ import { Nav } from "./Nav";
 import { HeroCountdownCard } from "./HeroCountdownCard";
 import { Timeline } from "./Timeline";
 import { RecurringEventsSection } from "./RecurringEventsSection";
+import { PastEventsSection } from "./PastEventsSection";
 import { EventForm } from "./EventForm";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { EmptyState } from "./EmptyState";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
-import { eventsInterface } from "@/modules/events/events.interface";
+import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
 import type { EventInput, EventRecord } from "@/types/event";
 
 interface DashboardClientProps {
@@ -67,6 +68,12 @@ export function DashboardClient({
 
   const hasAnyEvents = initialEvents.length > 0 || initialRecurringEvents.length > 0;
 
+  // Past events are pulled out of the Timeline into their own compact section
+  // (docs/UI_SPEC.md) - status is presentational/client-side only, so this
+  // split is just a render-time filter, no service/DB change involved.
+  const activeEvents = initialEvents.filter((event) => getEventStatus(event.deadline).status !== "past");
+  const pastEvents = initialEvents.filter((event) => getEventStatus(event.deadline).status === "past");
+
   return (
     <div className="min-h-dvh">
       <Nav onAddEvent={() => setModal({ type: "add" })} />
@@ -78,17 +85,25 @@ export function DashboardClient({
           <>
             {initialNearestEvent && <HeroCountdownCard event={initialNearestEvent} />}
 
-            <section className="flex flex-col gap-4">
-              <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
-              <Timeline
-                events={initialEvents}
-                onEdit={(event) => setModal({ type: "edit", event })}
-                onDelete={(event) => setModal({ type: "delete", event })}
-              />
-            </section>
+            {activeEvents.length > 0 && (
+              <section className="flex flex-col gap-4">
+                <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
+                <Timeline
+                  events={activeEvents}
+                  onEdit={(event) => setModal({ type: "edit", event })}
+                  onDelete={(event) => setModal({ type: "delete", event })}
+                />
+              </section>
+            )}
 
             <RecurringEventsSection
               events={initialRecurringEvents}
+              onEdit={(event) => setModal({ type: "edit", event })}
+              onDelete={(event) => setModal({ type: "delete", event })}
+            />
+
+            <PastEventsSection
+              events={pastEvents}
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />

@@ -52,8 +52,10 @@ the `pg_cron` extension first) directly in the Supabase SQL editor.
   `modules/events/` and `modules/auth/`, each exposing a narrow `*.interface.ts` - that's
   the only file in a module pages/components may import. `events.repository.ts` is the only
   file that calls `supabase.from("events")`; `auth.repository.ts` is the only file that
-  calls `supabase.auth.*`. Repository → service → interface, one direction, per module. See
-  `docs/ARCHITECTURE_MONOLITH.md` for the full mapping (what was adopted from
+  calls `supabase.auth.*`. Repository → service → interface, one direction, per module -
+  though `auth/` has no service file since it's a passthrough with no business logic beyond
+  what Supabase Auth already does; `auth.interface.ts` re-exports `authRepository` directly.
+  See `docs/ARCHITECTURE_MONOLITH.md` for the full mapping (what was adopted from
   `docs/ARCHITECTURE_DESIGN.md` vs. deliberately skipped, e.g. no REST/WebSocket layer -
   there's no separate backend process to put one in front of). **Adding a new entity means
   a new `modules/<name>/` module, not a Supabase call inlined into a component.**

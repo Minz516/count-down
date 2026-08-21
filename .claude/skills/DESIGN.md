@@ -92,6 +92,12 @@ each always paired with text, never color alone:
 | Soon (≤7d) | yellow `--status-soon` | "còn X ngày" | list row status pill |
 | Later (>7d) | `--text-muted` | "còn X ngày" | list row status pill |
 
+**Tinted-chip variant, still bounded:** `StatusLabel`'s optional `chip` prop renders the same
+status color as a `rounded-full bg-{status}/12 text-{status}` pill instead of bare colored
+text — used on Timeline rows and the recurring "còn X ngày" badge. This is the approved way
+to make a card read as "more colorful" without introducing a new hue: reuse the existing
+bounded status color at low-opacity background + full-opacity text, never a fifth color.
+
 **Flag — reference inconsistency to resolve:** `references/register-login.png` renders the
 "ChronoFlow" wordmark and the "Quiet Anticipation." subtitle in a multi-color rainbow
 gradient. That directly violates the one-accent rule the rest of the system follows (Hero
@@ -204,13 +210,34 @@ user avatar icon.
 - Mobile: `hero-countdown-mobile` (48px), stays on one line per UI_SPEC.
 
 ### 8.3 Timeline / Event List Item
-Compact horizontal row inside a `surface-container` card, `rounded-lg`:
-`[status dot] [event name (body-lg) + date (body-sm, muted)] ... [status pill (label-caps)] [edit icon] [delete icon]`.
-Status dot: `rounded-full`, 8px, filled with the row's status color — this is the one
-legitimate use of a decorative-looking dot in the whole app, because it carries real
-semantic state (matches the skill's "only when conveying real semantic state" exception).
+`Timeline` only ever receives today/future events — `DashboardClient` filters past events out
+before the list reaches it and renders them in the separate, compact §8.7 section instead, so
+there's no past-event dimming state to handle here anymore.
+
+`Timeline` owns a connecting rail, not just a stack of independent cards: each row is
+`[dot + line segment column] [card]`, where the line segment is a `w-px` div that stretches
+(`flex-1`) down to the next row's dot, so segments compose into one continuous rail with no
+measurement/JS — the row's own bottom padding (not a `gap` on the list) is what lets the line
+touch the next dot. `EventListItem` itself is now pure card content — it takes `status` as a
+prop from `Timeline` (which computes `getEventStatus` once per row) rather than deriving it
+itself, and no longer renders its own dot.
+
+Card: `surface-container`, `rounded-lg`: `[date line (mono, muted) + event name (semibold)]
+... [status chip] [edit icon] [delete icon]`. Date line uses `formatTimelineDate`
+(`lib/dateFormat.ts`) — short Vietnamese weekday + dd/mm/yyyy (e.g. "T3, 18/08/2026") — not
+`formatEventDate`, which stays reserved for the Hero Card's long English format.
+
+Status dot (`TimelineDot` in `StatusIndicator.tsx`): `rounded-full`, 8px, filled with the
+row's status color — this is the one legitimate use of a decorative-looking dot in the whole
+app, because it carries real semantic state. The single nearest-upcoming row (first non-past
+event in the already-sorted list, derived locally in `Timeline`) gets `emphasized`: a larger
+dot (14px) with a soft ring in that *same* status color — not forced to a fixed hue. A
+"today" row stays urgent-red even when it's also the nearest one; only "soon" rows render
+amber. Forcing a fixed color for emphasis would break the bounded status-color rule above.
+
 Edit/delete: icon-only buttons, `ghost` style, visible on hover on desktop / always visible
-on touch.
+on touch. Edit hovers to `primary` (accent-action intent), delete stays `error`
+(danger-action intent).
 
 ### 8.4 Recurring Event Card
 Visually distinct per UI_SPEC: `border-dashed` instead of the timeline's solid low-opacity
@@ -226,6 +253,28 @@ border, otherwise same card treatment. Shows "Lặp lại - [Thứ] hàng tuần
 - Inputs: darker than surface (`surface-container-lowest` / `#0b0e14`), border only on
   focus in `primary`, `body-lg` type inside. Placeholder text at `text-muted` — verify
   contrast (§2, passes at 5.4:1).
+- **Deadline date/time are hand-built, not native `<input type="date"/"time">`**
+  (`DateField.tsx` / `TimeField.tsx`) — the native date input renders a locale-dependent
+  mm/dd/yyyy placeholder and the native time input can render 12h AM/PM depending on browser
+  locale, neither of which this app wants. `DateField` gives two ways to set a date: three
+  segmented dd/mm/yyyy digit inputs (auto-advance on 2 digits, backspace-to-previous-segment,
+  blur clamps/pads each segment reading the live DOM value rather than React state — a
+  synchronous-blur-during-auto-advance race otherwise reads one keystroke stale), or a
+  trailing calendar-icon button that opens `CalendarPopup`, a hand-built month-grid picker
+  (no dependency — this app has no date-picker library and isn't adding one). `TimeField` is
+  two segments (HH 0-23 / MM 0-59), always 24h, with no AM/PM control anywhere. Both emit the
+  same plain-string contract (`yyyy-mm-dd` / `HH:mm`) the rest of `EventForm` already used
+  with the native inputs, so `toDateTimeParts`/`fromDateTimeParts` needed no changes. Segment
+  and field containers use `flex-1`/`min-w-0` (not fixed pixel widths) so the control fills
+  its field box evenly instead of clustering left with dead space before the icon.
+- `CalendarPopup` is a plain conditional (`{open && <CalendarPopup .../>}`), not wrapped in
+  `AnimatePresence` — nested inside `EventForm`'s own `AnimatePresence` (itself nested inside
+  `DashboardClient`'s), an exit animation here got stuck (opacity animated to 0 but the node
+  never unmounted). The mount-in fade still plays via `initial`/`animate` without
+  `AnimatePresence`; only the exit fade is sacrificed. Native HTML5 `required` is also
+  dropped on the deadline fields since a segmented input can't carry it meaningfully — no
+  functional loss, since `EventForm`'s existing `if (!name.trim() || !deadlineIso)` JS check
+  already independently enforces it before submit.
 - Past-deadline warning: inline text below the deadline field, `accent-warning` color, not
   a blocking error — matches PRD's "warns but does not block."
 - Actions: Cancel (`ghost`), Save (`primary`), right-aligned, single line, no wrap.
@@ -241,11 +290,21 @@ border, otherwise same card treatment. Shows "Lặp lại - [Thứ] hàng tuần
 - **Danger (delete confirm only):** same ghost structure, `error` color border/text instead
   of primary — keep it visually quiet until the user is actually in a delete-confirm state.
 
-### 8.7 Past Events
-60% opacity + grayscale filter (`filter: grayscale(1) opacity(0.6)`) per THEME.md, applied
-to the whole row including the status dot (dot still shows the muted green, just desaturated
-consistent with the rest of the row). They live inline in the single continuous timeline per
-UI_SPEC — not a separate visually-boxed section beyond the opacity treatment.
+### 8.7 Past Events Section
+Pulled out of the Timeline entirely (docs/UI_SPEC.md) into its own compact section
+(`PastEventsSection.tsx` / `PastEventCard.tsx`), pinned at the bottom of the page below
+Recurring — the least important, most transient content on the dashboard, since an event only
+lives here for the 24h grace window before the cleanup cron hard-deletes it.
+
+Rows are deliberately smaller and quieter than a Timeline row: `surface-container-lowest`
+(one tone darker, not the Timeline's `surface-container`), `text-sm` event name in
+`text-muted` (not `on-surface`/semibold), no status dot or chip — the section header already
+says "past," repeating a colored status label on every row would be noise. Same 60%
+opacity + grayscale filter (`filter: grayscale(1) opacity(0.6)`) per THEME.md as before,
+easing to full opacity on hover so the row is still legible when the user is actually looking
+at it. Section header is `label-caps`/`text-muted`, not the `headline-md` used for "Timeline"/
+"Recurring" — a visually quieter heading for a visually quieter section. Section renders
+nothing at all when there are no past events, matching §8.4's Recurring Section guard.
 
 ### 8.8 Empty State
 Per UI_SPEC: no events yet → friendly, plain-language message (no cute AI copy, per taste —

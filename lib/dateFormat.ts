@@ -10,17 +10,36 @@ const DAY_NAMES_VI: Record<DayOfWeek, string> = {
   6: "Thứ Bảy",
 };
 
+const DAY_ABBR_VI: Record<DayOfWeek, string> = {
+  0: "CN",
+  1: "T2",
+  2: "T3",
+  3: "T4",
+  4: "T5",
+  5: "T6",
+  6: "T7",
+};
+
 export function dayOfWeekLabel(day: DayOfWeek): string {
   return DAY_NAMES_VI[day];
 }
 
-/** e.g. "November 15, 2024" - used on the Hero Card and Timeline rows. */
+/** e.g. "November 15, 2024" - used on the Hero Card only. */
 export function formatEventDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "long",
     day: "2-digit",
     year: "numeric",
   });
+}
+
+/** e.g. "T3, 18/08/2026" - short Vietnamese weekday + dd/mm/yyyy, Timeline rows only. */
+export function formatTimelineDate(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const abbr = DAY_ABBR_VI[d.getDay() as DayOfWeek];
+
+  return `${abbr}, ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
 interface DateParts {
