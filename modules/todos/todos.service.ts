@@ -3,6 +3,10 @@ import { todosRepository } from "./todos.repository";
 import { ValidationError } from "@/modules/shared/errors";
 import type { TodoRecord } from "@/types/todo";
 
+// Mirrors the `todos_content_length` check constraint added in
+// supabase/migrations/20260822000000_production_readiness.sql.
+const CONTENT_MAX_LENGTH = 500;
+
 /** Splits one flat `listAllForUser` result into per-event lists - see docs/ARCHITECTURE.md. */
 export function groupByEvent(todos: TodoRecord[]): Record<string, TodoRecord[]> {
   const grouped: Record<string, TodoRecord[]> = {};
@@ -29,6 +33,9 @@ export const todosService = {
     const trimmed = content.trim();
     if (!trimmed) {
       throw new ValidationError("Checklist item can't be empty.");
+    }
+    if (trimmed.length > CONTENT_MAX_LENGTH) {
+      throw new ValidationError(`Checklist item must be ${CONTENT_MAX_LENGTH} characters or fewer.`);
     }
     return todosRepository.insert(supabase, userId, eventId, trimmed, currentCount);
   },

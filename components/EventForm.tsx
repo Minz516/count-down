@@ -105,6 +105,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
               onChange={(event) => setName(event.target.value)}
               placeholder="e.g. Project Launch"
               required
+              maxLength={200}
               className={inputClass}
             />
           </Field>
@@ -130,6 +131,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Add some context..."
               rows={3}
+              maxLength={2000}
               className={inputClass}
             />
           </Field>

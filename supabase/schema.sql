@@ -13,6 +13,12 @@ create table if not exists public.events (
 
 create index if not exists events_user_id_deadline_idx on public.events (user_id, deadline);
 
+-- Length caps (docs/PRODUCTION_READINESS_CHECKLIST.md §2) so one bad request can't insert a
+-- multi-megabyte row - mirrored by matching checks in modules/events/events.service.ts.
+alter table public.events
+  add constraint events_name_length check (char_length(name) <= 200),
+  add constraint events_description_length check (description is null or char_length(description) <= 2000);
+
 alter table public.events enable row level security;
 
 -- Each user may only ever see/create/edit/delete their own events (docs/PRD.md hard requirement).
@@ -38,10 +44,16 @@ create table if not exists public.todos (
   content text not null,
   is_done boolean not null default false,
   position integer not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Length cap (docs/PRODUCTION_READINESS_CHECKLIST.md §2) - mirrors the matching check in
+  -- modules/todos/todos.service.ts.
+  constraint todos_content_length check (char_length(content) <= 500)
 );
 
 create index if not exists todos_event_id_position_idx on public.todos (event_id, position);
+-- todos.repository.ts's listAllForUser filters on user_id alone, not covered by the
+-- composite index above (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+create index if not exists todos_user_id_idx on public.todos (user_id);
 
 alter table public.todos enable row level security;
 
@@ -87,10 +99,17 @@ create table if not exists public.groups (
   created_at timestamptz not null default now()
 );
 
+-- Length cap (docs/PRODUCTION_READINESS_CHECKLIST.md §2) - mirrors the matching check in
+-- modules/groups/groups.service.ts.
+alter table public.groups add constraint groups_name_length check (char_length(name) <= 100);
+
 alter table public.groups enable row level security;
 
 -- events.group_id: null = personal event, set = belongs to that group.
 alter table public.events add column if not exists group_id uuid references public.groups (id) on delete cascade;
+-- events.repository.ts's listByGroupAndRecurrence filters on group_id alone, not covered
+-- by the events(user_id, deadline) index above (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+create index if not exists events_group_id_idx on public.events (group_id);
 
 create table if not exists public.group_members (
   group_id uuid not null references public.groups (id) on delete cascade,
@@ -98,6 +117,10 @@ create table if not exists public.group_members (
   joined_at timestamptz not null default now(),
   primary key (group_id, user_id)
 );
+
+-- The primary key above leads with group_id, so it doesn't serve a user_id-only lookup
+-- (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+create index if not exists group_members_user_id_idx on public.group_members (user_id);
 
 alter table public.group_members enable row level security;
 
@@ -225,6 +248,24 @@ begin
 end;
 $$;
 
+-- Rate limiting for invite-code join attempts (docs/PRODUCTION_READINESS_CHECKLIST.md §8):
+-- groups.invite_code is only 8 characters, so without a cap it's brute-forceable through
+-- repeated calls to join_group_by_code() directly - RLS/policies don't limit call
+-- frequency. Logs every attempt regardless of outcome, since what's being capped is
+-- request volume, not just failures. No client-facing policies at all - only
+-- join_group_by_code() (security definer) below ever writes to or reads this table, the
+-- same "controlled write path" pattern as groups/group_members themselves.
+create table if not exists public.group_join_attempts (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  attempted_at timestamptz not null default now()
+);
+
+create index if not exists group_join_attempts_user_id_attempted_at_idx
+  on public.group_join_attempts (user_id, attempted_at);
+
+alter table public.group_join_attempts enable row level security;
+
 create or replace function public.join_group_by_code(p_invite_code text)
 returns public.groups
 language plpgsql
@@ -233,7 +274,18 @@ set search_path = public
 as $$
 declare
   v_group public.groups;
+  v_recent_attempts int;
 begin
+  select count(*) into v_recent_attempts
+  from public.group_join_attempts
+  where user_id = auth.uid() and attempted_at > now() - interval '10 minutes';
+
+  if v_recent_attempts >= 10 then
+    raise exception 'Too many join attempts - please wait a few minutes and try again';
+  end if;
+
+  insert into public.group_join_attempts (user_id) values (auth.uid());
+
   select * into v_group from public.groups where invite_code = p_invite_code;
 
   if not found then

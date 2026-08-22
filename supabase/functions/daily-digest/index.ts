@@ -265,7 +265,39 @@ async function generateNotifications(supabase: SupabaseClient, now: Date): Promi
   return { inserted: rows.length };
 }
 
-Deno.serve(async () => {
+// Optional shared secret (docs/PRODUCTION_READINESS_CHECKLIST.md §1): Supabase's default
+// per-function JWT verification only proves the caller holds *some* valid Supabase JWT -
+// the public anon key (shipped to every browser) satisfies that trivially, so without this,
+// anyone could trigger this job on demand. Set via `supabase secrets set
+// DIGEST_CRON_SECRET=<random value>` and configure the cron invocation to send it as the
+// `x-cron-secret` header (see docs/SETUP.md) - the check is skipped (not enforced) if the
+// secret is left unset, so an existing deployment doesn't start failing merely by
+// redeploying this file before that secret is configured.
+const CRON_SECRET = Deno.env.get("DIGEST_CRON_SECRET");
+
+/** Posts a one-line failure alert to a separate, dedicated health-check webhook (distinct
+ * from any user's/group's own digest webhook) - opt-in via `HEALTH_WEBHOOK_URL`
+ * (docs/PRODUCTION_READINESS_CHECKLIST.md §11), since a silently broken daily job could
+ * otherwise go unnoticed for weeks. Swallows its own errors - a failed alert must never
+ * mask the original failure by throwing over it. */
+async function postHealthAlert(message: string): Promise<void> {
+  const webhookUrl = Deno.env.get("HEALTH_WEBHOOK_URL");
+  if (!webhookUrl) return;
+  try {
+    await postDiscordMessage(webhookUrl, `⚠️ daily-digest failed: ${message}`);
+  } catch (err) {
+    console.error("postHealthAlert itself failed:", err instanceof Error ? err.message : String(err));
+  }
+}
+
+Deno.serve(async (req) => {
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+    console.error("Rejected invocation: missing/incorrect x-cron-secret header.");
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  console.log("daily-digest: run started", new Date().toISOString());
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -277,8 +309,12 @@ Deno.serve(async () => {
   // on is_recurring/deadline, indifferent to group_id.
   const { error: cleanupError } = await supabase.rpc("cleanup_and_roll_events");
   if (cleanupError) {
-    return Response.json({ error: `cleanup_and_roll_events failed: ${cleanupError.message}` }, { status: 500 });
+    const message = `cleanup_and_roll_events failed: ${cleanupError.message}`;
+    console.error(message);
+    await postHealthAlert(message);
+    return Response.json({ error: message }, { status: 500 });
   }
+  console.log("daily-digest: cleanup_and_roll_events succeeded");
 
   const now = new Date();
   const weekFromNow = new Date(now.getTime() + 7 * DAY_MS);
@@ -296,11 +332,23 @@ Deno.serve(async () => {
     results = [...personalResults, ...groupResults];
     notificationsResult = notifications;
   } catch (err) {
-    return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("daily-digest: digest/notification step threw:", message);
+    await postHealthAlert(message);
+    return Response.json({ error: message }, { status: 500 });
   }
 
   const sent = results.filter((result) => result.sent).length;
   const failures = results.flatMap((result) => (result.failure ? [result.failure] : []));
+
+  // Logged on success too, not just failure (docs/PRODUCTION_READINESS_CHECKLIST.md §11) -
+  // otherwise there's no way to confirm the job actually ran short of inferring it from the
+  // absence of a complaint.
+  console.log(`daily-digest: run complete - sent ${sent}, ${failures.length} failure(s), ${notificationsResult.inserted} notification(s) inserted`);
+  if (failures.length > 0) {
+    console.error("daily-digest: per-recipient failures:", failures);
+    await postHealthAlert(`${failures.length} digest send(s) failed - ${failures.join("; ")}`);
+  }
 
   return Response.json({ sent, failures, notificationsInserted: notificationsResult.inserted });
 });

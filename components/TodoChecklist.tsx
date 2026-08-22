@@ -161,6 +161,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               value={newContent}
               onChange={(inputEvent) => setNewContent(inputEvent.target.value)}
               placeholder="Add an item..."
+              maxLength={500}
               className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none"
             />
           </form>

@@ -16,6 +16,13 @@ export interface DashboardData {
  * different queries (personal vs. group-scoped) even though the fields line up. */
 export type GroupDashboardData = DashboardData;
 
+// Mirrors the `events_name_length`/`events_description_length` check constraints added in
+// supabase/migrations/20260822000000_production_readiness.sql - checked here first so a
+// too-long input fails with a friendly ValidationError instead of a raw Postgres constraint
+// violation surfacing as a DatabaseError.
+const NAME_MAX_LENGTH = 200;
+const DESCRIPTION_MAX_LENGTH = 2000;
+
 /**
  * Re-validates what the form already checked client-side (docs/ARCHITECTURE_DESIGN.md
  * §2.3: "controllers assume already-valid input", but the service layer is the
@@ -24,6 +31,12 @@ export type GroupDashboardData = DashboardData;
 function assertValidInput(input: EventInput): void {
   if (!input.name.trim()) {
     throw new ValidationError("Name is required.");
+  }
+  if (input.name.length > NAME_MAX_LENGTH) {
+    throw new ValidationError(`Name must be ${NAME_MAX_LENGTH} characters or fewer.`);
+  }
+  if (input.description && input.description.length > DESCRIPTION_MAX_LENGTH) {
+    throw new ValidationError(`Description must be ${DESCRIPTION_MAX_LENGTH} characters or fewer.`);
   }
   if (!input.deadline) {
     throw new ValidationError("Deadline is required.");

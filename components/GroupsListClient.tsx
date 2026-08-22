@@ -131,6 +131,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="e.g. COSC2087 classmates"
+              maxLength={100}
               className={inputClass}
               autoFocus
             />

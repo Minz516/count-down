@@ -26,17 +26,26 @@ join-group-by-invite-code function from Milestone 2) and Supabase Edge
 Functions (the scheduled daily job, the Discord interactions handler).
 
 ### Checklist
-- [ ] No business logic that should be server-side is instead implemented
+- [x] No business logic that should be server-side is instead implemented
       only in the client (e.g. the 10-member group cap must be enforced
-      by a database trigger, not just a check in a React component)
-- [ ] Every Postgres function callable by the client (`join_group`, etc.)
+      by a database trigger, not just a check in a React component) —
+      confirmed: `check_group_member_cap()` trigger in `supabase/schema.sql`
+- [x] Every Postgres function callable by the client (`join_group`, etc.)
       validates its inputs and uses `SECURITY DEFINER` only where
-      genuinely needed, with an explicit comment explaining why
-- [ ] Edge Functions validate their inputs (e.g. the Discord interactions
-      function must not trust the payload without signature verification)
-- [ ] No API keys or secrets are ever sent to the client — only
+      genuinely needed, with an explicit comment explaining why — confirmed
+      for all of `create_group`/`join_group_by_code`/`is_group_member`/
+      `get_email_for_username`/`handle_new_user`
+- [x] Edge Functions validate their inputs — N/A in practice: this app never
+      built a Discord interactions (inbound slash-command) handler, only the
+      one-way outbound `daily-digest` cron function, so there's no inbound
+      payload to verify signatures on. Its own *invocation*, however, wasn't
+      gated beyond Supabase's default JWT check (which the public anon key
+      satisfies trivially) — closed with an optional `DIGEST_CRON_SECRET`
+      header check (see `docs/SETUP.md`)
+- [x] No API keys or secrets are ever sent to the client — only
       `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-      should appear in frontend code
+      should appear in frontend code — confirmed via
+      `grep -r "SERVICE_ROLE" app/ components/ lib/ modules/` (empty)
 
 ### How to Check
 - `grep -r "SERVICE_ROLE" app/ components/ lib/` — should return nothing;
@@ -65,19 +74,27 @@ Postgres via Supabase. Tables across milestones: `events`, `todos`,
 is used yet — nothing in the spec requires uploading files.
 
 ### Checklist
-- [ ] Every foreign key has an explicit `ON DELETE` behavior decided on
+- [x] Every foreign key has an explicit `ON DELETE` behavior decided on
       purpose (e.g. deleting a user should cascade-delete their `events`
       and `todos`; deleting a group should cascade-delete its events and
-      `group_members` rows) — not left as the Postgres default
-- [ ] Indexes exist on columns used in frequent `WHERE`/`ORDER BY`
+      `group_members` rows) — not left as the Postgres default — confirmed,
+      all `cascade` except `groups.created_by` (`set null`, deliberate)
+- [x] Indexes exist on columns used in frequent `WHERE`/`ORDER BY`
       clauses: `events(user_id)`, `events(group_id)`, `events(deadline)`,
       `todos(event_id)`, `todos(user_id)`, `group_members(group_id)`,
-      `group_members(user_id)`
-- [ ] Text fields that accept free-form user input (`events.name`,
+      `group_members(user_id)` — `events(group_id)`, `todos(user_id)`, and
+      `group_members(user_id)` were missing; added in
+      `supabase/migrations/20260822000000_production_readiness.sql`
+- [x] Text fields that accept free-form user input (`events.name`,
       `events.description`) have a sane length cap so one bad request
-      can't insert a multi-megabyte row
-- [ ] `invite_code` on `groups` has a `UNIQUE` constraint (not just
-      "usually unique" — enforced by the database)
+      can't insert a multi-megabyte row — added as check constraints
+      (`events.name` ≤200, `events.description` ≤2000, `todos.content`
+      ≤500, `groups.name` ≤100), mirrored in each module's `*.service.ts`
+      and as `maxLength` on the relevant form inputs
+- [x] `invite_code` on `groups` has a `UNIQUE` constraint (not just
+      "usually unique" — enforced by the database) — confirmed, and
+      generated via `gen_random_uuid()` (cryptographically random, not
+      sequential)
 
 ### How to Check
 ```sql
@@ -117,18 +134,23 @@ Supabase Auth, email + password. Personal data isolated via RLS
 (`group_id` membership check).
 
 ### Checklist
-- [ ] Row Level Security is **enabled** (not just "has policies") on
-      every table containing user data
+- [x] Row Level Security is **enabled** (not just "has policies") on
+      every table containing user data — confirmed via `alter table ...
+      enable row level security` on every table in `supabase/schema.sql`
 - [ ] Email confirmation setting in Supabase Auth is a deliberate choice,
       not left on the default — decide whether users must verify their
-      email before first login
-- [ ] Session handling: the Supabase client's auto-refresh-token behavior
+      email before first login — **this is a Supabase Dashboard toggle,
+      can't be checked or set from the codebase; decide and confirm it
+      yourself** (Authentication > Settings > "Confirm email" — see
+      `docs/SETUP.md`)
+- [x] Session handling: the Supabase client's auto-refresh-token behavior
       is relied on (not disabled), and there's a Next.js middleware or
       layout-level check that redirects unauthenticated users away from
-      protected pages
-- [ ] There is no page or API route that reads/writes `events`, `todos`,
+      protected pages — confirmed in `proxy.ts`
+- [x] There is no page or API route that reads/writes `events`, `todos`,
       or group data using the service role key from a client-reachable
-      code path (that would bypass RLS entirely)
+      code path (that would bypass RLS entirely) — confirmed via the same
+      grep as §1
 
 ### How to Check
 - Supabase Dashboard > Database > Tables — each table should show "RLS
@@ -163,13 +185,18 @@ Vercel for the Next.js frontend, Supabase Cloud for the backend.
 ### Checklist
 - [ ] Production environment variables (`NEXT_PUBLIC_SUPABASE_URL`,
       `NEXT_PUBLIC_SUPABASE_ANON_KEY`) are set in the Vercel project
-      settings, not only in a local `.env.local`
-- [ ] `npm run build` completes with no TypeScript errors before relying
-      on Vercel's build to catch it
+      settings, not only in a local `.env.local` — **Vercel dashboard
+      setting, can't be checked from the codebase; confirm yourself**
+- [x] `npm run build` completes with no TypeScript errors before relying
+      on Vercel's build to catch it — confirmed clean (`npx tsc --noEmit`,
+      `npm run lint`, `npm run build` all pass) as of this pass, and now
+      also enforced automatically by `.github/workflows/ci.yml` on every
+      push/PR
 - [ ] Preview deployments are enabled for branches/PRs (Vercel does this
-      by default — just confirm it's not disabled)
+      by default — just confirm it's not disabled) — **Vercel dashboard
+      setting, confirm yourself**
 - [ ] A custom domain is configured if the app is meant to be shared
-      with the friend group under a memorable URL (optional)
+      with the friend group under a memorable URL (optional) — your call
 
 ### How to Check
 - Vercel Dashboard > Project > Settings > Environment Variables
@@ -196,14 +223,18 @@ Discord interactions handler.
 - [ ] The Supabase project's region is set close to where most users
       actually are (for this app, likely Singapore, for lowest latency
       from Vietnam) — this cannot be changed after project creation
-      without migrating, so it's worth getting right early
-- [ ] Edge Function execution time stays well within Supabase's execution
-      time limit — the daily job (delete + rollover + digests) should not
-      be doing anything that could balloon in duration as data grows
-      (e.g. sending Discord messages one at a time instead of in
-      parallel)
-- [ ] The Discord interactions Edge Function replies within Discord's
-      3-second timeout, using a deferred response for anything slower
+      without migrating, so it's worth getting right early — **Supabase
+      dashboard setting, can't be checked from the codebase; confirm
+      yourself**
+- [x] Edge Function execution time stays well within Supabase's execution
+      time limit — confirmed: `sendPersonalDigests`/`sendGroupDigests`/
+      `generateNotifications` all run via `Promise.all`, and each
+      recipient's Discord POST inside those is also `Promise.all`'d, not a
+      sequential loop
+- N/A The Discord interactions Edge Function replies within Discord's
+      3-second timeout — this app has no inbound Discord interactions
+      handler (see §1), only the outbound `daily-digest` cron function, so
+      this bullet doesn't apply to anything that was actually built
 
 ### How to Check
 - Supabase Dashboard > Project Settings > General — check the region
@@ -228,14 +259,20 @@ Assumed: a GitHub repository, with Vercel auto-deploying on push to
 `main`.
 
 ### Checklist
-- [ ] `.gitignore` excludes `.env.local`, `node_modules`, and `.next`
-- [ ] Database schema changes are tracked as versioned SQL migration
+- [x] `.gitignore` excludes `.env.local`, `node_modules`, and `.next` —
+      confirmed (`.env*`, `/node_modules`, `/.next/`)
+- [x] Database schema changes are tracked as versioned SQL migration
       files in the repo (e.g. `supabase/migrations/`), not only applied
       ad hoc through the Supabase SQL Editor — otherwise there's no
-      record of what schema state a given commit expects
-- [ ] A basic CI check (GitHub Actions or similar) runs `npm run build`
+      record of what schema state a given commit expects — added
+      `supabase/migrations/20260822000000_production_readiness.sql` as
+      the first tracked migration; use this directory for future schema
+      changes
+- [x] A basic CI check (GitHub Actions or similar) runs `npm run build`
       and lint on every pull request, so broken code can't merge silently
+      — added `.github/workflows/ci.yml`
 - [ ] Branch protection on `main`, if more than one person will push code
+      — **GitHub repo setting, your call given this is currently solo**
 
 ### How to Check
 - `cat .gitignore`
@@ -263,22 +300,29 @@ RLS is the primary security boundary for this app (see Section 3). This
 section covers security concerns beyond just "is RLS on."
 
 ### Checklist
-- [ ] Every table has RLS policies for **all four** operations
+- [x] Every table has RLS policies for **all four** operations
       (SELECT/INSERT/UPDATE/DELETE) — not just SELECT, which is the most
       common thing to remember and the easiest to forget for the others
-- [ ] The service role key is never present in any file that ships to
-      the browser (see Section 1)
-- [ ] `invite_code` values are generated with a cryptographically
+      — reviewed every `create policy` in `supabase/schema.sql`:
+      `events`/`todos`/`notifications` have all four; `user_settings`/
+      `group_settings`/`profiles` are missing only `delete` (deliberate —
+      nothing in the app ever deletes those rows directly, they cascade
+      from `auth.users`); `groups`/`group_members` are select-only by
+      design (writes only via the `security definer` functions)
+- [x] The service role key is never present in any file that ships to
+      the browser (see Section 1) — confirmed
+- [x] `invite_code` values are generated with a cryptographically
       reasonable random source and are long enough to resist guessing
-      (e.g. not a short sequential or predictable string)
-- [ ] Discord Webhook URLs entered by users are validated to actually be
+      (e.g. not a short sequential or predictable string) — confirmed,
+      `gen_random_uuid()`-derived; brute-force attempts are now also
+      rate-limited (see §8)
+- [x] Discord Webhook URLs entered by users are validated to actually be
       `https://discord.com/api/webhooks/...` URLs before being saved or
-      used by the scheduled job — otherwise a user could paste an
-      arbitrary URL and turn the daily job into a way to make outbound
-      requests to arbitrary hosts
-- [ ] User-supplied text (event names, descriptions) is never rendered
+      used by the scheduled job — confirmed,
+      `modules/settings/settings.discord.ts`'s `WEBHOOK_URL_PATTERN`
+- [x] User-supplied text (event names, descriptions) is never rendered
       with `dangerouslySetInnerHTML` — React's default escaping is
-      relied on throughout
+      relied on throughout — confirmed, no matches in `app/`/`components/`
 
 ### How to Check
 ```sql
@@ -313,15 +357,17 @@ None implemented yet beyond whatever Supabase Auth applies by default to
 its own endpoints (login attempts, signups).
 
 ### Checklist
-- [ ] Group invite-code join attempts are rate-limited per user/IP —
+- [x] Group invite-code join attempts are rate-limited per user/IP —
       otherwise a short invite code could be brute-forced by repeated
-      guesses
+      guesses — added `group_join_attempts` table + a check in
+      `join_group_by_code()` (10 attempts / 10 minutes per user)
 - [ ] Event creation is rate-limited per user (a basic sanity cap, e.g.
       no more than N events created per minute), to prevent accidental or
-      malicious spam from one account
-- [ ] The Discord slash-command Edge Function has some minimal protection
-      against being hammered with requests, beyond what Discord itself
-      already gates
+      malicious spam from one account — left as-is per the checklist's
+      own priority call (nice-to-have, revisit if abuse is ever observed)
+- N/A The Discord slash-command Edge Function has some minimal protection
+      against being hammered with requests — no such function exists in
+      this app (see §1)
 
 ### How to Check
 - Search the codebase / Postgres functions for any rate-limiting logic —
@@ -353,11 +399,13 @@ through its CDN with no extra configuration needed.
 ### Checklist
 - [ ] Static assets are confirmed to be served with appropriate
       `Cache-Control` headers (Vercel's default handles this — just
-      confirm nothing in the app is overriding it)
-- [ ] No caching is applied to per-user data (dashboard queries) that
-      would risk showing one user's events to another — this app's data
-      is highly personalized, so aggressive caching is actively
-      undesirable here, not just unnecessary
+      confirm nothing in the app is overriding it) — **Vercel default,
+      nothing in the codebase overrides it; confirm in the deployed
+      Network tab if you want certainty**
+- [x] No caching is applied to per-user data (dashboard queries) that
+      would risk showing one user's events to another — confirmed, no
+      caching layer added anywhere; every page fetches fresh via the
+      Supabase client
 
 ### How to Check
 - Inspect response headers in the browser's Network tab for a static
@@ -380,14 +428,17 @@ functions automatically per-request; Supabase manages Postgres with a
 connection pooler (PgBouncer) available.
 
 ### Checklist
-- [ ] Serverless/Edge Functions connect to Postgres through Supabase's
+- N/A Serverless/Edge Functions connect to Postgres through Supabase's
       **connection pooler** (port 6543, transaction mode), not the direct
-      connection (port 5432) — direct connections exhaust quickly under
-      serverless's many-short-lived-connections pattern
+      connection (port 5432) — confirmed this doesn't apply: nothing in
+      this codebase opens a raw Postgres connection anywhere (grepped for
+      `postgres://`, `:5432`, `:6543` - no matches). Both the frontend
+      (`@supabase/ssr`) and the Edge Function (`supabase-js`) talk to
+      Supabase over HTTPS/PostgREST, not a direct driver connection, so
+      the pooler-port concern doesn't arise
 - [ ] Awareness of the current Supabase plan's connection and resource
-      limits relative to expected usage (a personal + small friend-group
-      app is nowhere near typical free-tier limits, but worth confirming
-      once, not assuming)
+      limits relative to expected usage — **Supabase dashboard/billing
+      info, can't be checked from the codebase; worth a quick look**
 
 ### How to Check
 - Check the connection string used by the Edge Functions / any
@@ -410,17 +461,24 @@ None implemented yet. Supabase does provide basic Edge Function logs in
 its dashboard, but nothing is actively monitored or alerted on.
 
 ### Checklist
-- [ ] Runtime errors in the Next.js frontend are captured somewhere
+- [x] Runtime errors in the Next.js frontend are captured somewhere
       (e.g. Sentry's free tier), not just silently failing in a user's
-      browser with nothing visible to the developer
-- [ ] The scheduled Edge Function logs clearly on both success and
+      browser with nothing visible to the developer — `@sentry/nextjs`
+      wired up (`instrumentation.ts`, `instrumentation-client.ts`,
+      `next.config.ts`); dormant until you create a free Sentry account
+      and set `NEXT_PUBLIC_SENTRY_DSN` (docs/SETUP.md §4b — an account is
+      something only you can create, not automatable)
+- [x] The scheduled Edge Function logs clearly on both success and
       failure (not just on failure) so it's possible to confirm it ran,
-      not just infer it from the absence of a complaint
-- [ ] If the scheduled job fails (e.g. can't reach Discord, a query
+      not just infer it from the absence of a complaint — added
+      `console.log`/`console.error` at each step in
+      `supabase/functions/daily-digest/index.ts`
+- [x] If the scheduled job fails (e.g. can't reach Discord, a query
       errors out), there's at least a minimal alert — reusing the
       existing Discord webhook mechanism to post a failure notice to a
       dedicated "app health" channel/webhook is a lightweight option that
-      fits this stack well
+      fits this stack well — added, opt-in via `HEALTH_WEBHOOK_URL`
+      (docs/SETUP.md)
 
 ### How to Check
 - `grep -r "Sentry" package.json` or similar

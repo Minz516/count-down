@@ -11,7 +11,11 @@ groups with an invite code, a group dashboard reusing the personal one's UI, and
 own Discord digest), username-based auth (username + confirm-password at signup, sign in by
 username or email), profile editing (username + avatar upload, a group member roster,
 and avatar previews on the Groups list), per-member todo checklists on group events, and an
-in-app notification bell (event passed / due today-tomorrow) are all built. The daily Discord digest's Edge Function
+in-app notification bell (event passed / due today-tomorrow), and a production-readiness
+pass (`docs/PRODUCTION_READINESS_CHECKLIST.md`: length caps + extra indexes, invite-code
+join rate limiting, an optional shared-secret gate + health-webhook alerting on the daily
+Edge Function, `@sentry/nextjs` wired but dormant until a DSN is set, and a GitHub Actions
+CI workflow) are all built. The daily Discord digest's Edge Function
 (`supabase/functions/daily-digest/`) is written but not yet deployed/scheduled - that's a
 manual step, same as the SQL files below. The docs below are still the source of truth for
 product/behavioral decisions - code comments point back to them rather than restating
@@ -55,7 +59,13 @@ Storage bucket + its 4 policies) directly in the Supabase SQL editor. `supabase/
 file's own comment); deploy and schedule `supabase/functions/daily-digest/` (a Supabase Edge
 Function, `supabase functions deploy daily-digest` - no secret to set up, `SUPABASE_SERVICE_ROLE_KEY`
 is auto-injected, see the Architecture bullet below) to run it daily and send both personal
-and group Discord digests, and to generate in-app notifications.
+and group Discord digests, and to generate in-app notifications. `supabase/migrations/`
+holds schema changes made after the initial build as standalone timestamped files (currently
+just one: length caps, extra indexes, and invite-code rate limiting) - `schema.sql` has also
+been updated in place with the same changes, so a brand-new project still only needs to run
+that one file; add new migration files here going forward instead of only editing
+`schema.sql` (see `docs/PRODUCTION_READINESS_CHECKLIST.md` §6). `.github/workflows/ci.yml`
+runs lint + build on every push/PR to `main`.
 
 ## Architecture
 
@@ -64,6 +74,11 @@ and group Discord digests, and to generate in-app notifications.
   for Client Components, `lib/supabase/server.ts` for the one Server Component that needs it
   (`app/page.tsx`), `proxy.ts` (Next 16's `middleware.ts` replacement - see its file-
   convention note below) refreshes the session cookie and redirects based on auth state.
+  Root `instrumentation.ts` (server/edge) and `instrumentation-client.ts` (browser) wire up
+  `@sentry/nextjs` (`next.config.ts` wraps the config with `withSentryConfig` for source
+  map upload) but both are no-ops until `NEXT_PUBLIC_SENTRY_DSN` is set
+  (`.env.local.example`) - getting a DSN means creating a Sentry account, a step for the
+  human running this, not something to automate.
 - **Modular Monolith, adapted (`modules/`):** all Supabase access is behind
   `modules/events/` and `modules/auth/`, each exposing a narrow `*.interface.ts` - that's
   the only file in a module pages/components may import. `events.repository.ts` is the only
@@ -105,6 +120,15 @@ and group Discord digests, and to generate in-app notifications.
   yourself. It's the one place in the codebase that uses this key - everything under
   `lib/supabase/` and `modules/` stays anon-key-only, and this key must never end up in
   `.env.local`/`NEXT_PUBLIC_*` or anywhere sent to the browser.
+- **`daily-digest`'s own invocation is gated by an optional `DIGEST_CRON_SECRET`**, checked
+  against an `x-cron-secret` request header before anything else runs - Supabase's default
+  per-function JWT verification accepts the public anon key as a valid caller, so without
+  this, anyone holding it (i.e. anyone) could trigger the job on demand. The check is
+  skipped if the secret is unset, so this doesn't break an existing deployment that hasn't
+  configured it (`docs/SETUP.md`). Success and failure are both logged (not just failure),
+  and an optional `HEALTH_WEBHOOK_URL` (a Discord webhook dedicated to app health, distinct
+  from any user's/group's own digest webhook) gets a one-line alert if cleanup, a digest
+  send, or notification generation throws.
 - **In-app notifications are generated server-side, once a day, by that same Edge Function**
   - not in real time, since this app has no real-time infrastructure anywhere by design
   (`docs/ARCHITECTURE_DESIGN.md`). `generateNotifications()` runs after cleanup and
@@ -136,7 +160,11 @@ and group Discord digests, and to generate in-app notifications.
   `groups` and `group_members` have **no** client-facing insert policy at all. This is
   deliberate: it's what makes the 10-member cap (a `before insert on group_members` trigger)
   and "join only via a known invite code" actually enforced, not just UI-level conventions a
-  direct API call could route around.
+  direct API call could route around. `join_group_by_code()` also rate-limits itself via
+  `group_join_attempts(user_id, attempted_at)` - 10+ calls from one user in the trailing 10
+  minutes raise before the invite code is even checked, defending the 8-character
+  `invite_code` against brute-forcing (`docs/PRODUCTION_READINESS_CHECKLIST.md` §8). No
+  client-facing policies on that table either - same controlled-write-path reasoning.
 - **Every "is the current user a member of this group?" RLS check goes through
   `public.is_group_member(group_id)`** (also `security definer`), not an inline
   `group_id in (select group_id from group_members where user_id = auth.uid())` subquery -

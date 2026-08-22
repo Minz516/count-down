@@ -5,6 +5,9 @@ import { ValidationError } from "@/modules/shared/errors";
 import type { GroupRecord, GroupMemberRecord } from "@/types/group";
 
 const PREVIEW_AVATAR_COUNT = 4;
+// Mirrors the `groups_name_length` check constraint added in
+// supabase/migrations/20260822000000_production_readiness.sql.
+const NAME_MAX_LENGTH = 100;
 
 /** Fills in each group's `preview_avatars` from `group_members`/`profiles` - a repository
  * method only ever touches its own table, so the cross-table (and cross-module, for
@@ -52,6 +55,9 @@ export const groupsService = {
     if (!trimmed) {
       throw new ValidationError("Group name is required.");
     }
+    if (trimmed.length > NAME_MAX_LENGTH) {
+      throw new ValidationError(`Group name must be ${NAME_MAX_LENGTH} characters or fewer.`);
+    }
     return groupsRepository.create(supabase, trimmed);
   },
 
@@ -76,6 +82,12 @@ export const groupsService = {
       }
       if (message.includes("Invalid invite code")) {
         throw new ValidationError("Mã mời không hợp lệ.");
+      }
+      // Rate limit from join_group_by_code()'s group_join_attempts check
+      // (supabase/migrations/20260822000000_production_readiness.sql, docs/
+      // PRODUCTION_READINESS_CHECKLIST.md §8) - brute-forcing invite codes.
+      if (message.includes("Too many join attempts")) {
+        throw new ValidationError("Bạn đã thử quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.");
       }
       throw err;
     }

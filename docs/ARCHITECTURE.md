@@ -359,3 +359,51 @@ recurring ones forward — the same daily job, not a separate one.
   never reaches Supabase Auth with a non-email string.
 - Pre-existing accounts (created before username support existed) simply have no `profiles`
   row and keep signing in by email only - no backfill/migration needed.
+
+## Production Readiness Additions
+Implemented from a pass against `docs/PRODUCTION_READINESS_CHECKLIST.md`; see that file for
+the full audit (what was already fine vs. what these additions closed).
+
+- **`supabase/migrations/`** now holds the first schema change tracked as a standalone,
+  timestamped file rather than only edited into `supabase/schema.sql` ad hoc - going
+  forward, add new migration files here for schema changes; `schema.sql` has also been
+  updated in place so a brand-new project setup still only needs to run one file
+  (`docs/SETUP.md`).
+- **Length caps** on free-form text columns so one bad request can't insert a
+  multi-megabyte row: `events.name` (200), `events.description` (2000), `todos.content`
+  (500), `groups.name` (100) - enforced as Postgres check constraints (the hard backstop)
+  and mirrored as friendly-message checks in each module's `*.service.ts` (the first line
+  of defense) and as `maxLength` on the relevant form inputs.
+- **Indexes** added for query patterns that weren't covered by the pre-existing
+  `events(user_id, deadline)` / `todos(event_id, position)` composite indexes:
+  `events(group_id)` (group dashboard queries), `todos(user_id)` (`listAllForUser`),
+  `group_members(user_id)` (the table's own primary key leads with `group_id`, so it
+  doesn't serve a `user_id`-only lookup).
+- **Invite-code join rate limiting**: `group_join_attempts(user_id, attempted_at)` logs
+  every call to `join_group_by_code()` regardless of outcome; the function itself now
+  rejects with `'Too many join attempts...'` once a user has made 10+ attempts in the
+  trailing 10 minutes, before it ever checks the code against `groups` - defends
+  `groups.invite_code` (8 characters) against being brute-forced via repeated direct calls.
+  No client-facing policies on this table - written to only by the `security definer`
+  function, same "controlled write path" as `groups`/`group_members` themselves.
+- **`daily-digest`'s own invocation is now gated by an optional shared secret**
+  (`DIGEST_CRON_SECRET`, checked against an `x-cron-secret` request header) - Supabase's
+  default per-function JWT verification only proves the caller holds *some* valid project
+  JWT, and the public anon key (shipped to every browser) satisfies that trivially. The
+  check is skipped entirely if the secret is left unset, so redeploying this file doesn't
+  break an existing schedule that hasn't configured it yet (see `docs/SETUP.md`).
+- **The scheduled job now logs clearly on both success and failure** (not just failure) and,
+  if `HEALTH_WEBHOOK_URL` is set (a Discord webhook separate from any user's/group's own
+  digest webhook), posts a one-line alert there when cleanup, a digest step, or a
+  notification-generation step throws - otherwise a silently broken daily job could go
+  unnoticed for weeks.
+- **Error tracking**: `@sentry/nextjs` is wired up (root `instrumentation.ts` for
+  server/edge errors via `onRequestError`/`Sentry.captureRequestError`, root
+  `instrumentation-client.ts` for browser errors, `next.config.ts` wrapped with
+  `withSentryConfig` for source map upload) but stays completely inert - `Sentry.init` is
+  never called - until `NEXT_PUBLIC_SENTRY_DSN` is set (`.env.local.example`). Getting a DSN
+  means creating a free Sentry account, which is a step for you to do yourself, not
+  something automatable here.
+- **CI**: `.github/workflows/ci.yml` runs `npm ci`, `npm run lint`, and `npm run build` on
+  every push/PR to `main`, using placeholder `NEXT_PUBLIC_*` values (they're not secrets -
+  they ship to the browser anyway) since the build never calls Supabase at build time.
