@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Gear, Plus, User, UsersThree } from "@phosphor-icons/react/ssr";
+import { Gear, Plus, User, UsersThree } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { Button } from "./Button";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 
 interface NavProps {
@@ -73,13 +74,7 @@ export function Nav({ onAddEvent }: NavProps) {
             </button>
           </>
         )}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
-        >
-          <Bell size={20} />
-        </button>
+        <NotificationBell />
         <Link
           href="/settings"
           aria-label="Settings"

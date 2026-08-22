@@ -15,6 +15,14 @@
      default silhouette if none is set) opens a small menu - **Edit profile** and **Log
      out** - rather than signing out on the first click; shared by `Nav.tsx` and
      `GroupNav.tsx`
+   - Notification bell: an unread dot when there's anything unread; clicking opens a
+     small panel listing recent notifications (newest first), a "Mark all as read"
+     action, and clicking a single notification marks just that one read. A trash icon
+     (revealed on hover) permanently deletes one notification - not a soft-hide, a real
+     delete. Notifications are generated server-side, once a day (docs/ARCHITECTURE.md "In-App
+     Notifications") - an event passing, or due today/tomorrow - independent of the
+     Discord digest entirely; also present on `GroupNav.tsx`, since group events
+     generate notifications too
    - Edit Profile (modal, from the account menu): avatar preview + "Change avatar" file
      picker, username field, Save/Cancel. A taken username is rejected with a validation
      message; changing your username changes what you sign in with too (docs/PRD.md)

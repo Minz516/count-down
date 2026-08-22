@@ -17,6 +17,8 @@ the single nearest upcoming event highlighted with the most detail
 - Let a personal todo checklist be attached to any event
 - Let a user paste their own Discord Webhook URL and receive a daily digest
   of upcoming deadlines
+- Notify users in-app (a bell icon, independent of Discord) when an event passes, and
+  once a day about events due today or tomorrow
 - Let users create/join a Group and share a single timeline of deadlines,
   with equal edit permissions for every member
 
@@ -91,6 +93,10 @@ the single nearest upcoming event highlighted with the most detail
       checklist, just now also available on group events) - clearly labeled
       as personal, not shared, so nobody mistakes their own progress for the
       whole group's
+- [ ] In-app notification bell, independent of the Discord digest: notified once an
+      event passes, and once a day about events due today or tomorrow (see
+      `ARCHITECTURE.md` "In-App Notifications") - for a group event, every member is
+      notified, not just whoever created it
 
 ## Out of Scope (for MVP)
 - Push notifications / reminders beyond the Discord digest

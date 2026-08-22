@@ -353,3 +353,38 @@ create policy "Users can delete their own avatar" on storage.objects
   for delete using (
     bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- In-app notification bell (event passed, due today/tomorrow). No client-facing insert
+-- policy - only the daily-digest Edge Function (service role) ever creates rows, the
+-- same "controlled write path" pattern as groups/group_members.
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  event_id uuid references public.events (id) on delete cascade,
+  type text not null check (type in ('event_passed', 'due_soon')),
+  message text not null,
+  is_read boolean not null default false,
+  -- Set when is_read flips to true (not just a boolean) so a read notification can be
+  -- auto-deleted 1 day after *that*, not 1 day after created_at - see
+  -- cleanup_and_roll_events() in supabase/cleanup_and_rollover.sql.
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  -- Dedup: each event produces at most one notification of a given type per
+  -- recipient, ever - the Edge Function upserts against this constraint
+  -- (ignoreDuplicates) instead of tracking "already notified" state separately.
+  unique (user_id, event_id, type)
+);
+
+create index if not exists notifications_user_id_created_at_idx
+  on public.notifications (user_id, created_at desc);
+
+alter table public.notifications enable row level security;
+
+create policy "Users can view their own notifications" on public.notifications
+  for select using (auth.uid() = user_id);
+
+create policy "Users can update their own notifications" on public.notifications
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can delete their own notifications" on public.notifications
+  for delete using (auth.uid() = user_id);

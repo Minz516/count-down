@@ -232,6 +232,8 @@ extension, running once a day:
    For every row where `is_recurring = true AND deadline < now()`, update
    `deadline` to the next date matching `recurrence_day_of_week` (i.e. add
    7 days, repeated if needed until the result is in the future).
+3. **Delete read notifications older than a day:** see "In-App Notifications" below for why
+   `read_at`, not `created_at`, is the clock.
 
 Implemented as `public.cleanup_and_roll_events()`, a `plpgsql` function
 (`supabase/cleanup_and_rollover.sql`).
@@ -277,6 +279,57 @@ button is a separate, simpler path: it POSTs directly from the browser to
 the webhook URL currently in the form (Discord webhooks accept cross-origin
 POSTs) — no Edge Function involved, since that action has a signed-in user
 and only needs to talk to Discord.
+
+## In-App Notifications
+The bell icon in the nav is backed by a `notifications` table, not computed client-side -
+that's what lets it have real read/unread state instead of just a live re-derived list.
+Rows are only ever created server-side, by the same `daily-digest` Edge Function as the
+Discord digest above (a fourth responsibility added to that job, not new infrastructure -
+this app has no real-time layer anywhere, and both triggers below are naturally daily-cadence
+already):
+
+**table: notifications**
+| column      | type        | notes                                                     |
+|-------------|-------------|------------------------------------------------------------|
+| id          | uuid        | primary key, default gen_random_uuid()                    |
+| user_id     | uuid        | references auth.users(id), not null                        |
+| event_id    | uuid        | references events(id), nullable — cascades on event delete |
+| type        | text        | `'event_passed'` or `'due_soon'`                            |
+| message     | text        | not null                                                    |
+| is_read     | boolean     | default false                                               |
+| read_at     | timestamptz | nullable — set when is_read flips to true                   |
+| created_at  | timestamptz | default now()                                               |
+
+`unique (user_id, event_id, type)` is the dedup mechanism: each event produces at most one
+notification of a given type per recipient, ever. The Edge Function `upsert`s against this
+constraint (`ignoreDuplicates: true`) instead of tracking "already notified" state
+separately or querying for existing rows first.
+
+**RLS** — select/update/delete where `auth.uid() = user_id` (read, mark-as-read, dismiss);
+**no insert policy** - only the Edge Function (service role) ever creates rows, the same
+controlled-write-path pattern as `groups`/`group_members`.
+
+**Generation, once daily, after cleanup:**
+1. `event_passed` — every non-recurring event where `deadline < now()` (still within the 24h
+   grace window; anything cleanup already hard-deleted this run is naturally excluded, so
+   there's nothing wasted notifying about).
+2. `due_soon` — every non-recurring event whose `deadline` falls within today or tomorrow,
+   using **calendar-day boundaries computed in ICT** (UTC+7, matching the cron's own 06:00
+   ICT schedule) — a specific message noting "hôm nay" vs. "vào ngày mai", not a rolling
+   window like the Discord digest's own 7-day lookahead.
+3. For each matching event: a personal event's only recipient is `event.user_id`; a group
+   event's recipients are every row in `group_members` for that `group_id` — every member
+   gets notified, not just whoever created the event (the same "everyone's concern, not the
+   creator's alone" rule as equal edit permissions and the shared Discord digest).
+
+Independent of Discord entirely — a user with no webhook configured (or digests disabled)
+still gets in-app notifications.
+
+**Read notifications auto-delete 1 day after being read** — `read_at` (not `created_at`) is
+the clock, so an unread notification is kept indefinitely regardless of age; only marking it
+read starts the countdown. This is the third step `cleanup_and_roll_events()`
+(`supabase/cleanup_and_rollover.sql`) performs, alongside deleting expired events and rolling
+recurring ones forward — the same daily job, not a separate one.
 
 ## Real-Time Countdown Logic
 - `useCountdown(deadline)` custom hook:

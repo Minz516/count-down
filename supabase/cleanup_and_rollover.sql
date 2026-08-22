@@ -28,6 +28,13 @@ begin
     + (ceil(extract(epoch from (now() - deadline)) / (7 * 86400))::int * interval '7 days')
   where is_recurring = true
     and deadline < now();
+
+  -- 3. Hard-delete notifications 24h after they were marked read (docs/ARCHITECTURE.md
+  --    "In-App Notifications") - read_at, not created_at, is the clock: an unread
+  --    notification is kept indefinitely regardless of age.
+  delete from public.notifications
+  where read_at is not null
+    and read_at < now() - interval '1 day';
 end;
 $$;
 

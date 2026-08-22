@@ -68,3 +68,18 @@ export function toDateTimeParts(iso: string): DateParts {
 export function fromDateTimeParts(date: string, time: string): string {
   return new Date(`${date}T${time}`).toISOString();
 }
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+/** e.g. "5 phút trước" - coarse relative time for the notification bell, not meant for
+ * anything precision-sensitive (deadlines/countdowns still use the absolute formatters above). */
+export function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+
+  if (diffMs < MINUTE_MS) return "vừa xong";
+  if (diffMs < HOUR_MS) return `${Math.floor(diffMs / MINUTE_MS)} phút trước`;
+  if (diffMs < DAY_MS) return `${Math.floor(diffMs / HOUR_MS)} giờ trước`;
+  return `${Math.floor(diffMs / DAY_MS)} ngày trước`;
+}

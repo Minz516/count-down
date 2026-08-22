@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Gear, Plus } from "@phosphor-icons/react/ssr";
 import { Button } from "./Button";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 
 interface GroupNavProps {
@@ -53,6 +54,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
         >
           <Gear size={20} />
         </button>
+        <NotificationBell />
         <UserMenu />
       </div>
     </header>

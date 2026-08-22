@@ -10,8 +10,8 @@ todo checklist, the Settings page (Discord webhook + digest), Group Countdown (s
 groups with an invite code, a group dashboard reusing the personal one's UI, and a group's
 own Discord digest), username-based auth (username + confirm-password at signup, sign in by
 username or email), profile editing (username + avatar upload, a group member roster,
-and avatar previews on the Groups list), and per-member todo checklists on group events
-are all built. The daily Discord digest's Edge Function
+and avatar previews on the Groups list), per-member todo checklists on group events, and an
+in-app notification bell (event passed / due today-tomorrow) are all built. The daily Discord digest's Edge Function
 (`supabase/functions/daily-digest/`) is written but not yet deployed/scheduled - that's a
 manual step, same as the SQL files below. The docs below are still the source of truth for
 product/behavioral decisions - code comments point back to them rather than restating
@@ -48,14 +48,14 @@ throws on every request since it needs a Supabase client to check the session.
 Database setup is not part of `npm run` anything - run `supabase/schema.sql` (tables + RLS
 policies for `events`, `todos`, `user_settings`, `groups`, `group_members`,
 `group_settings`, `profiles` (including its `avatar_url` column and cross-member visibility
-policy), plus the `create_group`/`join_group_by_code`/`get_email_for_username` functions, the
-`handle_new_user` signup trigger, the member-cap trigger, and the `avatars` Storage bucket +
-its 4 policies) directly in the Supabase SQL editor. `supabase/cleanup_and_rollover.sql` defines the
+policy), `notifications`, plus the `create_group`/`join_group_by_code`/`get_email_for_username`
+functions, the `handle_new_user` signup trigger, the member-cap trigger, and the `avatars`
+Storage bucket + its 4 policies) directly in the Supabase SQL editor. `supabase/cleanup_and_rollover.sql` defines the
 `cleanup_and_roll_events()` function (no longer self-schedules via `pg_cron` - see the
 file's own comment); deploy and schedule `supabase/functions/daily-digest/` (a Supabase Edge
 Function, `supabase functions deploy daily-digest` - no secret to set up, `SUPABASE_SERVICE_ROLE_KEY`
 is auto-injected, see the Architecture bullet below) to run it daily and send both personal
-and group Discord digests.
+and group Discord digests, and to generate in-app notifications.
 
 ## Architecture
 
@@ -82,7 +82,10 @@ and group Discord digests.
   `group_settings` (`group-settings.repository.ts`/`.service.ts`), both re-exported from one
   `groups.interface.ts`. `modules/profiles/` is the only place that touches
   `supabase.from("profiles")` **or** `supabase.storage.from("avatars")` - both are this
-  module's data sources, not just the table.
+  module's data sources, not just the table. `modules/notifications/` follows the shape too,
+  for `notifications` - a passthrough module like `auth/` used to be: no client-side business
+  rules of its own, since rows are only ever created server-side (see the Edge Function
+  bullet below), never inserted by the client at all.
 - **`events` has two ownership scopes, not two modules:** a group event is still just a row
   in `events` with `group_id` set (personal: `group_id is null`). Rather than forking the
   entity, `events.repository.ts`/`events.service.ts` grew group-scoped siblings
@@ -102,6 +105,23 @@ and group Discord digests.
   yourself. It's the one place in the codebase that uses this key - everything under
   `lib/supabase/` and `modules/` stays anon-key-only, and this key must never end up in
   `.env.local`/`NEXT_PUBLIC_*` or anywhere sent to the browser.
+- **In-app notifications are generated server-side, once a day, by that same Edge Function**
+  - not in real time, since this app has no real-time infrastructure anywhere by design
+  (`docs/ARCHITECTURE_DESIGN.md`). `generateNotifications()` runs after cleanup and
+  concurrently with the Discord digest sends, independent of whether a user has a webhook
+  configured. Dedup is the `notifications` table's own `unique(user_id, event_id, type)`
+  constraint - the function `upsert`s with `ignoreDuplicates: true` against it rather than
+  querying for existing rows first; don't reintroduce a manual existence check here. A group
+  event notifies **every** `group_members` row for that group, not just `event.user_id` (the
+  creator) - same "everyone's concern" rule as equal edit permissions and the group Discord
+  digest. "Today"/"tomorrow" are calendar-day boundaries computed in ICT (UTC+7, matching the
+  cron's own 06:00 ICT schedule), not a rolling window like the digest's own 7-day lookahead.
+- **A read notification auto-deletes 1 day after being read, not 1 day after being
+  created** - `notifications.read_at` (set by `markAsRead`/`markAllAsRead` in
+  `notifications.repository.ts` alongside `is_read`) is the clock, not `created_at`; an
+  unread notification is kept indefinitely regardless of age. The delete itself is a third
+  step in `cleanup_and_roll_events()` (`supabase/cleanup_and_rollover.sql`) - the same daily
+  job as event cleanup/rollover, not a separate one.
 - **Data model:** single `events` table (`user_id`, `name`, `deadline`, `description`,
   `is_recurring`, `recurrence_day_of_week`, `group_id`), RLS-scoped to `user_id = auth.uid()
   or group_id in (select group_id from group_members where user_id = auth.uid())`. Mirrored
@@ -231,7 +251,9 @@ and group Discord digests.
   self-sufficient rather than prop-driven: it fetches the current user's profile itself on
   mount (rendering `<Avatar>` as its own trigger button) and owns `EditProfileModal` - that's
   *why* both navs can keep rendering `<UserMenu />` with zero props even though it now shows
-  per-user data.
+  per-user data. `components/NotificationBell.tsx` (replacing the old decorative `<Bell>`
+  button in both navs) follows the exact same self-sufficient shape - fetches its own
+  notifications on mount, no props.
 - **`components/Avatar.tsx` is the one avatar renderer** (falls back to
   `/default-avatar.png` when `src` is null) - used by `UserMenu`, the group member roster in
   `GroupSettingsModal.tsx`, and the facepile on `GroupsListClient.tsx`'s cards. Don't

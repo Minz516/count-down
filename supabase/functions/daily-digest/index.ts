@@ -4,12 +4,16 @@
 // the "one Edge Function, scheduled once daily, does three things" job from
 // docs/ARCHITECTURE.md "Discord Digest", extended in Milestone 2
 // (docs/milestone2/ARCHITECTURE-milestone-2.md) with a second digest pass for
-// groups:
+// groups, and again for the in-app notification bell
+// (docs/ARCHITECTURE.md "In-App Notifications"):
 //   1. delete expired non-recurring events + roll recurring ones forward
 //   2. read every user's AND every group's digest preference
 //   3. POST a Discord message per opted-in user/group, all concurrently via
 //      Promise.all (not a sequential loop) so this doesn't slow down linearly
 //      as the number of users/groups grows
+//   4. generate in-app notifications (event passed / due today-tomorrow) for
+//      every user, independent of Discord digest opt-in - a group event
+//      notifies every member, not just whoever created it
 //
 // Deliberate exception to this project's anon-key-only rule: everywhere else
 // (lib/supabase/*.ts) uses the anon key + a user's own session, relying on RLS
@@ -165,6 +169,102 @@ async function sendGroupDigests(
   );
 }
 
+const ICT_OFFSET_MS = 7 * 60 * 60 * 1000; // UTC+7 - matches this function's own cron schedule (06:00 ICT)
+
+interface NotificationEventRow {
+  id: string;
+  name: string;
+  user_id: string;
+  group_id: string | null;
+  deadline: string;
+}
+
+interface NotificationInsertRow {
+  user_id: string;
+  event_id: string;
+  type: "event_passed" | "due_soon";
+  message: string;
+}
+
+/** Personal event -> just its owner; group event -> every member, not just whoever
+ * created it (docs/ARCHITECTURE.md "In-App Notifications" - same "everyone's concern,
+ * not the creator's alone" rule as equal edit permissions and the shared Discord digest). */
+async function resolveRecipients(supabase: SupabaseClient, event: NotificationEventRow): Promise<string[]> {
+  if (!event.group_id) return [event.user_id];
+
+  const { data, error } = await supabase.from("group_members").select("user_id").eq("group_id", event.group_id);
+  if (error) throw new Error(`Reading group_members failed: ${error.message}`);
+  return ((data ?? []) as { user_id: string }[]).map((row) => row.user_id);
+}
+
+/** In-app notifications (event passed / due today-tomorrow) for the bell icon -
+ * independent of the Discord digest above, sent to every user regardless of whether
+ * they've configured a webhook. Dedup is the `notifications` table's own
+ * `unique(user_id, event_id, type)` constraint (supabase/schema.sql) - this upserts
+ * with `ignoreDuplicates` against it rather than checking existence per row first. */
+async function generateNotifications(supabase: SupabaseClient, now: Date): Promise<{ inserted: number }> {
+  // Calendar-day boundaries in ICT, not a rolling window - "today"/"tomorrow" are
+  // calendar concepts, unlike the digest's own rolling 7-day-from-now window above.
+  const nowIct = new Date(now.getTime() + ICT_OFFSET_MS);
+  const todayStartIct = Date.UTC(nowIct.getUTCFullYear(), nowIct.getUTCMonth(), nowIct.getUTCDate());
+  const todayStart = new Date(todayStartIct - ICT_OFFSET_MS);
+  const tomorrowStart = new Date(todayStart.getTime() + DAY_MS);
+  const dayAfterTomorrowStart = new Date(todayStart.getTime() + 2 * DAY_MS);
+
+  const [passed, dueSoon] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, name, user_id, group_id, deadline")
+      .eq("is_recurring", false)
+      .lt("deadline", now.toISOString()),
+    supabase
+      .from("events")
+      .select("id, name, user_id, group_id, deadline")
+      .eq("is_recurring", false)
+      .gte("deadline", todayStart.toISOString())
+      .lt("deadline", dayAfterTomorrowStart.toISOString()),
+  ]);
+
+  if (passed.error) throw new Error(`Reading passed events failed: ${passed.error.message}`);
+  if (dueSoon.error) throw new Error(`Reading due-soon events failed: ${dueSoon.error.message}`);
+
+  const rows: NotificationInsertRow[] = [];
+
+  for (const event of (passed.data ?? []) as NotificationEventRow[]) {
+    const recipients = await resolveRecipients(supabase, event);
+    for (const userId of recipients) {
+      rows.push({
+        user_id: userId,
+        event_id: event.id,
+        type: "event_passed",
+        message: `"${event.name}" đã qua hạn.`,
+      });
+    }
+  }
+
+  for (const event of (dueSoon.data ?? []) as NotificationEventRow[]) {
+    const dayLabel = new Date(event.deadline).getTime() < tomorrowStart.getTime() ? "hôm nay" : "vào ngày mai";
+    const recipients = await resolveRecipients(supabase, event);
+    for (const userId of recipients) {
+      rows.push({
+        user_id: userId,
+        event_id: event.id,
+        type: "due_soon",
+        message: `"${event.name}" đến hạn ${dayLabel}.`,
+      });
+    }
+  }
+
+  if (rows.length === 0) return { inserted: 0 };
+
+  const { error } = await supabase
+    .from("notifications")
+    .upsert(rows, { onConflict: "user_id,event_id,type", ignoreDuplicates: true });
+
+  if (error) throw new Error(`Upserting notifications failed: ${error.message}`);
+  return { inserted: rows.length };
+}
+
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -184,14 +284,17 @@ Deno.serve(async () => {
   const weekFromNow = new Date(now.getTime() + 7 * DAY_MS);
 
   let results: DigestResult[];
+  let notificationsResult: { inserted: number };
   try {
-    // Steps 2+3: personal and group digests run concurrently, not one after
-    // the other, so this stays fast as users/groups grow.
-    const [personalResults, groupResults] = await Promise.all([
+    // Steps 2-4: Discord digests (personal + group) and in-app notifications all run
+    // concurrently, not one after the other, so this stays fast as users/groups grow.
+    const [personalResults, groupResults, notifications] = await Promise.all([
       sendPersonalDigests(supabase, now, weekFromNow),
       sendGroupDigests(supabase, now, weekFromNow),
+      generateNotifications(supabase, now),
     ]);
     results = [...personalResults, ...groupResults];
+    notificationsResult = notifications;
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
@@ -199,5 +302,5 @@ Deno.serve(async () => {
   const sent = results.filter((result) => result.sent).length;
   const failures = results.flatMap((result) => (result.failure ? [result.failure] : []));
 
-  return Response.json({ sent, failures });
+  return Response.json({ sent, failures, notificationsInserted: notificationsResult.inserted });
 });
