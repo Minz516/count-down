@@ -115,9 +115,31 @@ permissions (docs/PRD.md), including the group's creator.
 | discord_webhook_url  | text    | nullable — the group's own Discord Webhook URL  |
 | digest_enabled       | boolean | default true                                    |
 
+**table: profiles**
+| column      | type        | notes                                          |
+|-------------|-------------|--------------------------------------------------|
+| id          | uuid        | primary key, references auth.users(id)          |
+| username    | text        | unique, not null                                |
+| avatar_url  | text        | nullable — public Supabase Storage URL          |
+| created_at  | timestamptz | default now()                                   |
+
+`username`/`created_at` are populated by the `handle_new_user()` trigger (see "Auth Flow"),
+never a client insert. `username`/`avatar_url` are user-editable after that (Edit Profile,
+from the account menu) - a user may update their own row.
+
+**Storage bucket: avatars** (public read) - one object per user, keyed `{user_id}/avatar`
+with no extension (the correct `Content-Type` is set explicitly at upload time instead, so
+serving is correct regardless of image format); `upsert: true` on write means changing an
+avatar replaces the object rather than accumulating old files. Write policies restrict each
+user to their own folder (`(storage.foldername(name))[1] = auth.uid()::text`).
+
 **Row Level Security (RLS)**
 - Enable RLS on `events`, `todos`, `user_settings`, `groups`, `group_members`,
-  `group_settings`
+  `group_settings`, `profiles`
+- `profiles`: select where `auth.uid() = id` **or** the caller shares any group with that
+  profile's user (needed for the group member roster and Groups-list avatar previews); update
+  where `auth.uid() = id` (Edit Profile) — still no client-facing insert/delete policy; a row
+  is only ever created by `handle_new_user()`
 - `events`: select/update/delete allowed where
   `user_id = auth.uid() or group_id in (select group_id from group_members where user_id = auth.uid())`
   — insert only needs `user_id = auth.uid()`, since every insert (personal or
@@ -262,6 +284,21 @@ and only needs to talk to Discord.
   tick every second for those, to avoid unnecessary re-renders.
 
 ## Auth Flow
-- Supabase Auth, email + password to start (magic link can be added later)
+- Supabase Auth, email + password (magic link can be added later)
 - Session managed via the Supabase client
 - Protected routes redirect to `/login` if there is no active session
+- Signup collects a **username** (in addition to email/password/confirm-password), passed as
+  `options: { data: { username } }` on `supabase.auth.signUp` - `auth.users` itself can't be
+  extended with custom columns, so a `handle_new_user()` trigger (`after insert on
+  auth.users`, `security definer`) copies it into a separate `public.profiles` table
+  (`id references auth.users`, `username unique not null`). A duplicate username raises a
+  clean `'Username already taken'` exception the client translates to a friendly message.
+- **Sign in accepts either a username or an email.** An input containing `@` is treated as
+  an email directly; otherwise it's resolved to an email first via
+  `get_email_for_username(username)` (`security definer`, callable while unauthenticated -
+  that's the point) before calling `signInWithPassword`, which only ever accepts an email. A
+  username with no matching profile fails with the same generic "invalid credentials"
+  message as a wrong password - it never confirms/denies whether a username exists, and
+  never reaches Supabase Auth with a non-email string.
+- Pre-existing accounts (created before username support existed) simply have no `profiles`
+  row and keep signing in by email only - no backfill/migration needed.

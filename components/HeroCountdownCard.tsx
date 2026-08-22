@@ -16,22 +16,32 @@ export function HeroCountdownCard({ event }: { event: EventRecord }) {
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-primary-container/15 bg-surface-container bg-gradient-to-b from-primary-container/5 to-transparent px-6 py-10 text-center sm:px-10">
-      <h2 className="font-display text-2xl font-semibold text-on-surface sm:text-[32px]">
+      <h2 className="text-balance font-display text-2xl font-semibold text-on-surface sm:text-[32px]">
         {event.name}
       </h2>
       <p className="mt-2 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
         {formatEventDate(event.deadline)}, {formatEventTime(event.deadline)}
       </p>
 
-      <div className="mt-8 flex justify-center gap-4 sm:gap-8">
-        {UNITS.map(({ key, label }) => (
-          <div key={key} className="flex flex-col items-center">
-            <span className="font-display text-5xl font-bold tracking-tight tabular-nums text-primary sm:text-[80px]">
-              {countdown ? String(countdown[key]).padStart(2, "0") : "--"}
-            </span>
-            <span className="mt-1 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-              {label}
-            </span>
+      <div className="mt-8 flex items-start justify-center gap-2 sm:gap-4">
+        {UNITS.map(({ key, label }, index) => (
+          <div key={key} className="flex items-start">
+            {index > 0 && (
+              <span
+                aria-hidden
+                className="font-display text-5xl font-bold text-primary/30 sm:text-[80px]"
+              >
+                :
+              </span>
+            )}
+            <div className="flex flex-col items-center">
+              <span className="font-display text-5xl font-bold tracking-tight tabular-nums text-primary sm:text-[80px]">
+                {countdown ? String(countdown[key]).padStart(2, "0") : "--"}
+              </span>
+              <span className="mt-1 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
+                {label}
+              </span>
+            </div>
           </div>
         ))}
       </div>

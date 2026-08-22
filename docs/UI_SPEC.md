@@ -1,13 +1,23 @@
 # UI Specification
 
 ## Screens
-1. **Login / Signup** — simple email + password form
+1. **Login / Signup** — Signup collects username, email, password, and confirm password
+   (client-side mismatch check before submitting); Login accepts a single "username or
+   email" field + password. Both screens show the logo mark next to the "Countdown"
+   wordmark.
 2. **Dashboard** (main page)
-   - Top nav: "Countdown" wordmark, **Personal**/**Group** tabs (1-person icon
-     / group icon, active tab underlined), Add Event, notifications, settings,
-     log out - shared with the Groups list screen (`Nav.tsx`); a specific
+   - Top nav: logo + "Countdown" wordmark, **Personal**/**Group** tabs (1-person
+     icon / group icon, active tab underlined), Add Event, notifications, settings,
+     account menu - shared with the Groups list screen (`Nav.tsx`); a specific
      group's own dashboard keeps its separate contextual header instead (see
      Group Dashboard below)
+   - Account menu: clicking the account icon (shows the signed-in user's avatar, or the
+     default silhouette if none is set) opens a small menu - **Edit profile** and **Log
+     out** - rather than signing out on the first click; shared by `Nav.tsx` and
+     `GroupNav.tsx`
+   - Edit Profile (modal, from the account menu): avatar preview + "Change avatar" file
+     picker, username field, Save/Cancel. A taken username is rejected with a validation
+     message; changing your username changes what you sign in with too (docs/PRD.md)
    - "Add Event" button/form (name + deadline datetime picker, optional
      "repeats weekly" toggle + day-of-week picker)
    - Hero Countdown Card (the nearest upcoming event)
@@ -22,14 +32,15 @@
 3. **Settings** — Discord Webhook URL input, "enable daily digest" toggle,
    "send test message" button
 4. **Groups** (`/groups`) — same top nav as the Dashboard (**Group** tab
-   active); list of groups the user belongs to (name + "N/10" member count),
-   "Create Group" (name -> shows the generated invite code with a copy
-   button) and "Join Group" (invite code input) flows
+   active); list of groups the user belongs to (name, a small overlapping stack of a few
+   members' avatars, "N/10" member count), "Create Group" (name -> shows the generated
+   invite code with a copy button) and "Join Group" (invite code input) flows
 5. **Group Dashboard** (`/groups/[groupId]`) — same layout as the personal
    Dashboard (Hero Card, Timeline, Recurring section), scoped to one group's
    events; event cards are **not** expandable here (no Todo Checklist yet -
-   Milestone 3). A "Group Settings" area (modal): invite code + copy button,
-   member count, and the same Discord webhook controls as personal Settings
+   Milestone 3). A "Group Settings" area (modal): invite code + copy button, a member
+   roster (avatar + username per member, so anyone can see who else is in the group),
+   and the same Discord webhook controls as personal Settings
 
 ## Hero Countdown Card (nearest event)
 - Large, visually prominent card pinned at the top of the dashboard
@@ -91,12 +102,18 @@
   bottom to add a new item
 - Personal only — not shared with anyone, at this milestone
 
-## Settings
-- Discord Webhook URL — text input, optional
+## Settings (personal and Group Settings alike)
+- Discord Webhook URL — text input, optional. If one is already saved, the field starts
+  **empty** and shows the saved URL as its placeholder instead - a signal that this
+  channel/user already has a webhook configured, without displaying it in plain text to
+  everyone who opens the page (relevant for Group Settings especially, since any member can
+  open it). Typing a new value and saving replaces it; leaving the field blank and saving
+  leaves the existing webhook untouched (it is **not** the same as clearing it). A small
+  "Remove webhook" link appears under the field (only when one is saved and the input is
+  empty) for actually clearing it.
 - "Enable daily digest" toggle
-- "Send test message" button — posts a sample message to the URL currently
-  in the field immediately (doesn't require Save first), so a user can
-  verify it before committing
+- "Send test message" button — uses whatever's currently in the field, or the already-saved
+  webhook if the field is empty; posts immediately, doesn't require Save first
 - Save persists the URL + toggle; an obviously-malformed webhook URL is
   rejected with a validation message before any network call
 

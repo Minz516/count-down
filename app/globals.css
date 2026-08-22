@@ -67,6 +67,10 @@
   --font-body: var(--font-manrope);
   --font-mono: var(--font-jetbrains-mono);
 
+  /* THEME.md documents a DEFAULT: 0.5rem (8px) tier for buttons/inputs, distinct
+     from --radius-sm - without it, bare `rounded` (used on every button/input/
+     icon-button app-wide) silently fell back to Tailwind's own stock 0.25rem. */
+  --radius: 0.5rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;

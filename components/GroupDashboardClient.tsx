@@ -15,7 +15,7 @@ import { EmptyState } from "./EmptyState";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
-import type { GroupRecord, GroupSettings } from "@/modules/groups/groups.interface";
+import type { GroupRecord, GroupMemberRecord, GroupSettings } from "@/modules/groups/groups.interface";
 import type { EventInput, EventRecord } from "@/types/event";
 
 interface GroupDashboardClientProps {
@@ -24,6 +24,7 @@ interface GroupDashboardClientProps {
   initialRecurringEvents: EventRecord[];
   initialNearestEvent: EventRecord | null;
   initialSettings: GroupSettings | null;
+  initialMembers: GroupMemberRecord[];
 }
 
 type ModalState =
@@ -45,6 +46,7 @@ export function GroupDashboardClient({
   initialRecurringEvents,
   initialNearestEvent,
   initialSettings,
+  initialMembers,
 }: GroupDashboardClientProps) {
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
@@ -153,6 +155,7 @@ export function GroupDashboardClient({
             key="group-settings"
             group={group}
             initialSettings={initialSettings}
+            initialMembers={initialMembers}
             onClose={() => setSettingsOpen(false)}
           />
         )}

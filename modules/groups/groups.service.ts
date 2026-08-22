@@ -1,15 +1,50 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { groupsRepository } from "./groups.repository";
+import { profilesInterface } from "@/modules/profiles/profiles.interface";
 import { ValidationError } from "@/modules/shared/errors";
-import type { GroupRecord } from "@/types/group";
+import type { GroupRecord, GroupMemberRecord } from "@/types/group";
+
+const PREVIEW_AVATAR_COUNT = 4;
+
+/** Fills in each group's `preview_avatars` from `group_members`/`profiles` - a repository
+ * method only ever touches its own table, so the cross-table (and cross-module, for
+ * `profiles`) composition lives here instead (docs/ARCHITECTURE_DESIGN.md §2.3). */
+async function attachPreviewAvatars(supabase: SupabaseClient, groups: GroupRecord[]): Promise<GroupRecord[]> {
+  if (groups.length === 0) return groups;
+
+  const memberRows = await groupsRepository.listMemberRowsForGroups(
+    supabase,
+    groups.map((group) => group.id),
+  );
+  const profileMap = await profilesInterface.getProfilesByIds(
+    supabase,
+    Array.from(new Set(memberRows.map((row) => row.user_id))),
+  );
+
+  const rowsByGroup: Record<string, typeof memberRows> = {};
+  for (const row of memberRows) {
+    (rowsByGroup[row.group_id] ??= []).push(row);
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    preview_avatars: (rowsByGroup[group.id] ?? [])
+      .slice(0, PREVIEW_AVATAR_COUNT)
+      .map((row) => profileMap.get(row.user_id)?.avatar_url ?? null),
+  }));
+}
 
 export const groupsService = {
-  listGroupsForUser(supabase: SupabaseClient): Promise<GroupRecord[]> {
-    return groupsRepository.listForUser(supabase);
+  async listGroupsForUser(supabase: SupabaseClient): Promise<GroupRecord[]> {
+    const groups = await groupsRepository.listForUser(supabase);
+    return attachPreviewAvatars(supabase, groups);
   },
 
-  getGroup(supabase: SupabaseClient, groupId: string): Promise<GroupRecord | null> {
-    return groupsRepository.getById(supabase, groupId);
+  async getGroup(supabase: SupabaseClient, groupId: string): Promise<GroupRecord | null> {
+    const group = await groupsRepository.getById(supabase, groupId);
+    if (!group) return null;
+    const [withPreview] = await attachPreviewAvatars(supabase, [group]);
+    return withPreview;
   },
 
   createGroup(supabase: SupabaseClient, name: string): Promise<GroupRecord> {
@@ -44,5 +79,25 @@ export const groupsService = {
       }
       throw err;
     }
+  },
+
+  /** A group's member roster (docs/UI_SPEC.md "Group Dashboard" - Members) - a member with
+   * no `profiles` row (pre-existing account) still appears, just with `username: null`. */
+  async listGroupMembers(supabase: SupabaseClient, groupId: string): Promise<GroupMemberRecord[]> {
+    const rows = await groupsRepository.listMemberRows(supabase, groupId);
+    const profileMap = await profilesInterface.getProfilesByIds(
+      supabase,
+      rows.map((row) => row.user_id),
+    );
+
+    return rows.map((row) => {
+      const profile = profileMap.get(row.user_id);
+      return {
+        user_id: row.user_id,
+        username: profile?.username ?? null,
+        avatar_url: profile?.avatar_url ?? null,
+        joined_at: row.joined_at,
+      };
+    });
   },
 };

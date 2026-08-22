@@ -1,12 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Bell, Gear, Plus, User, UserCircle, UsersThree } from "@phosphor-icons/react/ssr";
+import { usePathname } from "next/navigation";
+import { Bell, Gear, Plus, User, UsersThree } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
-import { createClient } from "@/lib/supabase/client";
-import { authInterface } from "@/modules/auth/auth.interface";
 import { Button } from "./Button";
+import { UserMenu } from "./UserMenu";
 
 interface NavProps {
   /** Omitted on screens with no "add event" action (e.g. the Groups list) - hides the button entirely. */
@@ -24,20 +24,15 @@ const TABS = [
  * its separate `GroupNav` instead (a drill-down view, not a top-level tab).
  */
 export function Nav({ onAddEvent }: NavProps) {
-  const router = useRouter();
   const pathname = usePathname();
-
-  async function handleLogout() {
-    const supabase = createClient();
-    await authInterface.signOut(supabase);
-    router.push("/login");
-    router.refresh();
-  }
 
   return (
     <header className="flex h-16 items-center justify-between gap-4 border-b border-primary-container/10 px-4 sm:px-12">
       <div className="flex items-center gap-6 sm:gap-10">
-        <span className="font-display text-lg font-semibold text-on-surface">Countdown</span>
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
+          <span className="font-display text-lg font-semibold text-on-surface">Countdown</span>
+        </div>
 
         <nav className="flex items-center gap-1 sm:gap-2">
           {TABS.map(({ href, label, icon: Icon, isActive }) => {
@@ -92,14 +87,7 @@ export function Nav({ onAddEvent }: NavProps) {
         >
           <Gear size={20} />
         </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
-          aria-label="Log out"
-          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
-        >
-          <UserCircle size={22} />
-        </button>
+        <UserMenu />
       </div>
     </header>
   );

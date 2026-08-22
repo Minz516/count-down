@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Gear, Plus, UserCircle } from "@phosphor-icons/react/ssr";
-import { createClient } from "@/lib/supabase/client";
-import { authInterface } from "@/modules/auth/auth.interface";
+import { ArrowLeft, Gear, Plus } from "@phosphor-icons/react/ssr";
 import { Button } from "./Button";
+import { UserMenu } from "./UserMenu";
 
 interface GroupNavProps {
   groupName: string;
@@ -16,15 +14,6 @@ interface GroupNavProps {
 
 /** Group Dashboard's header - same building blocks as Nav.tsx, scoped to one group instead of the personal dashboard. */
 export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }: GroupNavProps) {
-  const router = useRouter();
-
-  async function handleLogout() {
-    const supabase = createClient();
-    await authInterface.signOut(supabase);
-    router.push("/login");
-    router.refresh();
-  }
-
   return (
     <header className="flex h-16 items-center justify-between gap-3 border-b border-primary-container/10 px-4 sm:px-12">
       <div className="flex min-w-0 items-center gap-3">
@@ -64,14 +53,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
         >
           <Gear size={20} />
         </button>
-        <button
-          type="button"
-          onClick={handleLogout}
-          aria-label="Log out"
-          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
-        >
-          <UserCircle size={22} />
-        </button>
+        <UserMenu />
       </div>
     </header>
   );

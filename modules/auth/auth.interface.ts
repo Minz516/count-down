@@ -1,5 +1,6 @@
 /**
  * The public contract for the `auth` module. Pages and components import from
- * here only - never from auth.repository.ts directly.
+ * here only - never from auth.repository.ts or auth.service.ts directly.
  */
-export { authRepository as authInterface } from "./auth.repository";
+export { authService as authInterface } from "./auth.service";
+export type { SignUpInput } from "./auth.service";

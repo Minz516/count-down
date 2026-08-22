@@ -18,10 +18,11 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
     redirect("/login");
   }
 
-  const [group, { timeline, recurring, nearestEvent }, settings] = await Promise.all([
+  const [group, { timeline, recurring, nearestEvent }, settings, members] = await Promise.all([
     groupsInterface.getGroup(supabase, groupId),
     eventsInterface.getGroupDashboardData(supabase, groupId),
     groupSettingsInterface.getSettings(supabase, groupId),
+    groupsInterface.listGroupMembers(supabase, groupId),
   ]);
 
   // RLS returns no row both when the group doesn't exist and when the
@@ -48,6 +49,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
       initialRecurringEvents={recurring}
       initialNearestEvent={nearestEvent}
       initialSettings={settings}
+      initialMembers={members}
     />
   );
 }

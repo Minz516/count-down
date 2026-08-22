@@ -54,5 +54,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Excludes any path with a file extension (favicon.ico, logo.png, and any
+  // other static asset under public/), not just the one file we happened to
+  // have when this was first written - a request for a public asset should
+  // never get redirected to /login just because the visitor isn't signed in.
+  matcher: ["/((?!_next/static|_next/image|.*\\..*).*)"],
 };

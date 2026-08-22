@@ -248,3 +248,108 @@ begin
   return v_group;
 end;
 $$;
+
+-- Username support (docs/ARCHITECTURE.md "Auth Flow"). auth.users can't be extended with
+-- custom columns, so username lives in its own table, populated automatically at signup -
+-- not via a client insert - by the trigger below.
+create table if not exists public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  username text not null unique,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+-- Select-only: no insert/update/delete policy, since a profile is only ever created by
+-- handle_new_user() below, not a client insert.
+create policy "Users can view their own profile" on public.profiles
+  for select using (auth.uid() = id);
+
+-- Fires once per new auth.users row and copies the username passed at signup
+-- (`supabase.auth.signUp({ options: { data: { username } } })`) into profiles.
+-- security definer so it can write to profiles despite that table having no
+-- insert policy of its own.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  begin
+    insert into public.profiles (id, username) values (new.id, new.raw_user_meta_data ->> 'username');
+  exception when unique_violation then
+    raise exception 'Username already taken';
+  end;
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+-- Resolves a username to its email so "sign in with username or email" can call
+-- Supabase's email-only signInWithPassword either way. Must be callable while
+-- unauthenticated (that's the whole point - this runs before sign-in), hence the
+-- explicit grant below rather than relying on default privileges.
+create or replace function public.get_email_for_username(p_username text)
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select email from auth.users where id = (
+    select id from public.profiles where username = p_username
+  );
+$$;
+
+grant execute on function public.get_email_for_username(text) to anon, authenticated;
+
+-- Profile editing (avatar + username) and cross-member visibility
+-- (docs/ARCHITECTURE.md "Group Countdown" - member list, group card avatar previews).
+
+alter table public.profiles add column if not exists avatar_url text;
+
+-- New - a user may now edit their own profile (username/avatar), not just have it
+-- populated by handle_new_user() at signup.
+create policy "Users can update their own profile" on public.profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+-- New, added alongside (not replacing) the self-only select policy above - Postgres
+-- OR-combines multiple permissive policies for the same command, so a profile is now
+-- visible either to its own owner or to a fellow member of any group they share, which
+-- is what lets the group member list / group card avatar previews below actually work.
+create policy "Users can view fellow group members' profiles" on public.profiles
+  for select using (
+    exists (
+      select 1 from public.group_members gm1
+      join public.group_members gm2 on gm1.group_id = gm2.group_id
+      where gm1.user_id = auth.uid() and gm2.user_id = profiles.id
+    )
+  );
+
+-- Avatar images live in Storage, not a table - public read (avatars aren't sensitive),
+-- writes restricted to each user's own folder (docs/ARCHITECTURE.md "Auth Flow").
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+create policy "Avatar images are publicly readable" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+create policy "Users can upload their own avatar" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can replace their own avatar" on storage.objects
+  for update using (
+    bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Users can delete their own avatar" on storage.objects
+  for delete using (
+    bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text
+  );

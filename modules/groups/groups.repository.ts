@@ -28,10 +28,19 @@ function toGroupRecord(row: GroupRow): GroupRecord {
     created_by: row.created_by,
     created_at: row.created_at,
     member_count: row.member_count[0]?.count ?? 0,
+    // Filled in by groups.service.ts's attachPreviewAvatars() - repository
+    // methods only touch the `groups` table, not `profiles` too.
+    preview_avatars: [],
   };
 }
 
 const GROUP_SELECT_WITH_MEMBER_COUNT = "*, member_count:group_members(count)";
+
+interface MemberRow {
+  group_id: string;
+  user_id: string;
+  joined_at: string;
+}
 
 export const groupsRepository = {
   /** RLS already scopes `groups` to rows the caller is a member of - no extra filter needed. */
@@ -73,5 +82,32 @@ export const groupsRepository = {
     const group = await groupsRepository.getById(supabase, (data as { id: string }).id);
     if (!group) throw new DatabaseError("Joined the group but couldn't load it back.");
     return group;
+  },
+
+  /** Raw membership rows (no profile data) for one group, oldest-joined first. */
+  async listMemberRows(supabase: SupabaseClient, groupId: string): Promise<MemberRow[]> {
+    const { data, error } = await supabase
+      .from("group_members")
+      .select("group_id, user_id, joined_at")
+      .eq("group_id", groupId)
+      .order("joined_at", { ascending: true });
+
+    if (error) throw new DatabaseError(error.message);
+    return (data ?? []) as MemberRow[];
+  },
+
+  /** Same as above but batched across every group in `groupIds` in one query - used to
+   * build each group's avatar preview without a per-card round trip. */
+  async listMemberRowsForGroups(supabase: SupabaseClient, groupIds: string[]): Promise<MemberRow[]> {
+    if (groupIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from("group_members")
+      .select("group_id, user_id, joined_at")
+      .in("group_id", groupIds)
+      .order("joined_at", { ascending: true });
+
+    if (error) throw new DatabaseError(error.message);
+    return (data ?? []) as MemberRow[];
   },
 };

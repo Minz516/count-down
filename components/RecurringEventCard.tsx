@@ -35,12 +35,26 @@ export function RecurringEventCard({
   return (
     // Dashed border distinguishes recurring cards from the Timeline's solid-border rows (docs/UI_SPEC.md).
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
-    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
+    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist"). Keyboard-
+    // operable too (role/tabIndex/onKeyDown + a visible focus ring), not mouse-only.
     <div
       onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
+      onKeyDown={
+        showChecklist
+          ? (keyEvent) => {
+              if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+                keyEvent.preventDefault();
+                setChecklistExpanded((value) => !value);
+              }
+            }
+          : undefined
+      }
+      role={showChecklist ? "button" : undefined}
+      tabIndex={showChecklist ? 0 : undefined}
+      aria-expanded={showChecklist ? checklistExpanded : undefined}
       className={clsx(
         "flex flex-col rounded-lg border border-dashed border-primary-container/30 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated",
-        showChecklist && "cursor-pointer",
+        showChecklist && "cursor-pointer focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2",
       )}
     >
       <div className="flex items-center gap-3 px-5 py-4">

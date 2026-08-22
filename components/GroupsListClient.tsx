@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Plus, UsersThree } from "@phosphor-icons/react/ssr";
+import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
 import { groupsInterface } from "@/modules/groups/groups.interface";
@@ -189,9 +190,24 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
                 <span className="truncate font-body text-base font-semibold text-on-surface">
                   {group.name}
                 </span>
-                <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
-                  {group.member_count} / 10
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  {group.preview_avatars.length > 0 && (
+                    <div className="flex items-center -space-x-2">
+                      {group.preview_avatars.map((avatarUrl, index) => (
+                        <Avatar
+                          key={index}
+                          src={avatarUrl}
+                          alt=""
+                          size={22}
+                          className="border-2 border-surface-container"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
+                    {group.member_count} / 10
+                  </span>
+                </div>
               </Link>
             </li>
           ))}

@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Implemented: Next.js App Router + TypeScript + Tailwind v4, Supabase Auth + Postgres.
 Auth, events CRUD, the Hero Card, the unified Timeline, the recurring section, the per-event
-todo checklist, the Settings page (Discord webhook + digest), and Group Countdown (shared
+todo checklist, the Settings page (Discord webhook + digest), Group Countdown (shared
 groups with an invite code, a group dashboard reusing the personal one's UI, and a group's
-own Discord digest) are all built. The daily Discord digest's Edge Function
+own Discord digest), username-based auth (username + confirm-password at signup, sign in by
+username or email), and profile editing (username + avatar upload, a group member roster,
+and avatar previews on the Groups list) are all built. The daily Discord digest's Edge Function
 (`supabase/functions/daily-digest/`) is written but not yet deployed/scheduled - that's a
 manual step, same as the SQL files below. The docs below are still the source of truth for
 product/behavioral decisions - code comments point back to them rather than restating
@@ -44,8 +46,10 @@ throws on every request since it needs a Supabase client to check the session.
 
 Database setup is not part of `npm run` anything - run `supabase/schema.sql` (tables + RLS
 policies for `events`, `todos`, `user_settings`, `groups`, `group_members`,
-`group_settings`, plus the `create_group`/`join_group_by_code` functions and the member-cap
-trigger) directly in the Supabase SQL editor. `supabase/cleanup_and_rollover.sql` defines the
+`group_settings`, `profiles` (including its `avatar_url` column and cross-member visibility
+policy), plus the `create_group`/`join_group_by_code`/`get_email_for_username` functions, the
+`handle_new_user` signup trigger, the member-cap trigger, and the `avatars` Storage bucket +
+its 4 policies) directly in the Supabase SQL editor. `supabase/cleanup_and_rollover.sql` defines the
 `cleanup_and_roll_events()` function (no longer self-schedules via `pg_cron` - see the
 file's own comment); deploy and schedule `supabase/functions/daily-digest/` (a Supabase Edge
 Function, `supabase functions deploy daily-digest` - no secret to set up, `SUPABASE_SERVICE_ROLE_KEY`
@@ -63,9 +67,10 @@ and group Discord digests.
   `modules/events/` and `modules/auth/`, each exposing a narrow `*.interface.ts` - that's
   the only file in a module pages/components may import. `events.repository.ts` is the only
   file that calls `supabase.from("events")`; `auth.repository.ts` is the only file that
-  calls `supabase.auth.*`. Repository → service → interface, one direction, per module -
-  though `auth/` has no service file since it's a passthrough with no business logic beyond
-  what Supabase Auth already does; `auth.interface.ts` re-exports `authRepository` directly.
+  calls `supabase.auth.*`/`supabase.rpc("get_email_for_username", ...)`. Repository →
+  service → interface, one direction, per module - `auth/` now has a real `auth.service.ts`
+  (username/confirm-password validation, username-or-email sign-in resolution - see the
+  bullet below), no longer a passthrough; `auth.interface.ts` re-exports `authService`.
   See `docs/ARCHITECTURE_MONOLITH.md` for the full mapping (what was adopted from
   `docs/ARCHITECTURE_DESIGN.md` vs. deliberately skipped, e.g. no REST/WebSocket layer -
   there's no separate backend process to put one in front of). **Adding a new entity means
@@ -74,7 +79,9 @@ and group Discord digests.
   interface shape for the `todos` and `user_settings` tables. `modules/groups/` follows it
   too, for `groups`/`group_members` (`groups.repository.ts`/`.service.ts`) and
   `group_settings` (`group-settings.repository.ts`/`.service.ts`), both re-exported from one
-  `groups.interface.ts`.
+  `groups.interface.ts`. `modules/profiles/` is the only place that touches
+  `supabase.from("profiles")` **or** `supabase.storage.from("avatars")` - both are this
+  module's data sources, not just the table.
 - **`events` has two ownership scopes, not two modules:** a group event is still just a row
   in `events` with `group_id` set (personal: `group_id is null`). Rather than forking the
   entity, `events.repository.ts`/`events.service.ts` grew group-scoped siblings
@@ -166,6 +173,14 @@ and group Discord digests.
   updates local state directly. This is deliberate, not an inconsistency to fix - todos don't
   affect sort order, urgency, or anything else on the page (docs/PRD.md), so a full-page
   refresh would only cost a flash and lost expand/collapse state for no benefit.
+- **`SettingsForm.tsx`/`GroupSettingsModal.tsx`'s webhook field starts empty even when one is
+  already saved** - the saved URL is shown via the input's `placeholder`, not pre-filled as
+  its `value`, so it isn't sitting in plain text for anyone who opens the page/modal
+  (especially relevant for a group's shared settings). Consequence: a blank field on submit
+  means "unchanged," **not** "clear it" - `effectiveWebhookUrl` (`trimmedInput ||
+  savedWebhookUrl`) is what actually gets saved/tested, and clearing the webhook needs the
+  explicit "Remove webhook" link. If you touch this form again, keep that distinction - don't
+  "simplify" it back to submitting the raw input value directly.
 - **The Group Dashboard reuses Timeline/EventListItem/RecurringEventCard/PastEventCard
   unchanged**, via an optional `showChecklist` prop (default `true`) threaded down to each -
   `GroupDashboardClient.tsx` is the only caller that passes `false`, since group event cards
@@ -194,6 +209,51 @@ and group Discord digests.
   (`event.target.value`) on blur rather than the closed-over state, since an auto-advance
   `.focus()` call fires the next field's blur synchronously, one keystroke ahead of when React
   commits that keystroke's state (see the comment in `DateField.tsx` and `docs/DESIGN.md` §8.5).
+- **Username is a separate `public.profiles` table, not a column on `auth.users`** (which
+  can't be extended): populated automatically by a `handle_new_user()` trigger reading
+  `raw_user_meta_data->>'username'` set at signup - never a client insert (`profiles` has no
+  insert policy). "Sign in with username or email" resolves a username to its email via the
+  `get_email_for_username()` function (`security definer`, granted to `anon` since it must
+  run *before* the caller is authenticated) before ever calling `signInWithPassword`, which
+  Supabase only ever accepts an email for. Pre-existing accounts (created before this
+  feature) have no `profiles` row and simply keep signing in by email - no migration needed.
+- **`UserMenu.tsx` is the one shared logout control** for both `Nav.tsx` and `GroupNav.tsx` -
+  clicking the account icon opens a small menu (click-outside/Escape to close) rather than
+  signing out immediately on the first click; don't reintroduce a direct
+  `authInterface.signOut` call in either nav, extend this component instead. It's also
+  self-sufficient rather than prop-driven: it fetches the current user's profile itself on
+  mount (rendering `<Avatar>` as its own trigger button) and owns `EditProfileModal` - that's
+  *why* both navs can keep rendering `<UserMenu />` with zero props even though it now shows
+  per-user data.
+- **`components/Avatar.tsx` is the one avatar renderer** (falls back to
+  `/default-avatar.png` when `src` is null) - used by `UserMenu`, the group member roster in
+  `GroupSettingsModal.tsx`, and the facepile on `GroupsListClient.tsx`'s cards. Don't
+  hand-roll another `<Image>`-with-fallback for a person's picture anywhere else.
+- **A group's avatar data (member roster, card facepile) is composed in `groups.service.ts`,
+  not `groups.repository.ts`**: `groups.repository.ts` only ever touches the `groups`/
+  `group_members` tables (per the "one repository, one table" rule), so joining that against
+  `profiles` - a different module - happens in the service via
+  `profilesInterface.getProfilesByIds()`. There's deliberately no foreign key from
+  `group_members.user_id` to `profiles.id` for this (it's still keyed off `auth.users`) -
+  that FK would break for any member who joined before `profiles` existed. A member with no
+  profile row renders with `username: null`/no avatar instead of crashing - keep that
+  fallback if you touch this path.
+- **Avatar images are served from Supabase Storage, not `public/`** - `next/image` requires
+  remote hostnames to be explicitly allow-listed, so `next.config.ts` derives the Supabase
+  project's own hostname from `NEXT_PUBLIC_SUPABASE_URL` and adds it to `images.remotePatterns`
+  (scoped to `/storage/v1/object/public/**`). If avatar images ever 400 in production with an
+  "Invalid src prop... hostname not configured" error, check this config first.
+- **`proxy.ts`'s middleware matcher excludes any path with a file extension** (`.*\\..*`), not
+  just `_next/static`/`_next/image`/`favicon.ico` by name - a request for any static asset
+  under `public/` (the logo, `default-avatar.png`, anything added later) must never get
+  redirected to `/login` just because the visitor isn't signed in. If a new public asset
+  seems to fail to load, this matcher is the first thing to check, not the asset itself.
+- **`app/globals.css`'s `@theme inline` block defines a bare `--radius` (0.5rem/8px)
+  alongside `--radius-sm/md/lg/xl`** - without it, Tailwind's bare `rounded` utility (used on
+  nearly every button/input/icon-button in the app) silently falls back to Tailwind's own
+  stock 0.25rem instead of this project's documented 8px base radius (`.claude/skills/THEME.md`'s
+  `rounded.DEFAULT`). If radii ever look inconsistent again, check this token first before
+  touching individual component classes.
 
 ## `proxy.ts`, not `middleware.ts`
 

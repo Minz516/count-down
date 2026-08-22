@@ -26,6 +26,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded px-4 py-2",
         "font-body text-sm font-medium transition-[transform,background-color,border-color] duration-150",
         "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+        "focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2",
         VARIANT_CLASSES[variant],
         className,
       )}

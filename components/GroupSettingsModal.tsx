@@ -3,14 +3,16 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { Check, Copy, X } from "@phosphor-icons/react/ssr";
+import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
 import { groupSettingsInterface } from "@/modules/groups/groups.interface";
-import type { GroupRecord, GroupSettings } from "@/types/group";
+import type { GroupRecord, GroupMemberRecord, GroupSettings } from "@/types/group";
 
 interface GroupSettingsModalProps {
   group: GroupRecord;
   initialSettings: GroupSettings | null;
+  initialMembers: GroupMemberRecord[];
   onClose: () => void;
 }
 
@@ -22,14 +24,33 @@ const inputClass =
  * "Group Settings") - a modal rather than a separate route/tab, since the spec allows either
  * and this avoids a new page for what's a small, single-purpose panel.
  */
-export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSettingsModalProps) {
+export function GroupSettingsModal({
+  group,
+  initialSettings,
+  initialMembers,
+  onClose,
+}: GroupSettingsModalProps) {
   const [copied, setCopied] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState(initialSettings?.discord_webhook_url ?? "");
+
+  // Tracked in state (not read straight from the prop each render) so the
+  // placeholder reflects a webhook just saved this session too, not only
+  // what the modal originally opened with.
+  const [savedWebhookUrl, setSavedWebhookUrl] = useState(initialSettings?.discord_webhook_url ?? null);
+
+  // Starts empty even when a webhook is already saved - the saved URL is
+  // surfaced via the placeholder instead (see below), not pre-filled as an
+  // editable value visible to every member who opens this modal. Left blank
+  // on save, the existing value is kept as-is (see handleSave) - it's not
+  // the same as clearing it.
+  const [webhookInput, setWebhookInput] = useState("");
   const [digestEnabled, setDigestEnabled] = useState(initialSettings?.digest_enabled ?? true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const trimmedInput = webhookInput.trim();
+  const effectiveWebhookUrl = trimmedInput || savedWebhookUrl;
 
   async function handleCopy() {
     await navigator.clipboard.writeText(group.invite_code);
@@ -46,10 +67,33 @@ export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSet
     try {
       const supabase = createClient();
       await groupSettingsInterface.saveSettings(supabase, group.id, {
-        discord_webhook_url: webhookUrl.trim() || null,
+        discord_webhook_url: effectiveWebhookUrl,
         digest_enabled: digestEnabled,
       });
+      setSavedWebhookUrl(effectiveWebhookUrl);
+      setWebhookInput("");
       setMessage("Settings saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRemoveWebhook() {
+    setError(null);
+    setMessage(null);
+    setSaving(true);
+
+    try {
+      const supabase = createClient();
+      await groupSettingsInterface.saveSettings(supabase, group.id, {
+        discord_webhook_url: null,
+        digest_enabled: digestEnabled,
+      });
+      setSavedWebhookUrl(null);
+      setWebhookInput("");
+      setMessage("Webhook removed.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -63,7 +107,7 @@ export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSet
     setTesting(true);
 
     try {
-      await groupSettingsInterface.sendTestMessage(webhookUrl.trim() || null);
+      await groupSettingsInterface.sendTestMessage(effectiveWebhookUrl);
       setMessage("Test message sent - check the group's Discord channel.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't send the test message.");
@@ -114,9 +158,21 @@ export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSet
             </button>
           </div>
 
-          <p className="font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-            {group.member_count} / 10 thành viên
-          </p>
+          <div>
+            <p className="font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
+              {group.member_count} / 10 thành viên
+            </p>
+            <ul className="mt-2 flex max-h-48 flex-col gap-2 overflow-y-auto">
+              {initialMembers.map((member) => (
+                <li key={member.user_id} className="flex items-center gap-2.5">
+                  <Avatar src={member.avatar_url} alt="" size={24} />
+                  <span className="truncate font-body text-sm text-on-surface">
+                    {member.username ?? "Unnamed member"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <form onSubmit={handleSave} className="mt-6 flex flex-col gap-4 border-t border-primary-container/10 pt-6">
@@ -133,11 +189,21 @@ export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSet
             </span>
             <input
               type="url"
-              value={webhookUrl}
-              onChange={(inputEvent) => setWebhookUrl(inputEvent.target.value)}
-              placeholder="https://discord.com/api/webhooks/..."
+              value={webhookInput}
+              onChange={(inputEvent) => setWebhookInput(inputEvent.target.value)}
+              placeholder={savedWebhookUrl ?? "https://discord.com/api/webhooks/..."}
               className={inputClass}
             />
+            {savedWebhookUrl && !trimmedInput && (
+              <button
+                type="button"
+                onClick={handleRemoveWebhook}
+                disabled={saving}
+                className="self-start font-body text-xs text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
+              >
+                Remove webhook
+              </button>
+            )}
           </label>
 
           <label className="flex items-center gap-2 font-body text-sm text-on-surface">
@@ -157,7 +223,7 @@ export function GroupSettingsModal({ group, initialSettings, onClose }: GroupSet
             <Button
               type="button"
               variant="ghost"
-              disabled={!webhookUrl.trim() || testing}
+              disabled={!effectiveWebhookUrl || testing}
               onClick={handleTestMessage}
             >
               {testing ? "Sending..." : "Send test message"}

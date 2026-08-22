@@ -27,12 +27,26 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
 
   return (
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
-    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
+    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist"). Keyboard-
+    // operable too (role/tabIndex/onKeyDown + a visible focus ring), not mouse-only.
     <div
       onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
+      onKeyDown={
+        showChecklist
+          ? (keyEvent) => {
+              if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+                keyEvent.preventDefault();
+                setChecklistExpanded((value) => !value);
+              }
+            }
+          : undefined
+      }
+      role={showChecklist ? "button" : undefined}
+      tabIndex={showChecklist ? 0 : undefined}
+      aria-expanded={showChecklist ? checklistExpanded : undefined}
       className={clsx(
         "flex flex-col rounded border border-transparent bg-surface-container-lowest opacity-70 grayscale transition-opacity hover:opacity-100",
-        showChecklist && "cursor-pointer",
+        showChecklist && "cursor-pointer focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2",
       )}
     >
       <div className="flex items-center gap-3 px-3 py-2">
