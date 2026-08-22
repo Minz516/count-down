@@ -3,13 +3,30 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Envelope, Eye, EyeSlash, LockKey, User } from "@phosphor-icons/react/ssr";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  DiscordLogo,
+  Envelope,
+  Eye,
+  EyeSlash,
+  FacebookLogo,
+  GithubLogo,
+  GoogleLogo,
+  LockKey,
+  User,
+} from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { authInterface } from "@/modules/auth/auth.interface";
+import { authInterface, type OAuthProvider } from "@/modules/auth/auth.interface";
 import { PASSWORD_REQUIREMENTS } from "@/lib/passwordStrength";
 import { Button } from "./Button";
+
+const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: React.ReactNode }[] = [
+  { provider: "google", label: "Google", icon: <GoogleLogo size={18} /> },
+  { provider: "facebook", label: "Facebook", icon: <FacebookLogo size={18} /> },
+  { provider: "discord", label: "Discord", icon: <DiscordLogo size={18} /> },
+  { provider: "github", label: "GitHub", icon: <GithubLogo size={18} /> },
+];
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -131,6 +148,7 @@ function PasswordRequirementsList({ password }: { password: string }) {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const copy = COPY[mode];
 
   const [username, setUsername] = useState("");
@@ -138,7 +156,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState(""); // signup only
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Seeded from app/auth/callback/route.ts's ?error=oauth_failed redirect - a plain useState
+  // initializer (not an effect) since it only needs to reflect the URL once, on mount.
+  const [error, setError] = useState<string | null>(() =>
+    searchParams.get("error") === "oauth_failed" ? "That didn't work - please try again." : null,
+  );
   const [submitting, setSubmitting] = useState(false);
   // Set instead of redirecting when Supabase Auth's "Confirm email" setting is on
   // (docs/PRODUCTION_READINESS_CHECKLIST.md §3) - signUp() then returns no session until
@@ -179,6 +201,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     router.refresh();
   }
 
+  async function handleOAuth(provider: OAuthProvider) {
+    setError(null);
+    const supabase = createClient();
+    try {
+      // Navigates the browser away to the provider's consent screen on success - no
+      // further redirect/loading-state handling needed here.
+      await authInterface.signInWithOAuth(supabase, provider, `${window.location.origin}/auth/callback`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  }
+
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-4">
       <div className="mb-8 flex flex-col items-center text-center">
@@ -214,6 +248,27 @@ export function AuthForm({ mode }: AuthFormProps) {
           <>
             <h2 className="font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
             <p className="mt-1 font-body text-sm text-text-muted">{copy.subtitle}</p>
+
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              {OAUTH_PROVIDERS.map(({ provider, label, icon }) => (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleOAuth(provider)}
+                  className="gap-1.5"
+                >
+                  {icon}
+                  {label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-outline-variant" />
+              <span className="font-mono text-xs text-text-muted uppercase">or</span>
+              <span className="h-px flex-1 bg-outline-variant" />
+            </div>
 
             <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {mode === "signup" && (

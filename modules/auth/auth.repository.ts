@@ -1,6 +1,8 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { AppError } from "@/modules/shared/errors";
 
+export type OAuthProvider = "google" | "facebook" | "discord" | "github";
+
 /**
  * All Supabase Auth calls live here - nothing outside this module calls
  * `supabase.auth.*` or `supabase.rpc("get_email_for_username", ...)` directly.
@@ -26,6 +28,13 @@ export const authRepository = {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
     if (error) throw new AppError("auth_failed", error.message);
     return { hasSession: data.session !== null };
+  },
+
+  /** Browser-only: supabase-js navigates the page to the provider's consent screen itself
+   * (window.location.assign) once this resolves without error - no manual redirect needed. */
+  async signInWithOAuth(supabase: SupabaseClient, provider: OAuthProvider, redirectTo: string): Promise<void> {
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
+    if (error) throw new AppError("auth_failed", error.message);
   },
 
   async signOut(supabase: SupabaseClient): Promise<void> {

@@ -4,3 +4,4 @@
  */
 export { authService as authInterface } from "./auth.service";
 export type { SignUpInput } from "./auth.service";
+export type { OAuthProvider } from "./auth.repository";

@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const AUTH_ROUTES = ["/login", "/signup"];
+// "/auth/callback" is included so the OAuth code-exchange request (proxy.ts runs before
+// its Route Handler, at a point where no session exists yet) isn't redirected to /login
+// before it gets a chance to run (app/auth/callback/route.ts).
+const AUTH_ROUTES = ["/login", "/signup", "/auth/callback"];
 
 /**
  * Refreshes the Supabase session cookie on every request and redirects based on

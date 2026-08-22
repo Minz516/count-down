@@ -346,18 +346,61 @@ create policy "Users can view their own profile" on public.profiles
 -- (`supabase.auth.signUp({ options: { data: { username } } })`) into profiles.
 -- security definer so it can write to profiles despite that table having no
 -- insert policy of its own.
+-- OAuth sign-in (Google/Facebook/Discord/GitHub, docs/PRODUCTION_READINESS_CHECKLIST.md-era
+-- addition) doesn't collect a username the way AuthForm.tsx's signup form does, so this
+-- derives one automatically for that path while leaving the username/password path (which
+-- always sets raw_user_meta_data->>'username') untouched.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_username text;
+  v_base text;
+  v_suffix int := 0;
 begin
-  begin
-    insert into public.profiles (id, username) values (new.id, new.raw_user_meta_data ->> 'username');
-  exception when unique_violation then
-    raise exception 'Username already taken';
-  end;
+  v_username := new.raw_user_meta_data ->> 'username';
+
+  if v_username is not null then
+    -- A real, user-chosen username - a collision here is a genuine conflict, not
+    -- something to paper over.
+    begin
+      insert into public.profiles (id, username) values (new.id, v_username);
+    exception when unique_violation then
+      raise exception 'Username already taken';
+    end;
+    return new;
+  end if;
+
+  -- OAuth path: sanitize *each* candidate before coalescing (not after) - split_part()/->>
+  -- can return '' rather than null, which coalesce() would not skip, silently
+  -- short-circuiting the fallback chain to an empty string.
+  v_base := coalesce(
+    nullif(regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9_]', '', 'g'), ''),
+    nullif(regexp_replace(lower(new.raw_user_meta_data ->> 'user_name'), '[^a-z0-9_]', '', 'g'), ''),
+    nullif(regexp_replace(lower(new.raw_user_meta_data ->> 'preferred_username'), '[^a-z0-9_]', '', 'g'), ''),
+    nullif(regexp_replace(lower(new.raw_user_meta_data ->> 'name'), '[^a-z0-9_]', '', 'g'), ''),
+    'user'
+  );
+
+  v_username := v_base;
+  loop
+    begin
+      insert into public.profiles (id, username) values (new.id, v_username);
+      exit;
+    exception when unique_violation then
+      -- Auto-generated collision is expected/harmless - retry with a numeric suffix,
+      -- same loop-and-retry shape as create_group()'s invite_code collision handling.
+      v_suffix := v_suffix + 1;
+      if v_suffix > 1000 then
+        raise exception 'Could not generate a unique username';
+      end if;
+      v_username := v_base || v_suffix::text;
+    end;
+  end loop;
+
   return new;
 end;
 $$;

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { authRepository } from "./auth.repository";
+import { authRepository, type OAuthProvider } from "./auth.repository";
 import { ValidationError } from "@/modules/shared/errors";
 import { isPasswordStrong } from "@/lib/passwordStrength";
 
@@ -75,6 +75,12 @@ export const authService = {
     }
 
     await authRepository.signInWithPassword(supabase, email, password);
+  },
+
+  /** `redirectTo` is supplied by the caller rather than constructed here, keeping this
+   * module free of `window` references like the rest of it. */
+  signInWithOAuth(supabase: SupabaseClient, provider: OAuthProvider, redirectTo: string): Promise<void> {
+    return authRepository.signInWithOAuth(supabase, provider, redirectTo);
   },
 
   signOut(supabase: SupabaseClient): Promise<void> {
