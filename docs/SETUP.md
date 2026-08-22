@@ -106,6 +106,33 @@ creating a third-party account:
 Leaving all of these unset is fine - the app builds and runs identically
 either way (`docs/PRODUCTION_READINESS_CHECKLIST.md` §11).
 
+## 4c. Database Backups
+`.github/workflows/backup.yml` runs a weekly `pg_dump` (Sundays, 02:00 UTC) and
+uploads the result as a GitHub Actions artifact, kept 90 days - a supplement
+to whatever backup/retention Supabase's own plan provides, given free-tier
+retention is limited (`docs/PRODUCTION_READINESS_CHECKLIST.md` §12).
+
+**One-time setup:**
+1. Get the *direct* database connection string (not the pgbouncer/pooler
+   one): Supabase Dashboard > Project Settings > Database > Connection
+   string > URI (port 5432). Replace `[YOUR-PASSWORD]` in it with your actual
+   database password (same page, or reset it there if you don't have it)
+2. Add it as a GitHub repo secret: **Settings > Secrets and variables >
+   Actions > New repository secret**, name `SUPABASE_DB_URL`
+
+You can also trigger a backup on demand (e.g. right before a risky migration)
+via the Actions tab > Database Backup > **Run workflow**.
+
+**Test a restore at least once** (an untested backup is an assumption, not a
+guarantee) - download the artifact from a completed run, then locally:
+```bash
+# Against a throwaway local Postgres (e.g. via Docker):
+docker run -d --name pg-restore-test -e POSTGRES_PASSWORD=test -p 5433:5432 postgres:16
+createdb -h localhost -p 5433 -U postgres test_restore
+pg_restore -h localhost -p 5433 -U postgres --clean --if-exists -d test_restore backup.dump
+```
+If that completes without errors, the backup is confirmed usable.
+
 ## 5. Install & Run
 ```bash
 npx create-next-app@latest countdown --typescript --tailwind --app

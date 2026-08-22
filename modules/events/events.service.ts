@@ -46,6 +46,20 @@ function assertValidInput(input: EventInput): void {
   }
 }
 
+/**
+ * Translates `check_event_creation_rate_limit()`'s raised exception
+ * (supabase/schema.sql, docs/PRODUCTION_READINESS_CHECKLIST.md §8) into the friendly,
+ * typed error the UI expects - same pattern as groups.service.ts's joinGroup. Any other
+ * error passes through unchanged.
+ */
+function translateRateLimitError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : "";
+  if (message.includes("Too many events created recently")) {
+    return new ValidationError("You're creating events too quickly - please wait a moment and try again.");
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 export const eventsService = {
   async getDashboardData(supabase: SupabaseClient, userId: string): Promise<DashboardData> {
     // Two independent queries per docs/ARCHITECTURE.md: the Timeline never
@@ -62,9 +76,13 @@ export const eventsService = {
     return { timeline, recurring, nearestEvent };
   },
 
-  createEvent(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventRecord> {
+  async createEvent(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventRecord> {
     assertValidInput(input);
-    return eventsRepository.insert(supabase, userId, input);
+    try {
+      return await eventsRepository.insert(supabase, userId, input);
+    } catch (err) {
+      throw translateRateLimitError(err);
+    }
   },
 
   updateEvent(
@@ -95,14 +113,18 @@ export const eventsService = {
     return { timeline, recurring, nearestEvent };
   },
 
-  createGroupEvent(
+  async createGroupEvent(
     supabase: SupabaseClient,
     actingUserId: string,
     groupId: string,
     input: EventInput,
   ): Promise<EventRecord> {
     assertValidInput(input);
-    return eventsRepository.insertGroupEvent(supabase, actingUserId, groupId, input);
+    try {
+      return await eventsRepository.insertGroupEvent(supabase, actingUserId, groupId, input);
+    } catch (err) {
+      throw translateRateLimitError(err);
+    }
   },
 
   updateGroupEvent(

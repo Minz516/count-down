@@ -7,6 +7,11 @@ import { eventsInterface } from "@/modules/events/events.interface";
 import { groupsInterface, groupSettingsInterface } from "@/modules/groups/groups.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
 
+// Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
+// group's events/todos, scoped by the signed-in user's membership, and must never be
+// cached/statically served to another visitor (docs/PRODUCTION_READINESS_CHECKLIST.md §9).
+export const dynamic = "force-dynamic";
+
 export default async function GroupDashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
 

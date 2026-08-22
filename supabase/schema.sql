@@ -34,6 +34,31 @@ create policy "Users can update their own events" on public.events
 create policy "Users can delete their own events" on public.events
   for delete using (auth.uid() = user_id);
 
+-- Rate limiting (docs/PRODUCTION_READINESS_CHECKLIST.md §8): a basic sanity cap so one
+-- account can't spam event creation, accidentally or otherwise. Fires on every insert
+-- regardless of whether it came through the personal or group-scoped path - both always
+-- set user_id to the acting user (events.repository.ts), so one trigger covers both. No
+-- SECURITY DEFINER needed - the SELECT inside only reads rows the inserting user already
+-- has select access to under the policy above.
+create or replace function public.check_event_creation_rate_limit()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (
+    select count(*) from public.events
+    where user_id = new.user_id and created_at > now() - interval '1 minute'
+  ) >= 20 then
+    raise exception 'Too many events created recently - please wait a moment and try again';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger enforce_event_creation_rate_limit
+before insert on public.events
+for each row execute function public.check_event_creation_rate_limit();
+
 -- Personal todo checklist attached to an event (docs/ARCHITECTURE.md "Todo Checklist").
 -- `user_id` is included even though every event is personal today - forward-compatible
 -- with a future shared-event milestone without a schema change later.

@@ -1,0 +1,36 @@
+name: Database Backup
+
+# Weekly manual-backup habit (docs/PRODUCTION_READINESS_CHECKLIST.md §12) - a supplement to
+# whatever backup/retention Supabase's own plan provides, since free-tier retention is
+# limited. Also runnable on demand via workflow_dispatch for a backup before a risky change
+# (e.g. right before running a new migration).
+on:
+  schedule:
+    - cron: "0 2 * * 0" # Sundays at 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # -Fc (custom format) is already compressed and restorable with pg_restore, including
+      # selective/parallel restore - no separate gzip step needed. Use the *direct* database
+      # connection string (Supabase Dashboard > Project Settings > Database > Connection
+      # string > URI, port 5432), not the pgbouncer/pooler URL - pg_dump needs session-level
+      # features the transaction pooler doesn't support.
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: pg_dump "$SUPABASE_DB_URL" -Fc -f backup.dump
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-db-backup-${{ github.run_id }}
+          path: backup.dump
+          retention-days: 90

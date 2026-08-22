@@ -222,12 +222,15 @@ Edge Functions (Deno runtime) for the scheduled daily job and the
 Discord interactions handler.
 
 ### Checklist
-- [ ] The Supabase project's region is set close to where most users
+- [x] The Supabase project's region is set close to where most users
       actually are (for this app, likely Singapore, for lowest latency
       from Vietnam) — this cannot be changed after project creation
-      without migrating, so it's worth getting right early — **Supabase
-      dashboard setting, can't be checked from the codebase; confirm
-      yourself**
+      without migrating, so it's worth getting right early — checked
+      (screenshot, 2026-08-23): currently `ap-northeast-2` (Seoul), not
+      Singapore. Reviewed and deliberately deferred - free-plan project
+      limit reached, so migrating now isn't possible anyway; revisit and
+      migrate to Singapore once that constraint lifts and before there's
+      much production data to move
 - [x] Edge Function execution time stays well within Supabase's execution
       time limit — confirmed: `sendPersonalDigests`/`sendGroupDigests`/
       `generateNotifications` all run via `Promise.all`, and each
@@ -363,10 +366,12 @@ its own endpoints (login attempts, signups).
       otherwise a short invite code could be brute-forced by repeated
       guesses — added `group_join_attempts` table + a check in
       `join_group_by_code()` (10 attempts / 10 minutes per user)
-- [ ] Event creation is rate-limited per user (a basic sanity cap, e.g.
+- [x] Event creation is rate-limited per user (a basic sanity cap, e.g.
       no more than N events created per minute), to prevent accidental or
-      malicious spam from one account — left as-is per the checklist's
-      own priority call (nice-to-have, revisit if abuse is ever observed)
+      malicious spam from one account — added
+      `check_event_creation_rate_limit()` trigger (20 events/minute per
+      user), covers both personal and group event creation since both
+      always set `user_id` to the acting user
 - N/A The Discord slash-command Edge Function has some minimal protection
       against being hammered with requests — no such function exists in
       this app (see §1)
@@ -407,7 +412,12 @@ through its CDN with no extra configuration needed.
 - [x] No caching is applied to per-user data (dashboard queries) that
       would risk showing one user's events to another — confirmed, no
       caching layer added anywhere; every page fetches fresh via the
-      Supabase client
+      Supabase client. Previously relied only on `cookies()` usage
+      incidentally opting each page out of static rendering - now made
+      explicit with `export const dynamic = "force-dynamic"` on
+      `app/page.tsx`, `app/groups/page.tsx`, `app/groups/[groupId]/page.tsx`,
+      and `app/settings/page.tsx`, so this stays true even if a future
+      refactor removes the `cookies()` call
 
 ### How to Check
 - Inspect response headers in the browser's Network tab for a static
@@ -508,12 +518,19 @@ Relies entirely on Supabase's managed Postgres backups.
 - [ ] Confirm what backup/retention policy applies on the current
       Supabase plan (free tier has limited backup retention compared to
       paid tiers with point-in-time recovery) — know this number, don't
-      assume it
-- [ ] A manual backup habit (e.g. a periodic `pg_dump` export saved
-      somewhere) exists as a supplement, given free-tier limitations
+      assume it — **Supabase dashboard setting (Database > Backups),
+      can't be checked from the codebase; confirm yourself**
+- [x] A manual backup habit (e.g. a periodic `pg_dump` export saved
+      somewhere) exists as a supplement, given free-tier limitations —
+      added `.github/workflows/backup.yml` (weekly `pg_dump`, uploaded as
+      a 90-day GitHub Actions artifact; also runnable on demand). Needs a
+      one-time `SUPABASE_DB_URL` repo secret — see `docs/SETUP.md` §4c
 - [ ] The restore process has actually been tested at least once, even
       informally — "we have backups" that have never been restored from
-      is an untested assumption, not a guarantee
+      is an untested assumption, not a guarantee — **exact restore-test
+      commands are in `docs/SETUP.md` §4c; run them yourself once a
+      backup artifact exists (needs your own machine/Docker, not
+      automatable from here)**
 
 ### How to Check
 - Supabase Dashboard > Database > Backups — see what's actually offered

@@ -61,11 +61,16 @@ Function, `supabase functions deploy daily-digest` - no secret to set up, `SUPAB
 is auto-injected, see the Architecture bullet below) to run it daily and send both personal
 and group Discord digests, and to generate in-app notifications. `supabase/migrations/`
 holds schema changes made after the initial build as standalone timestamped files (currently
-just one: length caps, extra indexes, and invite-code rate limiting) - `schema.sql` has also
-been updated in place with the same changes, so a brand-new project still only needs to run
-that one file; add new migration files here going forward instead of only editing
-`schema.sql` (see `docs/PRODUCTION_READINESS_CHECKLIST.md` §6). `.github/workflows/ci.yml`
-runs lint + build on every push/PR to `main`.
+two: length caps/extra indexes/invite-code rate limiting, then event-creation rate limiting)
+- `schema.sql` has also been updated in place with the same changes, so a brand-new project
+still only needs to run that one file; add new migration files here going forward instead of
+only editing `schema.sql` (see `docs/PRODUCTION_READINESS_CHECKLIST.md` §6).
+`.github/workflows/ci.yml` runs lint + build on every push/PR to `main`.
+`.github/workflows/backup.yml` runs a weekly `pg_dump` (also triggerable on demand) and
+uploads it as a 90-day GitHub Actions artifact - a manual-backup supplement to whatever
+retention Supabase's own plan provides (`docs/PRODUCTION_READINESS_CHECKLIST.md` §12); needs
+a one-time `SUPABASE_DB_URL` repo secret (the *direct* connection string, not the pooler
+one - see `docs/SETUP.md` §4c).
 
 ## Architecture
 
@@ -79,6 +84,12 @@ runs lint + build on every push/PR to `main`.
   map upload) but both are no-ops until `NEXT_PUBLIC_SENTRY_DSN` is set
   (`.env.local.example`) - getting a DSN means creating a Sentry account, a step for the
   human running this, not something to automate.
+- **Every page rendering per-user data explicitly exports `dynamic = "force-dynamic"`**
+  (`app/page.tsx`, `app/groups/page.tsx`, `app/groups/[groupId]/page.tsx`,
+  `app/settings/page.tsx`) - each already opts out of static rendering incidentally via
+  `cookies()` (used by `lib/supabase/server.ts`), but the explicit export
+  (`docs/PRODUCTION_READINESS_CHECKLIST.md` §9) makes "never cache this" hold even if a
+  future refactor removes that incidental trigger.
 - **Modular Monolith, adapted (`modules/`):** all Supabase access is behind
   `modules/events/` and `modules/auth/`, each exposing a narrow `*.interface.ts` - that's
   the only file in a module pages/components may import. `events.repository.ts` is the only
@@ -165,6 +176,13 @@ runs lint + build on every push/PR to `main`.
   minutes raise before the invite code is even checked, defending the 8-character
   `invite_code` against brute-forcing (`docs/PRODUCTION_READINESS_CHECKLIST.md` §8). No
   client-facing policies on that table either - same controlled-write-path reasoning.
+- **Event creation is rate-limited too**: `check_event_creation_rate_limit()` (a `before
+  insert on events` trigger, no `security definer` needed - it only reads rows the
+  inserting user already has select access to) rejects once a user has created 20+ events
+  in the trailing minute. Fires for both personal and group event inserts, since both
+  always set `user_id` to the acting user - one trigger, no per-path duplication.
+  `events.service.ts`'s `createEvent`/`createGroupEvent` translate the raised exception
+  into a friendly `ValidationError`, same pattern as `groups.service.ts`'s `joinGroup`.
 - **Every "is the current user a member of this group?" RLS check goes through
   `public.is_group_member(group_id)`** (also `security definer`), not an inline
   `group_id in (select group_id from group_members where user_id = auth.uid())` subquery -

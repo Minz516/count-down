@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { settingsInterface } from "@/modules/settings/settings.interface";
 
+// Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
+// signed-in user's own webhook settings and must never be cached/statically served to
+// another visitor (docs/PRODUCTION_READINESS_CHECKLIST.md §9).
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const supabase = await createClient();
   const user = await authInterface.getCurrentUser(supabase);
