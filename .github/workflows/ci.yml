@@ -25,7 +25,13 @@ jobs:
       # placeholders good enough for a production build (Next.js doesn't call Supabase at
       # build time, cookies()-based routes are rendered dynamically at request time, not
       # prerendered), so no repo secrets need to be configured just to run CI.
+      #
+      # SENTRY_AUTH_TOKEN is a real credential, unlike the two above - it must come from a
+      # GitHub Actions repository secret (Settings > Secrets and variables > Actions > New
+      # repository secret), never hardcoded here. If it's unset, next.config.ts's
+      # withSentryConfig() just skips source map upload for that build - it doesn't fail CI.
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
