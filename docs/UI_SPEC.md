@@ -37,10 +37,11 @@
    invite code with a copy button) and "Join Group" (invite code input) flows
 5. **Group Dashboard** (`/groups/[groupId]`) — same layout as the personal
    Dashboard (Hero Card, Timeline, Recurring section), scoped to one group's
-   events; event cards are **not** expandable here (no Todo Checklist yet -
-   Milestone 3). A "Group Settings" area (modal): invite code + copy button, a member
-   roster (avatar + username per member, so anyone can see who else is in the group),
-   and the same Discord webhook controls as personal Settings
+   events. Event cards are expandable here too, same as the personal dashboard - each
+   member sees and manages their **own** checklist per event, never a shared one (see
+   "Todo Checklist on Group Events" below). A "Group Settings" area (modal): invite code
+   + copy button, a member roster (avatar + username per member, so anyone can see who
+   else is in the group), and the same Discord webhook controls as personal Settings
 
 ## Hero Countdown Card (nearest event)
 - Large, visually prominent card pinned at the top of the dashboard
@@ -93,14 +94,25 @@
 
 ## Todo Checklist (per event)
 - Collapsed by default on every event card (Timeline, Recurring, and Past
-  alike); a header row toggles it open in place — no navigation away from
-  the dashboard
+  alike, personal **and** group); a header row toggles it open in place —
+  no navigation away from the dashboard
 - Collapsed header shows an item count once the checklist has items (e.g.
   "2/5"); nothing shown when it's empty
 - Expanded: each item as a checkbox + text row (done items shown
   struck-through/muted), a trash icon per item, and a text input at the
   bottom to add a new item
-- Personal only — not shared with anyone, at this milestone
+- Personal only — not shared with anyone, even on a group event (see below)
+
+## Todo Checklist on Group Events
+- Same `TodoChecklist` component and interaction as a personal event - the only
+  difference is labeling, since it'd otherwise be ambiguous whether "2/5" means the
+  viewer's own progress or something the whole group shares
+- Collapsed header reads **"Bạn"** instead of "Checklist" (still paired with the same
+  "done/total" count chip)
+- Expanded body adds a one-line reminder: "Đây là checklist của riêng bạn"
+- Two members expanding the same group event each see and manage their own
+  independent list - nobody sees anyone else's items, and there's no shared/collective
+  checklist option
 
 ## Settings (personal and Group Settings alike)
 - Discord Webhook URL — text input, optional. If one is already saved, the field starts

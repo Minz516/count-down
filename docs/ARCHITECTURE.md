@@ -78,9 +78,13 @@ Notes:
 | position    | integer     | for manual ordering within the checklist        |
 | created_at  | timestamptz | default now()                                   |
 
-> `todos.user_id` is included even though every event is personal today —
-> forward-compatible with a future shared-event milestone without a schema
-> change later.
+> `todos.user_id` scopes every row to whoever created it, independent of whether the
+> parent event is personal or a group event (`events.group_id` set) - this was
+> deliberately designed in from the start so group events could get per-member
+> checklists later (docs/milestone3/ARCHITECTURE-milestone-3.md) with no schema or
+> RLS change when that milestone arrived. It didn't: a group event with 5 members
+> just ends up with up to 5 independent sets of `todos` rows sharing the same
+> `event_id`, each already filtered to `user_id = auth.uid()` by the existing policy.
 
 **table: user_settings**
 | column               | type    | notes                                          |

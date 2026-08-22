@@ -86,19 +86,25 @@ the single nearest upcoming event highlighted with the most detail
       member may add/edit/delete any event in the group), and a group-level
       Discord webhook + daily digest (separate from any member's personal
       one)
+- [ ] Todo checklist on group events: every member gets their own independent
+      checklist on each shared event (same personal scoping as the Milestone 1
+      checklist, just now also available on group events) - clearly labeled
+      as personal, not shared, so nobody mistakes their own progress for the
+      whole group's
 
 ## Out of Scope (for MVP)
 - Push notifications / reminders beyond the Discord digest
-- Sharing personal events between users / teams outside of a Group (a
-  personal event's checklist items always belong to the individual user;
-  group events don't have a checklist yet - see Group Countdown scope below)
+- Sharing personal events between users / teams outside of a Group
 - Categories or tags (can be a fast-follow if useful later)
 - Recurrence patterns other than weekly (e.g. monthly, custom intervals)
-- Todo checklists on group events, and any owner-only permission tier for
-  groups (kicking members, restricting edits) - both explicitly deferred;
-  every group member currently has equal permissions
+- Any owner-only permission tier for groups (kicking members, restricting edits) -
+  explicitly deferred; every group member has equal permissions
 - Merging personal and group timelines into one combined view - they stay
   as separate dashboards
+- A genuinely shared/collective checklist on a group event (everyone ticking the same
+  list) and assigning specific checklist items to specific members - each member's
+  checklist on a group event is their own, independent of every other member's (see
+  Core Features below); a shared version is a possible future feature, not planned
 
 ## Assumptions (confirm before implementation)
 - A deadline is a single point in time, not a date range

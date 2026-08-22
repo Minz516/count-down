@@ -17,6 +17,7 @@ import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
 import type { GroupRecord, GroupMemberRecord, GroupSettings } from "@/modules/groups/groups.interface";
 import type { EventInput, EventRecord } from "@/types/event";
+import type { TodoRecord } from "@/types/todo";
 
 interface GroupDashboardClientProps {
   group: GroupRecord;
@@ -25,6 +26,7 @@ interface GroupDashboardClientProps {
   initialNearestEvent: EventRecord | null;
   initialSettings: GroupSettings | null;
   initialMembers: GroupMemberRecord[];
+  initialTodosByEvent: Record<string, TodoRecord[]>;
 }
 
 type ModalState =
@@ -36,9 +38,12 @@ type ModalState =
 /**
  * Group Dashboard - same shape as DashboardClient.tsx, scoped to one group
  * instead of the signed-in user (docs/milestone2/UI_SPEC-milestone-2.md).
- * No todos prop threaded through: group event cards aren't expandable yet
- * (Timeline/RecurringEventsSection/PastEventsSection default `showChecklist`
- * to `true`, so this is the one caller that explicitly passes `false`).
+ * Group event cards are expandable too now (docs/milestone3/UI_SPEC-milestone-3.md) -
+ * `Timeline`/`RecurringEventsSection`/`PastEventsSection` all default
+ * `showChecklist` to `true`, so this component no longer overrides it to
+ * `false`. Each member's checklist is their own (`TodoChecklist`'s existing
+ * per-user scoping via `todosInterface`, unchanged from Milestone 1) - see
+ * `TodoChecklist.tsx`'s group-labeling note for how it stays visibly personal.
  */
 export function GroupDashboardClient({
   group,
@@ -47,6 +52,7 @@ export function GroupDashboardClient({
   initialNearestEvent,
   initialSettings,
   initialMembers,
+  initialTodosByEvent,
 }: GroupDashboardClientProps) {
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
@@ -102,7 +108,7 @@ export function GroupDashboardClient({
                 <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
                 <Timeline
                   events={activeEvents}
-                  showChecklist={false}
+                  todosByEvent={initialTodosByEvent}
                   onEdit={(event) => setModal({ type: "edit", event })}
                   onDelete={(event) => setModal({ type: "delete", event })}
                 />
@@ -111,14 +117,14 @@ export function GroupDashboardClient({
 
             <RecurringEventsSection
               events={initialRecurringEvents}
-              showChecklist={false}
+              todosByEvent={initialTodosByEvent}
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />
 
             <PastEventsSection
               events={pastEvents}
-              showChecklist={false}
+              todosByEvent={initialTodosByEvent}
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />

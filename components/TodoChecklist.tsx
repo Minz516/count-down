@@ -35,6 +35,12 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
 
   const doneCount = items.filter((item) => item.is_done).length;
 
+  // On a group event, every member gets their own independent checklist (same
+  // todos.user_id scoping as a personal event, unchanged - docs/milestone3/ARCHITECTURE-milestone-3.md).
+  // "Bạn" instead of "Checklist" makes that explicit, so nobody mistakes their own
+  // progress for a shared/group-wide one (docs/milestone3/UI_SPEC-milestone-3.md).
+  const isGroupEvent = event.group_id !== null;
+
   async function handleAdd(formEvent: FormEvent) {
     formEvent.preventDefault();
     if (!newContent.trim() || submitting) return;
@@ -76,14 +82,16 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
 
   return (
     <div className="border-t border-primary-container/10">
-      {/* Also independently clickable (keyboard-focusable) - stopPropagation so this
-          doesn't then also fire the card's own onClick and toggle back off. */}
+      {/* Also independently clickable (keyboard-focusable) - stopPropagation on both
+          click and keydown so this doesn't also fire the embedding card's own
+          onClick/onKeyDown (which toggles the same state) and cancel itself back out. */}
       <button
         type="button"
         onClick={(clickEvent) => {
           clickEvent.stopPropagation();
           onToggleExpanded();
         }}
+        onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
         aria-expanded={expanded}
         className={clsx(
           "flex w-full items-center gap-2 px-5 py-2.5 text-left transition-colors duration-150 hover:bg-surface-elevated",
@@ -96,7 +104,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
           <CaretRight size={12} className="text-text-muted" />
         )}
         <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-          Checklist
+          {isGroupEvent ? "Bạn" : "Checklist"}
         </span>
         {items.length > 0 && (
           <span className="ml-auto rounded-full bg-primary/12 px-2 py-0.5 font-mono text-[11px] text-primary tabular-nums">
@@ -106,9 +114,20 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
       </button>
 
       {expanded && (
-        // stopPropagation - clicking a checkbox, delete icon, or the add-item
-        // input must not also bubble up and collapse the card.
-        <div className="flex flex-col gap-2 px-5 pb-4" onClick={(clickEvent) => clickEvent.stopPropagation()}>
+        // stopPropagation on click *and* keydown - clicking a checkbox, delete icon,
+        // or the add-item input must not also bubble up and collapse the card, and
+        // neither must typing a space or pressing Enter while typing a new item (the
+        // card's onKeyDown otherwise treats any bubbled Space/Enter as "toggle me").
+        <div
+          className="flex flex-col gap-2 px-5 pb-4"
+          onClick={(clickEvent) => clickEvent.stopPropagation()}
+          onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
+        >
+          {isGroupEvent && (
+            <p className="-mt-1 font-body text-xs text-text-muted italic">
+              Đây là checklist của riêng bạn.
+            </p>
+          )}
           {items.map((item) => (
             <div key={item.id} className="group flex items-center gap-2">
               <input

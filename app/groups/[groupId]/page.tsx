@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface } from "@/modules/events/events.interface";
 import { groupsInterface, groupSettingsInterface } from "@/modules/groups/groups.interface";
+import { todosInterface } from "@/modules/todos/todos.interface";
 
 export default async function GroupDashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -18,11 +19,16 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
     redirect("/login");
   }
 
-  const [group, { timeline, recurring, nearestEvent }, settings, members] = await Promise.all([
+  // Same todosInterface.listAllForUser() call the personal dashboard uses (app/page.tsx) -
+  // it's already scoped to the viewer's own user_id (docs/milestone3/ARCHITECTURE-milestone-3.md
+  // "one thing to verify"), so it naturally covers this group's events too without a
+  // group-specific query: each member only ever gets their own todos back, personal or group.
+  const [group, { timeline, recurring, nearestEvent }, settings, members, todos] = await Promise.all([
     groupsInterface.getGroup(supabase, groupId),
     eventsInterface.getGroupDashboardData(supabase, groupId),
     groupSettingsInterface.getSettings(supabase, groupId),
     groupsInterface.listGroupMembers(supabase, groupId),
+    todosInterface.listAllForUser(supabase, user.id),
   ]);
 
   // RLS returns no row both when the group doesn't exist and when the
@@ -50,6 +56,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
       initialNearestEvent={nearestEvent}
       initialSettings={settings}
       initialMembers={members}
+      initialTodosByEvent={todosInterface.groupByEvent(todos)}
     />
   );
 }

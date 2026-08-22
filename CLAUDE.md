@@ -9,8 +9,9 @@ Auth, events CRUD, the Hero Card, the unified Timeline, the recurring section, t
 todo checklist, the Settings page (Discord webhook + digest), Group Countdown (shared
 groups with an invite code, a group dashboard reusing the personal one's UI, and a group's
 own Discord digest), username-based auth (username + confirm-password at signup, sign in by
-username or email), and profile editing (username + avatar upload, a group member roster,
-and avatar previews on the Groups list) are all built. The daily Discord digest's Edge Function
+username or email), profile editing (username + avatar upload, a group member roster,
+and avatar previews on the Groups list), and per-member todo checklists on group events
+are all built. The daily Discord digest's Edge Function
 (`supabase/functions/daily-digest/`) is written but not yet deployed/scheduled - that's a
 manual step, same as the SQL files below. The docs below are still the source of truth for
 product/behavioral decisions - code comments point back to them rather than restating
@@ -182,11 +183,17 @@ and group Discord digests.
   explicit "Remove webhook" link. If you touch this form again, keep that distinction - don't
   "simplify" it back to submitting the raw input value directly.
 - **The Group Dashboard reuses Timeline/EventListItem/RecurringEventCard/PastEventCard
-  unchanged**, via an optional `showChecklist` prop (default `true`) threaded down to each -
-  `GroupDashboardClient.tsx` is the only caller that passes `false`, since group event cards
-  aren't expandable yet (Milestone 3 territory - per-member checklists on shared events
-  aren't designed yet). Don't add group-specific copies of these components; extend the
-  shared ones with another prop the way this one was added.
+  unchanged**, including their `showChecklist` prop (default `true`) - `GroupDashboardClient.tsx`
+  no longer overrides it to `false` now that group event cards are expandable too (Milestone
+  3). Don't add group-specific copies of these components; extend the shared ones with
+  another prop if a future milestone needs group cards to diverge from personal ones again.
+- **A group event's `TodoChecklist` is still per-member, not shared** - `todos.user_id`
+  scoping is unchanged from Milestone 1 (`event.group_id` being set doesn't change which
+  rows a member's queries touch or return), so two members expanding the same group event
+  each see and manage their own independent list. `TodoChecklist.tsx` checks
+  `event.group_id !== null` to swap its header label to "Bạn" (instead of "Checklist") and
+  add a one-line "Đây là checklist của riêng bạn" reminder in the expanded body - purely
+  presentational, so nothing else needs to change if this labeling is ever revisited.
 - **`Nav.tsx` is shared between the Personal Dashboard and the Groups list**
   (`references/dashboard-nav-bar.png`), not two separate headers - a **Personal**/**Group**
   tab pair (active tab derived from `usePathname()`), plus an optional `onAddEvent` prop
