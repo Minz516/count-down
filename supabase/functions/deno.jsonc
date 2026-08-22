@@ -1,0 +1,11 @@
+// Deno project config, scoped to this folder only (see .vscode/settings.json's
+// "deno.enablePaths"). Lets the Deno language server (and `deno check`/`deno
+// deploy` themselves) resolve the `Deno.*` globals and `jsr:` module
+// specifiers used in daily-digest/index.ts - neither of which the rest of
+// this repo's Node/Next.js tsconfig.json knows about (it explicitly excludes
+// this folder instead, see its "exclude").
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window", "dom"]
+  }
+}

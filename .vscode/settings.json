@@ -1,0 +1,8 @@
+{
+  // The Deno extension only takes over "supabase/functions" (the Edge Function,
+  // which runs on Deno) - everywhere else in this Next.js/Node project keeps
+  // using the regular TypeScript server + tsconfig.json as normal.
+  "deno.enable": false,
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.config": "./supabase/functions/deno.jsonc"
+}
