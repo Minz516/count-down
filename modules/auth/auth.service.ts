@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authRepository } from "./auth.repository";
 import { ValidationError } from "@/modules/shared/errors";
+import { isPasswordStrong } from "@/lib/passwordStrength";
 
 export interface SignUpInput {
   username: string;
@@ -26,6 +27,14 @@ export const authService = {
     }
     if (input.password !== input.confirmPassword) {
       throw new ValidationError("Passwords do not match.");
+    }
+    // Re-checked here, not just in AuthForm.tsx's live checklist - the service layer is
+    // the boundary that must not trust its caller blindly (events.service.ts's
+    // assertValidInput follows the same rule).
+    if (!isPasswordStrong(input.password)) {
+      throw new ValidationError(
+        "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.",
+      );
     }
 
     try {

@@ -4,9 +4,11 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Envelope, LockKey, User } from "@phosphor-icons/react/ssr";
+import { Envelope, Eye, EyeSlash, LockKey, User } from "@phosphor-icons/react/ssr";
+import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
+import { PASSWORD_REQUIREMENTS } from "@/lib/passwordStrength";
 import { Button } from "./Button";
 
 interface AuthFormProps {
@@ -56,6 +58,74 @@ function Field({
         {children}
       </div>
     </label>
+  );
+}
+
+/** Password input with a show/hide toggle - used for both Password and Confirm Password. */
+function PasswordField({
+  label,
+  value,
+  onChange,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <Field label={label} icon={<LockKey size={18} className="shrink-0 text-text-muted" />}>
+      <input
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="********"
+        required
+        minLength={8}
+        autoComplete={autoComplete}
+        className={inputClass}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        className="shrink-0 rounded text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+      >
+        {visible ? <EyeSlash size={18} /> : <Eye size={18} />}
+      </button>
+    </Field>
+  );
+}
+
+/** Live guidance while typing (signup only) - each requirement ticks off as it's met,
+ * rather than only surfacing the rule after a failed submit. */
+function PasswordRequirementsList({ password }: { password: string }) {
+  return (
+    <ul className="flex flex-col gap-1">
+      {PASSWORD_REQUIREMENTS.map((requirement) => {
+        const met = requirement.test(password);
+        return (
+          <li
+            key={requirement.label}
+            className={clsx(
+              "flex items-center gap-1.5 font-body text-xs transition-colors",
+              met ? "text-primary" : "text-text-muted",
+            )}
+          >
+            <span
+              aria-hidden
+              className={clsx(
+                "size-1.5 shrink-0 rounded-full",
+                met ? "bg-primary" : "bg-outline-variant",
+              )}
+            />
+            {requirement.label}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -152,32 +222,24 @@ export function AuthForm({ mode }: AuthFormProps) {
             </Field>
           )}
 
-          <Field label="Password" icon={<LockKey size={18} className="shrink-0 text-text-muted" />}>
-            <input
-              type="password"
-              value={password}
-              onChange={(inputEvent) => setPassword(inputEvent.target.value)}
-              placeholder="********"
-              required
-              minLength={6}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              className={inputClass}
-            />
-          </Field>
+          <PasswordField
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          />
 
           {mode === "signup" && (
-            <Field label="Confirm Password" icon={<LockKey size={18} className="shrink-0 text-text-muted" />}>
-              <input
-                type="password"
+            <>
+              <PasswordRequirementsList password={password} />
+
+              <PasswordField
+                label="Confirm Password"
                 value={confirmPassword}
-                onChange={(inputEvent) => setConfirmPassword(inputEvent.target.value)}
-                placeholder="********"
-                required
-                minLength={6}
+                onChange={setConfirmPassword}
                 autoComplete="new-password"
-                className={inputClass}
               />
-            </Field>
+            </>
           )}
 
           {error && <p className="font-body text-sm text-error">{error}</p>}

@@ -4,7 +4,10 @@
 1. **Login / Signup** — Signup collects username, email, password, and confirm password
    (client-side mismatch check before submitting); Login accepts a single "username or
    email" field + password. Both screens show the logo mark next to the "Countdown"
-   wordmark.
+   wordmark. Every password field has a show/hide (eye icon) toggle. Signup's password
+   field shows a live checklist below it - 8+ characters, an uppercase letter, a
+   lowercase letter, a number, a special character - each ticking on as it's satisfied
+   while typing, not just surfaced after a failed submit.
 2. **Dashboard** (main page)
    - Top nav: logo + "Countdown" wordmark, **Personal**/**Group** tabs (1-person
      icon / group icon, active tab underlined), Add Event, notifications, settings,

@@ -244,6 +244,19 @@ and group Discord digests, and to generate in-app notifications.
   run *before* the caller is authenticated) before ever calling `signInWithPassword`, which
   Supabase only ever accepts an email for. Pre-existing accounts (created before this
   feature) have no `profiles` row and simply keep signing in by email - no migration needed.
+- **Password hashing is entirely Supabase Auth's job, not this app's** - `supabase.auth.signUp`/
+  `signInWithPassword` send the raw password over HTTPS to Supabase's own auth server, which
+  bcrypt-hashes it server-side before ever storing anything; this codebase never sees, stores,
+  or compares a password hash itself (there is no password column anywhere in
+  `supabase/schema.sql` - `auth.users` is entirely Supabase-managed). **Never** pre-hash a
+  password client-side or in `modules/auth/` before handing it to Supabase's client - that
+  would hash an already-opaque value against Supabase's own hash-and-compare logic and break
+  login, not add security.
+- **Password strength rules live in `lib/passwordStrength.ts`**, shared by
+  `AuthForm.tsx`'s live checklist (ticks off while typing) and `auth.service.ts`'s `signUp`
+  (the actual gate, re-checked server-side-of-the-client the same way `assertValidInput`
+  re-checks event input) - one rule set, not two that could drift apart. Both password
+  fields in `AuthForm.tsx` have a show/hide toggle (`PasswordField`'s local `visible` state).
 - **`UserMenu.tsx` is the one shared logout control** for both `Nav.tsx` and `GroupNav.tsx` -
   clicking the account icon opens a small menu (click-outside/Escape to close) rather than
   signing out immediately on the first click; don't reintroduce a direct
