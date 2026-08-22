@@ -1,7 +1,7 @@
 "use client";
 
 import { useCountdown, type Countdown } from "@/lib/useCountdown";
-import { formatEventDate } from "@/lib/dateFormat";
+import { formatEventDate, formatEventTime } from "@/lib/dateFormat";
 import type { EventRecord } from "@/types/event";
 
 const UNITS: { key: keyof Omit<Countdown, "isPast">; label: string }[] = [
@@ -20,7 +20,7 @@ export function HeroCountdownCard({ event }: { event: EventRecord }) {
         {event.name}
       </h2>
       <p className="mt-2 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-        {formatEventDate(event.deadline)}
+        {formatEventDate(event.deadline)}, {formatEventTime(event.deadline)}
       </p>
 
       <div className="mt-8 flex justify-center gap-4 sm:gap-8">

@@ -109,6 +109,14 @@ and group Discord digests.
   deliberate: it's what makes the 10-member cap (a `before insert on group_members` trigger)
   and "join only via a known invite code" actually enforced, not just UI-level conventions a
   direct API call could route around.
+- **Every "is the current user a member of this group?" RLS check goes through
+  `public.is_group_member(group_id)`** (also `security definer`), not an inline
+  `group_id in (select group_id from group_members where user_id = auth.uid())` subquery -
+  that inline form on `group_members`' own policy makes Postgres raise "infinite recursion
+  detected in policy for relation group_members" (the subquery re-triggers the same policy on
+  its own scan of the table). The function's internal query bypasses RLS instead of
+  re-entering it, breaking the cycle. Used consistently across `groups`/`group_members`/
+  `group_settings`/`events`' policies - don't reintroduce the inline subquery form anywhere.
 - **Two event lifecycles that must not be conflated:**
   - Non-recurring events are hard-deleted 24h after `deadline` passes (grace period).
   - Recurring events (weekly) never delete - `supabase/cleanup_and_rollover.sql`'s daily job
@@ -164,6 +172,18 @@ and group Discord digests.
   aren't expandable yet (Milestone 3 territory - per-member checklists on shared events
   aren't designed yet). Don't add group-specific copies of these components; extend the
   shared ones with another prop the way this one was added.
+- **`Nav.tsx` is shared between the Personal Dashboard and the Groups list**
+  (`references/dashboard-nav-bar.png`), not two separate headers - a **Personal**/**Group**
+  tab pair (active tab derived from `usePathname()`), plus an optional `onAddEvent` prop
+  that's omitted (hiding the Add Event button) on the Groups list, where it doesn't apply. A
+  specific group's own dashboard (`/groups/[groupId]`) still uses the separate `GroupNav`
+  instead - it's a drill-down view, not a top-level tab, so it isn't part of this pair.
+- **All user-facing dates/times go through `lib/dateFormat.ts`**: dd/mm/yyyy dates
+  (`formatEventDate`), 24-hour hh:mm times with no seconds (`formatEventTime`) - the
+  TimeField form input never collects seconds, so displaying a literal ":00" everywhere
+  would be noise, not information. `formatTimelineDate` composes both plus the Vietnamese
+  weekday abbreviation. Don't call `toLocaleDateString`/`toLocaleString` ad hoc elsewhere for
+  a user-facing display - add to/reuse this file instead, so formatting stays consistent app-wide.
 - **Vietnamese status/recurrence labels** ("Đã qua", "còn X ngày", "Lặp lại - ... hàng tuần")
   require the `vietnamese` font subset - `app/layout.tsx` loads all three fonts with
   `subsets: ["latin", "vietnamese"]` explicitly.

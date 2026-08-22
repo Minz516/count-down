@@ -46,11 +46,15 @@ interface DigestResult {
   failure?: string;
 }
 
+// Mirrors lib/dateFormat.ts's dd/mm/yyyy + hh:mm convention - kept as its own
+// copy here for the same reason postDiscordMessage below is (this function
+// deploys independently on Deno, can't import the Next.js app's modules).
 function formatEventLine(event: EventRow, now: Date): string {
   const deadline = new Date(event.deadline);
+  const pad = (n: number) => String(n).padStart(2, "0");
   const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS);
   const dayLabel = daysRemaining <= 0 ? "hôm nay" : `còn ${daysRemaining} ngày`;
-  const dateLabel = `${DAY_NAMES_VI[deadline.getDay()]}, ${deadline.toLocaleDateString("vi-VN")}`;
+  const dateLabel = `${DAY_NAMES_VI[deadline.getDay()]}, ${pad(deadline.getDate())}/${pad(deadline.getMonth() + 1)}/${deadline.getFullYear()}, ${pad(deadline.getHours())}:${pad(deadline.getMinutes())}`;
   return `• ${event.name} — ${dayLabel} (${dateLabel})`;
 }
 

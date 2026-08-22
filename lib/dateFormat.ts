@@ -24,22 +24,28 @@ export function dayOfWeekLabel(day: DayOfWeek): string {
   return DAY_NAMES_VI[day];
 }
 
-/** e.g. "November 15, 2024" - used on the Hero Card only. */
+/** e.g. "15/11/2024" - dd/mm/yyyy, the app-wide date display format for viewing. */
 export function formatEventDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "long",
-    day: "2-digit",
-    year: "numeric",
-  });
-}
-
-/** e.g. "T3, 18/08/2026" - short Vietnamese weekday + dd/mm/yyyy, Timeline rows only. */
-export function formatTimelineDate(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** e.g. "14:30" - 24-hour hh:mm, the app-wide time display format for viewing. No
+ * seconds: deadlines are only ever entered to minute precision (TimeField.tsx has no
+ * seconds input), so a literal ":00" would just be noise, not information. */
+export function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** e.g. "T3, 18/08/2026, 14:30" - short Vietnamese weekday + dd/mm/yyyy + hh:mm, Timeline rows. */
+export function formatTimelineDate(iso: string): string {
+  const d = new Date(iso);
   const abbr = DAY_ABBR_VI[d.getDay() as DayOfWeek];
 
-  return `${abbr}, ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  return `${abbr}, ${formatEventDate(iso)}, ${formatEventTime(iso)}`;
 }
 
 interface DateParts {

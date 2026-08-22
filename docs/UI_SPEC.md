@@ -3,6 +3,11 @@
 ## Screens
 1. **Login / Signup** — simple email + password form
 2. **Dashboard** (main page)
+   - Top nav: "Countdown" wordmark, **Personal**/**Group** tabs (1-person icon
+     / group icon, active tab underlined), Add Event, notifications, settings,
+     log out - shared with the Groups list screen (`Nav.tsx`); a specific
+     group's own dashboard keeps its separate contextual header instead (see
+     Group Dashboard below)
    - "Add Event" button/form (name + deadline datetime picker, optional
      "repeats weekly" toggle + day-of-week picker)
    - Hero Countdown Card (the nearest upcoming event)
@@ -16,9 +21,10 @@
      to show its own Todo Checklist
 3. **Settings** — Discord Webhook URL input, "enable daily digest" toggle,
    "send test message" button
-4. **Groups** (`/groups`) — list of groups the user belongs to (name + "N/10"
-   member count), "Create Group" (name -> shows the generated invite code
-   with a copy button) and "Join Group" (invite code input) flows
+4. **Groups** (`/groups`) — same top nav as the Dashboard (**Group** tab
+   active); list of groups the user belongs to (name + "N/10" member count),
+   "Create Group" (name -> shows the generated invite code with a copy
+   button) and "Join Group" (invite code input) flows
 5. **Group Dashboard** (`/groups/[groupId]`) — same layout as the personal
    Dashboard (Hero Card, Timeline, Recurring section), scoped to one group's
    events; event cards are **not** expandable here (no Todo Checklist yet -
@@ -27,8 +33,8 @@
 
 ## Hero Countdown Card (nearest event)
 - Large, visually prominent card pinned at the top of the dashboard
-- Displays: event name, live countdown formatted as `Dd Hh Mm Ss`, updating
-  every second
+- Displays: event name, the deadline as dd/mm/yyyy + 24-hour hh:mm, live
+  countdown formatted as `Dd Hh Mm Ss`, updating every second
 - Nice-to-have (not MVP-blocking): description text, a progress bar showing
   time elapsed since `created_at` relative to `deadline`
 - Should look visually distinct from other cards — larger type, accent
@@ -36,8 +42,8 @@
 
 ## Timeline (today + future events, one continuous list)
 - Compact list/cards, one row per event, sorted ascending by deadline
-- Each item shows: a small colored status dot/marker, event name, date,
-  and a right-aligned status label:
+- Each item shows: a small colored status dot/marker, event name, weekday +
+  date + time (dd/mm/yyyy, 24-hour hh:mm), and a right-aligned status label:
   - Today / nearest event: label reads "Hôm nay" (in red, bold)
   - Upcoming within 7 days: label reads "còn X ngày" (in yellow)
   - Upcoming beyond 7 days: label reads "còn X ngày" (default/muted color)
