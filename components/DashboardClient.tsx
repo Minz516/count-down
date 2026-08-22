@@ -15,11 +15,13 @@ import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
 import type { EventInput, EventRecord } from "@/types/event";
+import type { TodoRecord } from "@/types/todo";
 
 interface DashboardClientProps {
   initialEvents: EventRecord[];
   initialRecurringEvents: EventRecord[];
   initialNearestEvent: EventRecord | null;
+  initialTodosByEvent: Record<string, TodoRecord[]>;
 }
 
 type ModalState =
@@ -32,6 +34,7 @@ export function DashboardClient({
   initialEvents,
   initialRecurringEvents,
   initialNearestEvent,
+  initialTodosByEvent,
 }: DashboardClientProps) {
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
@@ -90,6 +93,7 @@ export function DashboardClient({
                 <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
                 <Timeline
                   events={activeEvents}
+                  todosByEvent={initialTodosByEvent}
                   onEdit={(event) => setModal({ type: "edit", event })}
                   onDelete={(event) => setModal({ type: "delete", event })}
                 />
@@ -98,12 +102,14 @@ export function DashboardClient({
 
             <RecurringEventsSection
               events={initialRecurringEvents}
+              todosByEvent={initialTodosByEvent}
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />
 
             <PastEventsSection
               events={pastEvents}
+              todosByEvent={initialTodosByEvent}
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />

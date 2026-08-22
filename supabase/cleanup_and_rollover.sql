@@ -31,8 +31,14 @@ begin
 end;
 $$;
 
-select cron.schedule(
-  'countdown-cleanup-and-rollover',
-  '0 3 * * *', -- daily at 03:00 UTC
-  $$select public.cleanup_and_roll_events();$$
-);
+-- Scheduling lives in one place, not split across pg_cron and an Edge Function
+-- (docs/ARCHITECTURE.md "pick one mechanism" guidance): the `daily-digest` Edge
+-- Function (supabase/functions/daily-digest/) calls this same function via
+-- `.rpc("cleanup_and_roll_events")` before sending Discord digests, since the
+-- digest send needs outbound HTTP that plain pg_cron/pg_net can't do as simply.
+-- Schedule *that* function's cron trigger instead (Supabase Dashboard -> Edge
+-- Functions -> your function -> Cron), not a `cron.schedule(...)` call here.
+--
+-- If `countdown-cleanup-and-rollover` was already scheduled from an earlier
+-- version of this file, unschedule it to avoid double-processing:
+--   select cron.unschedule('countdown-cleanup-and-rollover');

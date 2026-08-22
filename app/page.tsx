@@ -3,6 +3,7 @@ import { DashboardClient } from "@/components/DashboardClient";
 import { createClient } from "@/lib/supabase/server";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface } from "@/modules/events/events.interface";
+import { todosInterface } from "@/modules/todos/todos.interface";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -14,13 +15,19 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { timeline, recurring, nearestEvent } = await eventsInterface.getDashboardData(supabase, user.id);
+  // Two independent queries done once here, same shape as getDashboardData's
+  // timeline/recurring split - avoids a per-event-card todos query.
+  const [{ timeline, recurring, nearestEvent }, todos] = await Promise.all([
+    eventsInterface.getDashboardData(supabase, user.id),
+    todosInterface.listAllForUser(supabase, user.id),
+  ]);
 
   return (
     <DashboardClient
       initialEvents={timeline}
       initialRecurringEvents={recurring}
       initialNearestEvent={nearestEvent}
+      initialTodosByEvent={todosInterface.groupByEvent(todos)}
     />
   );
 }

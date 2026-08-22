@@ -5,10 +5,12 @@ import { EventListItem } from "./EventListItem";
 import { TimelineDot } from "./StatusIndicator";
 import { getEventStatus } from "@/modules/events/events.interface";
 import type { EventRecord } from "@/types/event";
+import type { TodoRecord } from "@/types/todo";
 
 interface TimelineProps {
   /** Today/soon/later events only - past events live in PastEventsSection instead (docs/UI_SPEC.md). */
   events: EventRecord[];
+  todosByEvent: Record<string, TodoRecord[]>;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
@@ -21,7 +23,7 @@ interface TimelineProps {
  * Add/remove animates as a soft height collapse so the list never jump-cuts
  * (docs/DESIGN.md §7).
  */
-export function Timeline({ events, onEdit, onDelete }: TimelineProps) {
+export function Timeline({ events, todosByEvent, onEdit, onDelete }: TimelineProps) {
   // events is already sorted ascending and never contains past events - the
   // first row is always "nearest upcoming".
   const nearestUpcomingId = events[0]?.id ?? null;
@@ -48,7 +50,13 @@ export function Timeline({ events, onEdit, onDelete }: TimelineProps) {
               </div>
 
               <div className="flex-1 pb-3">
-                <EventListItem event={event} status={status} onEdit={onEdit} onDelete={onDelete} />
+                <EventListItem
+                  event={event}
+                  status={status}
+                  todos={todosByEvent[event.id] ?? []}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
               </div>
             </motion.li>
           );

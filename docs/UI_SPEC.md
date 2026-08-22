@@ -12,6 +12,10 @@
      timeline), one card per recurring event
    - Past Events section — compact, pinned at the bottom of the page, for
      events whose deadline just passed
+   - Every event card (Timeline, Recurring, or Past) is expandable in place
+     to show its own Todo Checklist
+3. **Settings** — Discord Webhook URL input, "enable daily digest" toggle,
+   "send test message" button
 
 ## Hero Countdown Card (nearest event)
 - Large, visually prominent card pinned at the top of the dashboard
@@ -58,6 +62,26 @@
   after its deadline, then disappears automatically once the backend
   deletes it (no user action needed; see `ARCHITECTURE.md` cleanup job)
 - Section doesn't render at all when there are no past events
+
+## Todo Checklist (per event)
+- Collapsed by default on every event card (Timeline, Recurring, and Past
+  alike); a header row toggles it open in place — no navigation away from
+  the dashboard
+- Collapsed header shows an item count once the checklist has items (e.g.
+  "2/5"); nothing shown when it's empty
+- Expanded: each item as a checkbox + text row (done items shown
+  struck-through/muted), a trash icon per item, and a text input at the
+  bottom to add a new item
+- Personal only — not shared with anyone, at this milestone
+
+## Settings
+- Discord Webhook URL — text input, optional
+- "Enable daily digest" toggle
+- "Send test message" button — posts a sample message to the URL currently
+  in the field immediately (doesn't require Save first), so a user can
+  verify it before committing
+- Save persists the URL + toggle; an obviously-malformed webhook URL is
+  rejected with a validation message before any network call
 
 ## Empty State
 - No events yet -> friendly message + a clear call-to-action to add the

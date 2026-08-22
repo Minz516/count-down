@@ -5,9 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project state
 
 Implemented: Next.js App Router + TypeScript + Tailwind v4, Supabase Auth + Postgres.
-Auth, events CRUD, the Hero Card, the unified Timeline, and the recurring section are all
-built. The docs below are still the source of truth for product/behavioral decisions - code
-comments point back to them rather than restating rationale.
+Auth, events CRUD, the Hero Card, the unified Timeline, the recurring section, the per-event
+todo checklist, and the Settings page (Discord webhook + digest) are all built. The daily
+Discord digest's Edge Function (`supabase/functions/daily-digest/`) is written but not yet
+deployed/scheduled - that's a manual step, same as the SQL files below. The docs below are
+still the source of truth for product/behavioral decisions - code comments point back to
+them rather than restating rationale.
 
 - `docs/PRD.md` — product requirements, MVP feature list, and explicit assumptions
 - `docs/ARCHITECTURE.md` — tech stack, folder structure, DB schema, sorting/cleanup logic
@@ -37,9 +40,13 @@ There is no test suite configured. Requires `.env.local` with `NEXT_PUBLIC_SUPAB
 and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (copy `.env.local.example`) - without it, `proxy.ts`
 throws on every request since it needs a Supabase client to check the session.
 
-Database setup is not part of `npm run` anything - run `supabase/schema.sql` (table + RLS
-policies) and `supabase/cleanup_and_rollover.sql` (daily `pg_cron` job, requires enabling
-the `pg_cron` extension first) directly in the Supabase SQL editor.
+Database setup is not part of `npm run` anything - run `supabase/schema.sql` (tables + RLS
+policies for `events`, `todos`, `user_settings`) directly in the Supabase SQL editor.
+`supabase/cleanup_and_rollover.sql` defines the `cleanup_and_roll_events()` function (no
+longer self-schedules via `pg_cron` - see the file's own comment); deploy and schedule
+`supabase/functions/daily-digest/` (a Supabase Edge Function, `supabase functions deploy
+daily-digest`, needs the `SUPABASE_SERVICE_ROLE_KEY` secret set) to run it daily and send
+the Discord digest.
 
 ## Architecture
 
@@ -59,6 +66,15 @@ the `pg_cron` extension first) directly in the Supabase SQL editor.
   `docs/ARCHITECTURE_DESIGN.md` vs. deliberately skipped, e.g. no REST/WebSocket layer -
   there's no separate backend process to put one in front of). **Adding a new entity means
   a new `modules/<name>/` module, not a Supabase call inlined into a component.**
+  `modules/todos/` and `modules/settings/` follow the same repository → service →
+  interface shape for the `todos` and `user_settings` tables.
+- **The daily digest Edge Function is a deliberate exception to the anon-key-only rule**
+  above: `supabase/functions/daily-digest/index.ts` runs with no signed-in user (it acts
+  across every user's data), so it uses the Supabase **service-role key**
+  (`SUPABASE_SERVICE_ROLE_KEY`, a function secret - never `.env.local`/`NEXT_PUBLIC_*`,
+  never sent to the browser) instead of the anon key, bypassing RLS by design. It's the one
+  place in the codebase that does this - everything under `lib/supabase/` and `modules/`
+  stays anon-key-only.
 - **Data model:** single `events` table (`user_id`, `name`, `deadline`, `description`,
   `is_recurring`, `recurrence_day_of_week`), RLS-scoped to `user_id = auth.uid()`. Mirrored
   in `types/event.ts` as `EventRecord` (a DB row) vs. `EventInput` (what the form collects) -
@@ -78,6 +94,12 @@ the `pg_cron` extension first) directly in the Supabase SQL editor.
   (`is_recurring = true`) never mix. The nearest non-past Timeline item is derived there too
   and passed down as `initialNearestEvent` - `app/page.tsx` calls this once and hands all
   three to `DashboardClient` as props; don't re-derive `nearestEvent` client-side.
+- **Past events are split out of the Timeline client-side, not server-side:** `events.service.ts`
+  still returns one combined past+today+future `timeline` array - `DashboardClient.tsx` filters
+  it in render (`getEventStatus(event.deadline).status !== "past"`) into `activeEvents` (goes to
+  `Timeline`) and `pastEvents` (goes to `PastEventsSection`, rendered below Recurring). This is a
+  presentational split only, since status is presentational per the bullet below - don't move the
+  filter into the service/repository or add a third DB query for it.
 - **Two different countdown update strategies:** only `HeroCountdownCard` uses the
   live-ticking `useCountdown` hook. Timeline/recurring rows call `getEventStatus()` /
   `daysUntil()` (from `modules/events/events.interface.ts`) once per render instead - don't
@@ -100,9 +122,23 @@ the `pg_cron` extension first) directly in the Supabase SQL editor.
   same component types as siblings inside one `AnimatePresence`, and without a key React (and
   AnimatePresence's own child-tracking) can reuse a previous instance's internal form state
   instead of mounting fresh.
+- **`TodoChecklist` manages its own state instead of `router.refresh()`-ing** (unlike every
+  event mutation in `DashboardClient.tsx`): it's seeded once from the `initialTodos` prop
+  (itself built server-side in `app/page.tsx` via `todosInterface.listAllForUser()` +
+  `groupByEvent()` - one query total, not one per event card) and every add/toggle/delete
+  updates local state directly. This is deliberate, not an inconsistency to fix - todos don't
+  affect sort order, urgency, or anything else on the page (docs/PRD.md), so a full-page
+  refresh would only cost a flash and lost expand/collapse state for no benefit.
 - **Vietnamese status/recurrence labels** ("Đã qua", "còn X ngày", "Lặp lại - ... hàng tuần")
   require the `vietnamese` font subset - `app/layout.tsx` loads all three fonts with
   `subsets: ["latin", "vietnamese"]` explicitly.
+- **Deadline date/time entry is two custom segmented-input components, not `<input type="date">`**:
+  `DateField.tsx` (dd/mm/yyyy, backed by `CalendarPopup.tsx` for click-to-pick) and
+  `TimeField.tsx`, both used from `EventForm`. Each digit group auto-advances focus on
+  completion and validates on blur - when editing either, read the live DOM value
+  (`event.target.value`) on blur rather than the closed-over state, since an auto-advance
+  `.focus()` call fires the next field's blur synchronously, one keystroke ahead of when React
+  commits that keystroke's state (see the comment in `DateField.tsx` and `docs/DESIGN.md` §8.5).
 
 ## `proxy.ts`, not `middleware.ts`
 

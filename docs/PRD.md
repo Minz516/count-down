@@ -14,6 +14,9 @@ the single nearest upcoming event highlighted with the most detail
 - Show all other events in a simpler list with just "X days left"
 - Persist data per user via authentication + database, accessible across
   devices
+- Let a personal todo checklist be attached to any event
+- Let a user paste their own Discord Webhook URL and receive a daily digest
+  of upcoming deadlines
 
 ## User Flow
 1. User signs up / logs in (Supabase Auth)
@@ -31,6 +34,10 @@ the single nearest upcoming event highlighted with the most detail
    event's deadline passes, it automatically rolls forward to its next
    occurrence instead of being deleted, and displays separately from the
    regular timeline
+10. Any event card can be expanded to show a personal todo checklist - add
+    items, check them off, see progress (e.g. "2/5")
+11. In Settings, the user can paste their own Discord Webhook URL; once
+    saved, a daily message lists their events due within the next 7 days
 
 ## Core Features (MVP)
 - [ ] **Auth & data isolation (hard requirement):** sign up / log in / log
@@ -57,10 +64,17 @@ the single nearest upcoming event highlighted with the most detail
       When a recurring event's deadline passes, it rolls forward to the
       next occurrence automatically instead of being deleted. Displayed in
       its own pinned section, separate from the main timeline.
+- [ ] Todo checklist per event (personal, not shared with anyone): add items,
+      check them off, item count shown on the card (e.g. "2/5")
+- [ ] Settings page: personal Discord Webhook URL + "enable daily digest"
+      toggle + a "send test message" button; a scheduled server-side job
+      sends the daily digest itself (see `ARCHITECTURE.md` "Discord Digest")
 
 ## Out of Scope (for MVP)
-- Push notifications / reminders
-- Sharing events between users / teams
+- Push notifications / reminders beyond the Discord digest
+- Sharing events between users / teams (including checklist items - a
+  checklist item always belongs to the individual user, no sharing concept
+  yet)
 - Categories or tags (can be a fast-follow if useful later)
 - Recurrence patterns other than weekly (e.g. monthly, custom intervals)
 
@@ -70,3 +84,8 @@ the single nearest upcoming event highlighted with the most detail
   after their deadline, then hard-deleted; this cannot be undone
 - The "add event" form warns (but does not block) if the chosen deadline is
   already in the past
+- Todo checklist items always belong to the individual user - there is no
+  concept of sharing them yet
+- The digest only ever covers non-recurring events - recurring events already
+  have their own always-visible pinned section, so they're not re-surfaced
+  in the digest too

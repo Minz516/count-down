@@ -1,53 +1,80 @@
 "use client";
 
+import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { dayOfWeekLabel } from "@/lib/dateFormat";
 import { nextOccurrence, daysUntil } from "@/modules/events/events.interface";
+import { TodoChecklist } from "./TodoChecklist";
 import type { EventRecord } from "@/types/event";
+import type { TodoRecord } from "@/types/todo";
 
 interface RecurringEventCardProps {
   event: EventRecord;
+  todos: TodoRecord[];
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
 
-export function RecurringEventCard({ event, onEdit, onDelete }: RecurringEventCardProps) {
+export function RecurringEventCard({ event, todos, onEdit, onDelete }: RecurringEventCardProps) {
+  // Before the early return below - hooks can't run conditionally.
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
+
   if (event.recurrence_day_of_week === null) return null;
 
   const days = daysUntil(nextOccurrence(event.deadline));
 
   return (
     // Dashed border distinguishes recurring cards from the Timeline's solid-border rows (docs/UI_SPEC.md).
-    <div className="flex items-center gap-3 rounded-lg border border-dashed border-primary-container/30 bg-surface-container px-5 py-4 transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated">
-      <div className="min-w-0 flex-1">
-        <p className="font-mono text-xs tracking-[0.1em] text-secondary uppercase">
-          Lặp lại - {dayOfWeekLabel(event.recurrence_day_of_week)} hàng tuần
-        </p>
-        <p className="truncate font-body text-base font-semibold text-on-surface">{event.name}</p>
+    // The whole card toggles the checklist - Edit/Delete below stopPropagation
+    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
+    <div
+      onClick={() => setChecklistExpanded((value) => !value)}
+      className="flex cursor-pointer flex-col rounded-lg border border-dashed border-primary-container/30 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated"
+    >
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-xs tracking-[0.1em] text-secondary uppercase">
+            Lặp lại - {dayOfWeekLabel(event.recurrence_day_of_week)} hàng tuần
+          </p>
+          <p className="truncate font-body text-base font-semibold text-on-surface">{event.name}</p>
+        </div>
+
+        <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
+          còn {days} ngày
+        </span>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={(clickEvent) => {
+              clickEvent.stopPropagation();
+              onEdit(event);
+            }}
+            aria-label={`Sửa ${event.name}`}
+            className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+          >
+            <PencilSimple size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={(clickEvent) => {
+              clickEvent.stopPropagation();
+              onDelete(event);
+            }}
+            aria-label={`Xóa ${event.name}`}
+            className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
       </div>
 
-      <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
-        còn {days} ngày
-      </span>
-
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onEdit(event)}
-          aria-label={`Sửa ${event.name}`}
-          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
-        >
-          <PencilSimple size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(event)}
-          aria-label={`Xóa ${event.name}`}
-          className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
-        >
-          <Trash size={16} />
-        </button>
-      </div>
+      <TodoChecklist
+        event={event}
+        initialTodos={todos}
+        expanded={checklistExpanded}
+        onToggleExpanded={() => setChecklistExpanded((value) => !value)}
+      />
     </div>
   );
 }

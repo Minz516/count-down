@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Plus, UserCircle } from "@phosphor-icons/react/ssr";
+import { Bell, Gear, Plus, UserCircle } from "@phosphor-icons/react/ssr";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { Button } from "./Button";
@@ -40,6 +41,13 @@ export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
         >
           <Bell size={20} />
         </button>
+        <Link
+          href="/settings"
+          aria-label="Settings"
+          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
+        >
+          <Gear size={20} />
+        </Link>
         <button
           type="button"
           onClick={handleLogout}

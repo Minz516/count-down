@@ -17,16 +17,21 @@ app/
   page.tsx                  -> main countdown dashboard
   login/page.tsx
   signup/page.tsx
+  settings/page.tsx         -> personal Discord webhook settings
 components/
   EventForm.tsx
   HeroCountdownCard.tsx      -> nearest event, live D:H:M:S
   EventListItem.tsx          -> other events, day count only
   PastEventsList.tsx
+  TodoChecklist.tsx          -> per-event personal checklist
+  SettingsForm.tsx
 lib/
   supabaseClient.ts
   useCountdown.ts            -> hook for the live-ticking countdown
 types/
   event.ts
+  todo.ts
+  settings.ts
 ```
 
 ## Database Schema (Supabase / Postgres)
@@ -50,10 +55,32 @@ Notes:
   scheduled job rolls `deadline` forward to the next matching
   `recurrence_day_of_week`, 7 days later.
 
+**table: todos**
+| column      | type        | notes                                          |
+|-------------|-------------|--------------------------------------------------|
+| id          | uuid        | primary key, default gen_random_uuid()          |
+| event_id    | uuid        | references events(id), not null                 |
+| user_id     | uuid        | references auth.users(id), not null             |
+| content     | text        | not null                                        |
+| is_done     | boolean     | default false                                   |
+| position    | integer     | for manual ordering within the checklist        |
+| created_at  | timestamptz | default now()                                   |
+
+> `todos.user_id` is included even though every event is personal today —
+> forward-compatible with a future shared-event milestone without a schema
+> change later.
+
+**table: user_settings**
+| column               | type    | notes                                          |
+|----------------------|---------|--------------------------------------------------|
+| user_id              | uuid    | primary key, references auth.users(id)          |
+| discord_webhook_url  | text    | nullable — user's own Discord Webhook URL       |
+| digest_enabled       | boolean | default true                                    |
+
 **Row Level Security (RLS)**
-- Enable RLS on `events`
+- Enable RLS on `events`, `todos`, `user_settings`
 - Policy: users may select/insert/update/delete only rows where
-  `user_id = auth.uid()`
+  `user_id = auth.uid()` (see `supabase/schema.sql` for the exact policies)
 
 ## Sorting & Priority Logic
 1. Fetch all non-recurring events for the logged-in user, ordered by
@@ -92,6 +119,36 @@ extension, running once a day:
    For every row where `is_recurring = true AND deadline < now()`, update
    `deadline` to the next date matching `recurrence_day_of_week` (i.e. add
    7 days, repeated if needed until the result is in the future).
+
+Implemented as `public.cleanup_and_roll_events()`, a `plpgsql` function
+(`supabase/cleanup_and_rollover.sql`).
+
+## Discord Digest
+The daily digest needs an outbound HTTP call to Discord, which plain
+`pg_cron` can't do on its own (no `pg_net`). Rather than split the scheduled
+job across two mechanisms, **one Supabase Edge Function**
+(`supabase/functions/daily-digest/`), scheduled once daily via its own cron
+trigger, does all of it:
+1. Calls `cleanup_and_roll_events()` via `.rpc()` — reuses the same SQL
+   function above instead of re-implementing that math in the function.
+2. Reads every row in `user_settings` where `discord_webhook_url` is set and
+   `digest_enabled = true`.
+3. For each, fetches that user's **non-recurring** events with `deadline`
+   between now and now + 7 days (recurring events already have their own
+   always-visible pinned section, so they're excluded from the digest),
+   formats a plain-text Discord message, and `POST`s it to their
+   `discord_webhook_url`. One user's failed send doesn't abort the rest of
+   the batch.
+
+This function runs with no signed-in user, so it authenticates with the
+Supabase **service-role key** (a function secret, never the anon key) —
+the one deliberate exception to this app's anon-key-only rule elsewhere,
+since it must act across every user's data, not one session's.
+
+The Settings page's "Send test message" button is a separate, simpler path:
+it POSTs directly from the browser to the webhook URL currently in the form
+(Discord webhooks accept cross-origin POSTs) — no Edge Function involved,
+since that action has a signed-in user and only needs to talk to Discord.
 
 ## Real-Time Countdown Logic
 - `useCountdown(deadline)` custom hook:

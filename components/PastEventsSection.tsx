@@ -2,9 +2,11 @@
 
 import { PastEventCard } from "./PastEventCard";
 import type { EventRecord } from "@/types/event";
+import type { TodoRecord } from "@/types/todo";
 
 interface PastEventsSectionProps {
   events: EventRecord[];
+  todosByEvent: Record<string, TodoRecord[]>;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
@@ -17,7 +19,7 @@ interface PastEventsSectionProps {
  * cleanup cron hard-deletes them, at which point this section disappears on
  * its own - same lifecycle as before, just relocated.
  */
-export function PastEventsSection({ events, onEdit, onDelete }: PastEventsSectionProps) {
+export function PastEventsSection({ events, todosByEvent, onEdit, onDelete }: PastEventsSectionProps) {
   if (events.length === 0) return null;
 
   return (
@@ -25,7 +27,13 @@ export function PastEventsSection({ events, onEdit, onDelete }: PastEventsSectio
       <h2 className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">Past</h2>
       <div className="flex flex-col gap-2">
         {events.map((event) => (
-          <PastEventCard key={event.id} event={event} onEdit={onEdit} onDelete={onDelete} />
+          <PastEventCard
+            key={event.id}
+            event={event}
+            todos={todosByEvent[event.id] ?? []}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </section>

@@ -262,6 +262,61 @@ verified locally, against the same Supabase project.
 
 ---
 
+## Phase 11 — Todo Checklist per event
+
+- [ ] `todos` table + RLS (`ARCHITECTURE.md`), `modules/todos/` (repository → service →
+      interface), `types/todo.ts`.
+- [ ] One query for every event's checklist (`todosInterface.listAllForUser` +
+      `groupByEvent`), called once in `app/page.tsx` alongside `getDashboardData` - not one
+      query per event card.
+- [ ] `components/TodoChecklist.tsx`: collapsed by default, header shows "done/total" once
+      non-empty, expands to a checkbox+text row per item plus an add-item input. Manages its
+      own local state from the `initialTodos` prop rather than `router.refresh()`-ing -
+      todos don't affect sort/urgency/anything else on the page.
+- [ ] Embedded in all three card types: `EventListItem`, `RecurringEventCard`,
+      `PastEventCard`.
+
+**Done when:** adding/checking/deleting a checklist item on any of the three card types
+persists (survives a page refresh) without affecting that event's position, status, or any
+other event's checklist.
+
+---
+
+## Phase 12 — Settings page (Discord webhook)
+
+- [ ] `user_settings` table + RLS, `modules/settings/` (repository → service → interface,
+      including webhook-URL-shape validation), `types/settings.ts`.
+- [ ] `app/settings/page.tsx` + `components/SettingsForm.tsx`: webhook URL input, "enable
+      daily digest" toggle, Save, and "Send test message" (posts directly from the browser
+      to the URL currently in the field - Discord webhooks accept cross-origin POSTs, no
+      Edge Function needed for this one action).
+- [ ] Nav link from the dashboard to `/settings`.
+
+**Done when:** saving an obviously-malformed URL is rejected before any network call, saving
+a real webhook URL persists across a reload, and "Send test message" delivers a message to
+the Discord channel.
+
+---
+
+## Phase 13 — Discord digest (Edge Function)
+
+- [ ] `supabase/functions/daily-digest/index.ts`: one Edge Function that (1) calls
+      `cleanup_and_roll_events()` via `.rpc()` - reusing Phase 8's SQL function instead of
+      re-implementing it in Deno, (2) reads every `user_settings` row with
+      `digest_enabled = true` and a webhook set, (3) for each, fetches that user's
+      non-recurring events due within 7 days and `POST`s a formatted digest to their webhook.
+      Uses the service-role key (a function secret) since it has no signed-in user - the only
+      place in the codebase that isn't anon-key-only.
+- [ ] Remove the standalone `cron.schedule(...)` from `cleanup_and_rollover.sql` in favor of
+      scheduling this one function daily (keeps the job in one place, per Phase 8's "pick one
+      mechanism" note).
+
+**Done when:** manually invoking the deployed function sends exactly one digest per
+opted-in user listing their events due in the next 7 days, and a user with
+`digest_enabled = false` (or no webhook set) receives nothing.
+
+---
+
 ## Cross-cutting risks to keep in view throughout
 
 - **RLS is the hard requirement** (PRD marks it as such) — verify it with a second test
