@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
+import { clsx } from "clsx";
 import { formatTimelineDate } from "@/lib/dateFormat";
 import { TodoChecklist } from "./TodoChecklist";
 import type { EventRecord } from "@/types/event";
@@ -10,6 +11,8 @@ import type { TodoRecord } from "@/types/todo";
 interface PastEventCardProps {
   event: EventRecord;
   todos: TodoRecord[];
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
@@ -19,15 +22,18 @@ interface PastEventCardProps {
  * already conveys "past" (docs/DESIGN.md §8.7). Only ever lives here for the
  * 24h grace window before `supabase/cleanup_and_rollover.sql` hard-deletes it.
  */
-export function PastEventCard({ event, todos, onEdit, onDelete }: PastEventCardProps) {
+export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDelete }: PastEventCardProps) {
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
   return (
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
     // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
     <div
-      onClick={() => setChecklistExpanded((value) => !value)}
-      className="flex cursor-pointer flex-col rounded border border-transparent bg-surface-container-lowest opacity-70 grayscale transition-opacity hover:opacity-100"
+      onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
+      className={clsx(
+        "flex flex-col rounded border border-transparent bg-surface-container-lowest opacity-70 grayscale transition-opacity hover:opacity-100",
+        showChecklist && "cursor-pointer",
+      )}
     >
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
@@ -63,12 +69,14 @@ export function PastEventCard({ event, todos, onEdit, onDelete }: PastEventCardP
         </div>
       </div>
 
-      <TodoChecklist
-        event={event}
-        initialTodos={todos}
-        expanded={checklistExpanded}
-        onToggleExpanded={() => setChecklistExpanded((value) => !value)}
-      />
+      {showChecklist && (
+        <TodoChecklist
+          event={event}
+          initialTodos={todos}
+          expanded={checklistExpanded}
+          onToggleExpanded={() => setChecklistExpanded((value) => !value)}
+        />
+      )}
     </div>
   );
 }

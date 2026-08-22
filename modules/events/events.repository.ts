@@ -16,6 +16,10 @@ import type { EventInput, EventRecord } from "@/types/event";
  * misconfigured) and makes the scoping visible in the code, not just the DB.
  */
 export const eventsRepository = {
+  /** `.is("group_id", null)` guards against a group event the caller happens to have
+   * authored themselves leaking into their personal timeline (docs/ARCHITECTURE.md
+   * "Group Countdown") - without it, `user_id = userId` alone isn't enough to mean
+   * "personal" once group events exist. */
   async listByRecurrence(
     supabase: SupabaseClient,
     userId: string,
@@ -25,6 +29,7 @@ export const eventsRepository = {
       .from("events")
       .select("*")
       .eq("user_id", userId)
+      .is("group_id", null)
       .eq("is_recurring", isRecurring)
       .order("deadline", { ascending: true });
 
@@ -54,6 +59,7 @@ export const eventsRepository = {
       .update(input)
       .eq("id", id)
       .eq("user_id", userId)
+      .is("group_id", null)
       .select()
       .single();
 
@@ -62,7 +68,72 @@ export const eventsRepository = {
   },
 
   async remove(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
-    const { error } = await supabase.from("events").delete().eq("id", id).eq("user_id", userId);
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .is("group_id", null);
+    if (error) throw new DatabaseError(error.message);
+  },
+
+  // --- Group-scoped variants (docs/ARCHITECTURE.md "Group Countdown") ---
+  // Filtered by group_id, not user_id: any member has equal permission to
+  // manage any event in a group they belong to (docs/PRD.md), not just events
+  // they personally authored.
+
+  async listByGroupAndRecurrence(
+    supabase: SupabaseClient,
+    groupId: string,
+    isRecurring: boolean,
+  ): Promise<EventRecord[]> {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("group_id", groupId)
+      .eq("is_recurring", isRecurring)
+      .order("deadline", { ascending: true });
+
+    if (error) throw new DatabaseError(error.message);
+    return (data ?? []) as EventRecord[];
+  },
+
+  async insertGroupEvent(
+    supabase: SupabaseClient,
+    actingUserId: string,
+    groupId: string,
+    input: EventInput,
+  ): Promise<EventRecord> {
+    const { data, error } = await supabase
+      .from("events")
+      .insert({ ...input, user_id: actingUserId, group_id: groupId })
+      .select()
+      .single();
+
+    if (error) throw new DatabaseError(error.message);
+    return data as EventRecord;
+  },
+
+  async updateGroupEvent(
+    supabase: SupabaseClient,
+    groupId: string,
+    id: string,
+    input: EventInput,
+  ): Promise<EventRecord> {
+    const { data, error } = await supabase
+      .from("events")
+      .update(input)
+      .eq("id", id)
+      .eq("group_id", groupId)
+      .select()
+      .single();
+
+    if (error) throw new DatabaseError(error.message);
+    return data as EventRecord;
+  },
+
+  async removeGroupEvent(supabase: SupabaseClient, groupId: string, id: string): Promise<void> {
+    const { error } = await supabase.from("events").delete().eq("id", id).eq("group_id", groupId);
     if (error) throw new DatabaseError(error.message);
   },
 };

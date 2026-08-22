@@ -10,7 +10,9 @@ import type { TodoRecord } from "@/types/todo";
 interface TimelineProps {
   /** Today/soon/later events only - past events live in PastEventsSection instead (docs/UI_SPEC.md). */
   events: EventRecord[];
-  todosByEvent: Record<string, TodoRecord[]>;
+  todosByEvent?: Record<string, TodoRecord[]>;
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
@@ -23,7 +25,7 @@ interface TimelineProps {
  * Add/remove animates as a soft height collapse so the list never jump-cuts
  * (docs/DESIGN.md §7).
  */
-export function Timeline({ events, todosByEvent, onEdit, onDelete }: TimelineProps) {
+export function Timeline({ events, todosByEvent = {}, showChecklist = true, onEdit, onDelete }: TimelineProps) {
   // events is already sorted ascending and never contains past events - the
   // first row is always "nearest upcoming".
   const nearestUpcomingId = events[0]?.id ?? null;
@@ -54,6 +56,7 @@ export function Timeline({ events, todosByEvent, onEdit, onDelete }: TimelinePro
                   event={event}
                   status={status}
                   todos={todosByEvent[event.id] ?? []}
+                  showChecklist={showChecklist}
                   onEdit={onEdit}
                   onDelete={onDelete}
                 />

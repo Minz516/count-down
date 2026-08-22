@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
+import { clsx } from "clsx";
 import { dayOfWeekLabel } from "@/lib/dateFormat";
 import { nextOccurrence, daysUntil } from "@/modules/events/events.interface";
 import { TodoChecklist } from "./TodoChecklist";
@@ -11,11 +12,19 @@ import type { TodoRecord } from "@/types/todo";
 interface RecurringEventCardProps {
   event: EventRecord;
   todos: TodoRecord[];
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
 
-export function RecurringEventCard({ event, todos, onEdit, onDelete }: RecurringEventCardProps) {
+export function RecurringEventCard({
+  event,
+  todos,
+  showChecklist = true,
+  onEdit,
+  onDelete,
+}: RecurringEventCardProps) {
   // Before the early return below - hooks can't run conditionally.
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
@@ -28,8 +37,11 @@ export function RecurringEventCard({ event, todos, onEdit, onDelete }: Recurring
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
     // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
     <div
-      onClick={() => setChecklistExpanded((value) => !value)}
-      className="flex cursor-pointer flex-col rounded-lg border border-dashed border-primary-container/30 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated"
+      onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
+      className={clsx(
+        "flex flex-col rounded-lg border border-dashed border-primary-container/30 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/50 hover:bg-surface-elevated",
+        showChecklist && "cursor-pointer",
+      )}
     >
       <div className="flex items-center gap-3 px-5 py-4">
         <div className="min-w-0 flex-1">
@@ -69,12 +81,14 @@ export function RecurringEventCard({ event, todos, onEdit, onDelete }: Recurring
         </div>
       </div>
 
-      <TodoChecklist
-        event={event}
-        initialTodos={todos}
-        expanded={checklistExpanded}
-        onToggleExpanded={() => setChecklistExpanded((value) => !value)}
-      />
+      {showChecklist && (
+        <TodoChecklist
+          event={event}
+          initialTodos={todos}
+          expanded={checklistExpanded}
+          onToggleExpanded={() => setChecklistExpanded((value) => !value)}
+        />
+      )}
     </div>
   );
 }

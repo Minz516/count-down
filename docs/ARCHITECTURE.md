@@ -18,6 +18,8 @@ app/
   login/page.tsx
   signup/page.tsx
   settings/page.tsx         -> personal Discord webhook settings
+  groups/page.tsx           -> groups list + create/join
+  groups/[groupId]/page.tsx -> one group's dashboard
 components/
   EventForm.tsx
   HeroCountdownCard.tsx      -> nearest event, live D:H:M:S
@@ -25,6 +27,10 @@ components/
   PastEventsList.tsx
   TodoChecklist.tsx          -> per-event personal checklist
   SettingsForm.tsx
+  GroupNav.tsx               -> Group Dashboard header
+  GroupSettingsModal.tsx     -> invite code, member count, group webhook
+  GroupDashboardClient.tsx   -> Group Dashboard, reuses the personal one's UI
+  GroupsListClient.tsx       -> groups list + create/join flows
 lib/
   supabaseClient.ts
   useCountdown.ts            -> hook for the live-ticking countdown
@@ -32,6 +38,7 @@ types/
   event.ts
   todo.ts
   settings.ts
+  group.ts
 ```
 
 ## Database Schema (Supabase / Postgres)
@@ -47,6 +54,7 @@ types/
 | created_at            | timestamptz | default now()                                   |
 | is_recurring          | boolean     | default false                                   |
 | recurrence_day_of_week| smallint    | nullable, 0 (Sunday) – 6 (Saturday); only set when is_recurring = true |
+| group_id              | uuid        | nullable, references groups(id); null = personal event, set = group event |
 
 Notes:
 - `is_archived` is **not** used anymore — expired non-recurring events are
@@ -54,6 +62,10 @@ Notes:
 - Recurring events never get deleted; when their `deadline` passes, a
   scheduled job rolls `deadline` forward to the next matching
   `recurrence_day_of_week`, 7 days later.
+- `user_id` still records who created the row even for a group event - it's
+  provenance, not an access-control gate, once `group_id` is set (see RLS
+  below: any group member may act on a group event regardless of who
+  authored it).
 
 **table: todos**
 | column      | type        | notes                                          |
@@ -77,10 +89,85 @@ Notes:
 | discord_webhook_url  | text    | nullable — user's own Discord Webhook URL       |
 | digest_enabled       | boolean | default true                                    |
 
+**table: groups**
+| column       | type        | notes                                          |
+|--------------|-------------|--------------------------------------------------|
+| id           | uuid        | primary key, default gen_random_uuid()          |
+| name         | text        | not null                                        |
+| invite_code  | text        | unique, short random string used to join        |
+| created_by   | uuid        | references auth.users(id)                       |
+| created_at   | timestamptz | default now()                                   |
+
+**table: group_members**
+| column     | type        | notes                                          |
+|------------|-------------|--------------------------------------------------|
+| group_id   | uuid        | references groups(id), not null                 |
+| user_id    | uuid        | references auth.users(id), not null             |
+| joined_at  | timestamptz | default now()                                   |
+
+Primary key: `(group_id, user_id)`. No `role` column — every member has equal
+permissions (docs/PRD.md), including the group's creator.
+
+**table: group_settings**
+| column               | type    | notes                                          |
+|----------------------|---------|--------------------------------------------------|
+| group_id             | uuid    | primary key, references groups(id)              |
+| discord_webhook_url  | text    | nullable — the group's own Discord Webhook URL  |
+| digest_enabled       | boolean | default true                                    |
+
 **Row Level Security (RLS)**
-- Enable RLS on `events`, `todos`, `user_settings`
-- Policy: users may select/insert/update/delete only rows where
-  `user_id = auth.uid()` (see `supabase/schema.sql` for the exact policies)
+- Enable RLS on `events`, `todos`, `user_settings`, `groups`, `group_members`,
+  `group_settings`
+- `events`: select/update/delete allowed where
+  `user_id = auth.uid() or group_id in (select group_id from group_members where user_id = auth.uid())`
+  — insert only needs `user_id = auth.uid()`, since every insert (personal or
+  group) sets `user_id` to the acting user regardless of `group_id`
+- `todos`, `user_settings`: unchanged from Milestone 1 —
+  `user_id = auth.uid()`
+- `groups`: **select only** (`id in (select group_id from group_members where user_id = auth.uid())`)
+  — no client-facing insert/update/delete policy; a group is only ever
+  created via the `create_group()` function below
+- `group_members`: **select only**, and self-referencing — a member can see
+  every row for a group they themselves belong to (needed for the member
+  count), not just their own row. No client-facing insert/update/delete
+  policy — joining only happens via `join_group_by_code()` below, so a
+  client can never join a group by guessing/knowing its `group_id` alone
+- `group_settings`: select/insert/update where
+  `group_id in (select group_id from group_members where user_id = auth.uid())`
+  (see `supabase/schema.sql` for the exact policies)
+
+## Group Countdown
+A group is a shared timeline: same Hero Card/Timeline/color-coding/Recurring
+UI as the personal dashboard, just scoped to `group_id` instead of to one
+user, with equal edit permissions for every member (docs/PRD.md - no
+owner-only tier).
+
+- **Creating and joining both go through `security definer` Postgres
+  functions**, never a raw client insert (`groups`/`group_members` have no
+  insert policy at all - see RLS above):
+  - `create_group(p_name text)`: generates a short unique invite code (retry
+    loop on a collision), inserts the group row and the creator's
+    `group_members` row together (one function call = one transaction, so a
+    partial failure can't leave a group with zero members).
+  - `join_group_by_code(p_invite_code text)`: looks up the group by code
+    (raises a friendly exception if none matches), inserts the caller's
+    `group_members` row.
+- **The 10-member cap is enforced with a database trigger**, not just
+  application code, so it can't be bypassed by a direct API call:
+  a `before insert on group_members` trigger raises an exception once a
+  group already has 10 members. It fires regardless of which function (or,
+  hypothetically, any other path) performed the insert.
+  `modules/groups/groups.service.ts` catches that exception (and the
+  invalid-code one) and re-throws the friendly Vietnamese messages the UI
+  expects ("Nhóm đã đủ 10 thành viên", etc.) instead of a raw Postgres error.
+- **The Group Dashboard reuses Milestone 1's dashboard components
+  unchanged** (`Timeline`, `RecurringEventsSection`, `PastEventsSection`,
+  `EventForm`, `ConfirmDialog`, `EmptyState`, `HeroCountdownCard`) - only the
+  query differs (`getGroupDashboardData(groupId)` instead of
+  `getDashboardData(userId)`). Group event cards aren't expandable yet (no
+  todo checklist - that's Milestone 3, once "whose checklist is it" for a
+  shared event is designed) - `showChecklist={false}` is passed down from
+  `GroupDashboardClient.tsx` to suppress it, the one caller that does so.
 
 ## Sorting & Priority Logic
 1. Fetch all non-recurring events for the logged-in user, ordered by
@@ -139,16 +226,31 @@ trigger, does all of it:
    formats a plain-text Discord message, and `POST`s it to their
    `discord_webhook_url`. One user's failed send doesn't abort the rest of
    the batch.
+4. Does the same for `group_settings`: every opted-in group's own
+   non-recurring events (`group_id = ...`, not filtered by any one member's
+   `user_id`), formatted and posted to that group's own
+   `discord_webhook_url` — entirely separate from any member's personal
+   digest.
+
+Personal and group digests are sent via `Promise.all` (both the two
+categories, and every recipient within each) rather than a sequential loop,
+so the function's runtime doesn't grow linearly with the number of
+users/groups.
 
 This function runs with no signed-in user, so it authenticates with the
-Supabase **service-role key** (a function secret, never the anon key) —
-the one deliberate exception to this app's anon-key-only rule elsewhere,
-since it must act across every user's data, not one session's.
+Supabase **service-role key** (never the anon key) — the one deliberate
+exception to this app's anon-key-only rule elsewhere, since it must act
+across every user's (and every group's) data, not one session's.
+`SUPABASE_SERVICE_ROLE_KEY` (with `SUPABASE_URL`) is auto-injected into
+every Edge Function's environment by Supabase itself - there's no secret to
+configure, and `supabase secrets set` refuses to let a reserved
+`SUPABASE_`-prefixed name be set manually.
 
-The Settings page's "Send test message" button is a separate, simpler path:
-it POSTs directly from the browser to the webhook URL currently in the form
-(Discord webhooks accept cross-origin POSTs) — no Edge Function involved,
-since that action has a signed-in user and only needs to talk to Discord.
+The Settings page's (and the Group Settings modal's) "Send test message"
+button is a separate, simpler path: it POSTs directly from the browser to
+the webhook URL currently in the form (Discord webhooks accept cross-origin
+POSTs) — no Edge Function involved, since that action has a signed-in user
+and only needs to talk to Discord.
 
 ## Real-Time Countdown Logic
 - `useCountdown(deadline)` custom hook:

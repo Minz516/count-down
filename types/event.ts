@@ -11,6 +11,8 @@ export interface EventRecord {
   created_at: string; // ISO timestamptz
   is_recurring: boolean;
   recurrence_day_of_week: DayOfWeek | null;
+  /** null = personal event, set = belongs to that group (docs/ARCHITECTURE.md "Group Countdown"). */
+  group_id: string | null;
 }
 
 /** Fields the create/edit form collects; `user_id`/`id`/`created_at` are server-assigned. */

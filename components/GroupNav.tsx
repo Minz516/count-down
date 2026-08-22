@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Gear, Plus, UserCircle, UsersThree } from "@phosphor-icons/react/ssr";
+import { ArrowLeft, Gear, Plus, UserCircle } from "@phosphor-icons/react/ssr";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { Button } from "./Button";
 
-export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
+interface GroupNavProps {
+  groupName: string;
+  memberCount: number;
+  onAddEvent: () => void;
+  onOpenSettings: () => void;
+}
+
+/** Group Dashboard's header - same building blocks as Nav.tsx, scoped to one group instead of the personal dashboard. */
+export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }: GroupNavProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -18,8 +26,22 @@ export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-primary-container/10 px-4 sm:px-12">
-      <span className="font-display text-lg font-semibold text-on-surface">Countdown</span>
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-primary-container/10 px-4 sm:px-12">
+      <div className="flex min-w-0 items-center gap-3">
+        <Link
+          href="/groups"
+          aria-label="Back to groups"
+          className="shrink-0 rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
+        >
+          <ArrowLeft size={20} />
+        </Link>
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-semibold text-on-surface">{groupName}</p>
+          <p className="font-mono text-[11px] tracking-[0.1em] text-text-muted uppercase">
+            {memberCount} / 10 thành viên
+          </p>
+        </div>
+      </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
         <Button onClick={onAddEvent} className="hidden sm:inline-flex">
@@ -36,25 +58,12 @@ export function Nav({ onAddEvent }: { onAddEvent: () => void }) {
         </button>
         <button
           type="button"
-          aria-label="Notifications"
-          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
-        >
-          <Bell size={20} />
-        </button>
-        <Link
-          href="/groups"
-          aria-label="Groups"
-          className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
-        >
-          <UsersThree size={20} />
-        </Link>
-        <Link
-          href="/settings"
-          aria-label="Settings"
+          onClick={onOpenSettings}
+          aria-label="Group settings"
           className="rounded p-1.5 text-text-muted transition-colors hover:text-on-surface"
         >
           <Gear size={20} />
-        </Link>
+        </button>
         <button
           type="button"
           onClick={handleLogout}

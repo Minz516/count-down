@@ -4,7 +4,7 @@
  * or events.service.ts directly, and never call `supabase.from("events")` themselves.
  */
 export { eventsService as eventsInterface } from "./events.service";
-export type { DashboardData } from "./events.service";
+export type { DashboardData, GroupDashboardData } from "./events.service";
 
 export { getEventStatus } from "./events.status";
 export type { EventStatus, EventStatusInfo } from "./events.status";

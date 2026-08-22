@@ -6,7 +6,9 @@ import type { TodoRecord } from "@/types/todo";
 
 interface PastEventsSectionProps {
   events: EventRecord[];
-  todosByEvent: Record<string, TodoRecord[]>;
+  todosByEvent?: Record<string, TodoRecord[]>;
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
@@ -19,7 +21,13 @@ interface PastEventsSectionProps {
  * cleanup cron hard-deletes them, at which point this section disappears on
  * its own - same lifecycle as before, just relocated.
  */
-export function PastEventsSection({ events, todosByEvent, onEdit, onDelete }: PastEventsSectionProps) {
+export function PastEventsSection({
+  events,
+  todosByEvent = {},
+  showChecklist = true,
+  onEdit,
+  onDelete,
+}: PastEventsSectionProps) {
   if (events.length === 0) return null;
 
   return (
@@ -31,6 +39,7 @@ export function PastEventsSection({ events, todosByEvent, onEdit, onDelete }: Pa
             key={event.id}
             event={event}
             todos={todosByEvent[event.id] ?? []}
+            showChecklist={showChecklist}
             onEdit={onEdit}
             onDelete={onDelete}
           />

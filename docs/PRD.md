@@ -17,6 +17,8 @@ the single nearest upcoming event highlighted with the most detail
 - Let a personal todo checklist be attached to any event
 - Let a user paste their own Discord Webhook URL and receive a daily digest
   of upcoming deadlines
+- Let users create/join a Group and share a single timeline of deadlines,
+  with equal edit permissions for every member
 
 ## User Flow
 1. User signs up / logs in (Supabase Auth)
@@ -38,6 +40,14 @@ the single nearest upcoming event highlighted with the most detail
     items, check them off, see progress (e.g. "2/5")
 11. In Settings, the user can paste their own Discord Webhook URL; once
     saved, a daily message lists their events due within the next 7 days
+12. From a Groups screen, a user can create a group (receiving a shareable
+    invite code) or join one by entering a code, up to 10 members per group
+13. Any member opens the Group Dashboard - the same Hero Card/Timeline/
+    Recurring UI as the personal dashboard, scoped to that group - and any
+    member can add/edit/delete any event there; changes are visible to
+    everyone immediately
+14. In the group's own Settings, any member can paste a Discord Webhook URL
+    for the group, separate from anyone's personal one
 
 ## Core Features (MVP)
 - [ ] **Auth & data isolation (hard requirement):** sign up / log in / log
@@ -69,14 +79,26 @@ the single nearest upcoming event highlighted with the most detail
 - [ ] Settings page: personal Discord Webhook URL + "enable daily digest"
       toggle + a "send test message" button; a scheduled server-side job
       sends the daily digest itself (see `ARCHITECTURE.md` "Discord Digest")
+- [ ] Group Countdown: create a group (name -> unique invite code), join a
+      group by code (hard cap of 10 members, enforced at the database
+      level), a Group Dashboard reusing the Hero Card/Timeline/color-coding/
+      Recurring UI scoped to that group, equal-permission editing (any
+      member may add/edit/delete any event in the group), and a group-level
+      Discord webhook + daily digest (separate from any member's personal
+      one)
 
 ## Out of Scope (for MVP)
 - Push notifications / reminders beyond the Discord digest
-- Sharing events between users / teams (including checklist items - a
-  checklist item always belongs to the individual user, no sharing concept
-  yet)
+- Sharing personal events between users / teams outside of a Group (a
+  personal event's checklist items always belong to the individual user;
+  group events don't have a checklist yet - see Group Countdown scope below)
 - Categories or tags (can be a fast-follow if useful later)
 - Recurrence patterns other than weekly (e.g. monthly, custom intervals)
+- Todo checklists on group events, and any owner-only permission tier for
+  groups (kicking members, restricting edits) - both explicitly deferred;
+  every group member currently has equal permissions
+- Merging personal and group timelines into one combined view - they stay
+  as separate dashboards
 
 ## Assumptions (confirm before implementation)
 - A deadline is a single point in time, not a date range
@@ -89,3 +111,7 @@ the single nearest upcoming event highlighted with the most detail
 - The digest only ever covers non-recurring events - recurring events already
   have their own always-visible pinned section, so they're not re-surfaced
   in the digest too
+- The 10-member group cap is a hard limit enforced at the database level, not
+  just in the UI (so it can't be bypassed by a direct API call)
+- A user can be a member of multiple groups at once, and the personal
+  dashboard and each group's dashboard remain fully separate views

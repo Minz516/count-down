@@ -6,11 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Implemented: Next.js App Router + TypeScript + Tailwind v4, Supabase Auth + Postgres.
 Auth, events CRUD, the Hero Card, the unified Timeline, the recurring section, the per-event
-todo checklist, and the Settings page (Discord webhook + digest) are all built. The daily
-Discord digest's Edge Function (`supabase/functions/daily-digest/`) is written but not yet
-deployed/scheduled - that's a manual step, same as the SQL files below. The docs below are
-still the source of truth for product/behavioral decisions - code comments point back to
-them rather than restating rationale.
+todo checklist, the Settings page (Discord webhook + digest), and Group Countdown (shared
+groups with an invite code, a group dashboard reusing the personal one's UI, and a group's
+own Discord digest) are all built. The daily Discord digest's Edge Function
+(`supabase/functions/daily-digest/`) is written but not yet deployed/scheduled - that's a
+manual step, same as the SQL files below. The docs below are still the source of truth for
+product/behavioral decisions - code comments point back to them rather than restating
+rationale.
 
 - `docs/PRD.md` — product requirements, MVP feature list, and explicit assumptions
 - `docs/ARCHITECTURE.md` — tech stack, folder structure, DB schema, sorting/cleanup logic
@@ -41,12 +43,14 @@ and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (copy `.env.local.example`) - without it, `p
 throws on every request since it needs a Supabase client to check the session.
 
 Database setup is not part of `npm run` anything - run `supabase/schema.sql` (tables + RLS
-policies for `events`, `todos`, `user_settings`) directly in the Supabase SQL editor.
-`supabase/cleanup_and_rollover.sql` defines the `cleanup_and_roll_events()` function (no
-longer self-schedules via `pg_cron` - see the file's own comment); deploy and schedule
-`supabase/functions/daily-digest/` (a Supabase Edge Function, `supabase functions deploy
-daily-digest`, needs the `SUPABASE_SERVICE_ROLE_KEY` secret set) to run it daily and send
-the Discord digest.
+policies for `events`, `todos`, `user_settings`, `groups`, `group_members`,
+`group_settings`, plus the `create_group`/`join_group_by_code` functions and the member-cap
+trigger) directly in the Supabase SQL editor. `supabase/cleanup_and_rollover.sql` defines the
+`cleanup_and_roll_events()` function (no longer self-schedules via `pg_cron` - see the
+file's own comment); deploy and schedule `supabase/functions/daily-digest/` (a Supabase Edge
+Function, `supabase functions deploy daily-digest` - no secret to set up, `SUPABASE_SERVICE_ROLE_KEY`
+is auto-injected, see the Architecture bullet below) to run it daily and send both personal
+and group Discord digests.
 
 ## Architecture
 
@@ -67,19 +71,44 @@ the Discord digest.
   there's no separate backend process to put one in front of). **Adding a new entity means
   a new `modules/<name>/` module, not a Supabase call inlined into a component.**
   `modules/todos/` and `modules/settings/` follow the same repository → service →
-  interface shape for the `todos` and `user_settings` tables.
+  interface shape for the `todos` and `user_settings` tables. `modules/groups/` follows it
+  too, for `groups`/`group_members` (`groups.repository.ts`/`.service.ts`) and
+  `group_settings` (`group-settings.repository.ts`/`.service.ts`), both re-exported from one
+  `groups.interface.ts`.
+- **`events` has two ownership scopes, not two modules:** a group event is still just a row
+  in `events` with `group_id` set (personal: `group_id is null`). Rather than forking the
+  entity, `events.repository.ts`/`events.service.ts` grew group-scoped siblings
+  (`listByGroupAndRecurrence`/`insertGroupEvent`/`updateGroupEvent`/`removeGroupEvent`,
+  `getGroupDashboardData`/`createGroupEvent`/`updateGroupEvent`/`deleteGroupEvent`) alongside
+  the original personal-scoped functions - both reuse the same `assertValidInput`. The
+  personal functions gained a `.is("group_id", null)` guard so a user who *authored* a group
+  event doesn't see it leak into their personal dashboard/digest just because its `user_id`
+  still matches them. Group update/delete filter by `group_id`, **not** `user_id` - any
+  member has equal permission to edit/delete any event in the group (docs/PRD.md).
 - **The daily digest Edge Function is a deliberate exception to the anon-key-only rule**
   above: `supabase/functions/daily-digest/index.ts` runs with no signed-in user (it acts
-  across every user's data), so it uses the Supabase **service-role key**
-  (`SUPABASE_SERVICE_ROLE_KEY`, a function secret - never `.env.local`/`NEXT_PUBLIC_*`,
-  never sent to the browser) instead of the anon key, bypassing RLS by design. It's the one
-  place in the codebase that does this - everything under `lib/supabase/` and `modules/`
-  stays anon-key-only.
+  across every user's data), so it uses the Supabase **service-role key** instead of the
+  anon key, bypassing RLS by design. `SUPABASE_SERVICE_ROLE_KEY` (along with `SUPABASE_URL`)
+  is a reserved name Supabase auto-injects into every Edge Function's environment - there's
+  nothing to configure, and `supabase secrets set` actively refuses to let you set it
+  yourself. It's the one place in the codebase that uses this key - everything under
+  `lib/supabase/` and `modules/` stays anon-key-only, and this key must never end up in
+  `.env.local`/`NEXT_PUBLIC_*` or anywhere sent to the browser.
 - **Data model:** single `events` table (`user_id`, `name`, `deadline`, `description`,
-  `is_recurring`, `recurrence_day_of_week`), RLS-scoped to `user_id = auth.uid()`. Mirrored
+  `is_recurring`, `recurrence_day_of_week`, `group_id`), RLS-scoped to `user_id = auth.uid()
+  or group_id in (select group_id from group_members where user_id = auth.uid())`. Mirrored
   in `types/event.ts` as `EventRecord` (a DB row) vs. `EventInput` (what the form collects) -
   this doubles as the `events` module's model, kept at the conventional `types/` location
   since presentational components also need it without importing from `modules/events/`.
+  `EventInput` deliberately excludes `group_id` - it's supplied by the caller context (which
+  page/handler is saving), not collected by `EventForm`, which is reused unchanged for both
+  personal and group events.
+- **Groups can only be created/joined through `security definer` Postgres functions**
+  (`create_group`/`join_group_by_code` in `supabase/schema.sql`), never a raw client insert -
+  `groups` and `group_members` have **no** client-facing insert policy at all. This is
+  deliberate: it's what makes the 10-member cap (a `before insert on group_members` trigger)
+  and "join only via a known invite code" actually enforced, not just UI-level conventions a
+  direct API call could route around.
 - **Two event lifecycles that must not be conflated:**
   - Non-recurring events are hard-deleted 24h after `deadline` passes (grace period).
   - Recurring events (weekly) never delete - `supabase/cleanup_and_rollover.sql`'s daily job
@@ -129,6 +158,12 @@ the Discord digest.
   updates local state directly. This is deliberate, not an inconsistency to fix - todos don't
   affect sort order, urgency, or anything else on the page (docs/PRD.md), so a full-page
   refresh would only cost a flash and lost expand/collapse state for no benefit.
+- **The Group Dashboard reuses Timeline/EventListItem/RecurringEventCard/PastEventCard
+  unchanged**, via an optional `showChecklist` prop (default `true`) threaded down to each -
+  `GroupDashboardClient.tsx` is the only caller that passes `false`, since group event cards
+  aren't expandable yet (Milestone 3 territory - per-member checklists on shared events
+  aren't designed yet). Don't add group-specific copies of these components; extend the
+  shared ones with another prop the way this one was added.
 - **Vietnamese status/recurrence labels** ("Đã qua", "còn X ngày", "Lặp lại - ... hàng tuần")
   require the `vietnamese` font subset - `app/layout.tsx` loads all three fonts with
   `subsets: ["latin", "vietnamese"]` explicitly.

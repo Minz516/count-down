@@ -75,3 +75,176 @@ create policy "Users can insert their own settings" on public.user_settings
 
 create policy "Users can update their own settings" on public.user_settings
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Milestone 2: Group Countdown (docs/ARCHITECTURE.md "Group Countdown").
+-- A shared timeline multiple invited members can view and edit together.
+
+create table if not exists public.groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  invite_code text not null unique,
+  created_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.groups enable row level security;
+
+-- events.group_id: null = personal event, set = belongs to that group.
+alter table public.events add column if not exists group_id uuid references public.groups (id) on delete cascade;
+
+create table if not exists public.group_members (
+  group_id uuid not null references public.groups (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+
+alter table public.group_members enable row level security;
+
+-- Every group-scoped policy below needs "is the current user a member of
+-- this group_id?" - including group_members' own policy, which needs to
+-- check that *about itself* (a member can see every row for a group they
+-- belong to, not just their own row, for the "7/10 members" count UI). A
+-- naive `group_id in (select group_id from group_members where ...)` directly
+-- inside group_members' own policy makes Postgres raise "infinite recursion
+-- detected in policy for relation group_members" - evaluating the subquery
+-- re-triggers the same policy on its own scan of the table, forever. A
+-- `security definer` function breaks the cycle: its internal query runs as
+-- the function's owner (bypasses RLS the same way create_group()/
+-- join_group_by_code() below do), not as the querying user, so it never
+-- re-enters the policy that's calling it.
+create or replace function public.is_group_member(p_group_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.group_members
+    where group_id = p_group_id and user_id = auth.uid()
+  );
+$$;
+
+-- No insert/update/delete policy - joining only happens via
+-- join_group_by_code() below (docs/ARCHITECTURE.md "avoids exposing group_id
+-- values or letting the RLS policy be the only gate on joining").
+create policy "Members can view fellow members" on public.group_members
+  for select using (public.is_group_member(group_id));
+
+-- No insert/update/delete policy here on purpose - the only write path is the
+-- security-definer create_group() function below, so an invite-code guess or
+-- a raw client insert can never create/alter a group row directly.
+create policy "Members can view their groups" on public.groups
+  for select using (public.is_group_member(id));
+
+-- The 10-member cap is enforced here, at the database level, not just in the
+-- UI - it fires on every insert into group_members regardless of whether that
+-- insert came from join_group_by_code() or (hypothetically) anywhere else.
+create or replace function public.check_group_member_cap()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (select count(*) from public.group_members where group_id = new.group_id) >= 10 then
+    raise exception 'Group has reached the 10-member limit';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger enforce_group_member_cap
+before insert on public.group_members
+for each row execute function public.check_group_member_cap();
+
+create table if not exists public.group_settings (
+  group_id uuid primary key references public.groups (id) on delete cascade,
+  discord_webhook_url text,
+  digest_enabled boolean not null default true
+);
+
+alter table public.group_settings enable row level security;
+
+create policy "Members can view their group settings" on public.group_settings
+  for select using (public.is_group_member(group_id));
+
+create policy "Members can insert their group settings" on public.group_settings
+  for insert with check (public.is_group_member(group_id));
+
+create policy "Members can update their group settings" on public.group_settings
+  for update using (public.is_group_member(group_id))
+  with check (public.is_group_member(group_id));
+
+-- Replace the events SELECT/UPDATE/DELETE policies so a member of an event's
+-- group can act on it too, not just the row's own user_id. INSERT is
+-- deliberately left untouched - every insert this app issues (personal or
+-- group) sets user_id to the acting user, so its existing check already
+-- covers group event creation with no change.
+drop policy "Users can view their own events" on public.events;
+drop policy "Users can update their own events" on public.events;
+drop policy "Users can delete their own events" on public.events;
+
+create policy "Users can view their own or group events" on public.events
+  for select using (user_id = auth.uid() or public.is_group_member(group_id));
+
+create policy "Users can update their own or group events" on public.events
+  for update using (user_id = auth.uid() or public.is_group_member(group_id))
+  with check (user_id = auth.uid() or public.is_group_member(group_id));
+
+create policy "Users can delete their own or group events" on public.events
+  for delete using (user_id = auth.uid() or public.is_group_member(group_id));
+
+-- security definer: bypasses RLS on groups/group_members so these two
+-- functions can be the *only* way either table is ever written to from the
+-- client (see the "no insert policy" comments above).
+create or replace function public.create_group(p_name text)
+returns public.groups
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code text;
+  v_group public.groups;
+begin
+  loop
+    v_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+    begin
+      insert into public.groups (name, invite_code, created_by)
+      values (p_name, v_code, auth.uid())
+      returning * into v_group;
+      exit;
+    exception when unique_violation then
+      -- invite_code collision - loop and try a freshly generated code.
+    end;
+  end loop;
+
+  insert into public.group_members (group_id, user_id) values (v_group.id, auth.uid());
+
+  return v_group;
+end;
+$$;
+
+create or replace function public.join_group_by_code(p_invite_code text)
+returns public.groups
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_group public.groups;
+begin
+  select * into v_group from public.groups where invite_code = p_invite_code;
+
+  if not found then
+    raise exception 'Invalid invite code';
+  end if;
+
+  -- The cap trigger above still fires here regardless of this function's
+  -- elevated privileges - it's a table-level guarantee, not bypassable.
+  insert into public.group_members (group_id, user_id) values (v_group.id, auth.uid())
+  on conflict (group_id, user_id) do nothing;
+
+  return v_group;
+end;
+$$;

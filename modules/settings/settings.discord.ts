@@ -1,4 +1,16 @@
-import { AppError } from "@/modules/shared/errors";
+import { AppError, ValidationError } from "@/modules/shared/errors";
+
+const WEBHOOK_URL_PATTERN = /^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//;
+
+/** The field is optional - only validate the shape when one is actually set.
+ * Shared by both `settings.service.ts` (personal) and the group settings
+ * service, so the two never validate against diverging patterns. */
+export function assertValidWebhook(url: string | null): void {
+  if (!url) return;
+  if (!WEBHOOK_URL_PATTERN.test(url)) {
+    throw new ValidationError("That doesn't look like a Discord webhook URL.");
+  }
+}
 
 /**
  * Posts a plain-text message to a Discord webhook. Runs client-side - Discord

@@ -5,3 +5,8 @@
  */
 export { settingsService as settingsInterface } from "./settings.service";
 export type { UserSettings, UserSettingsInput } from "@/types/settings";
+
+// Shared Discord helpers - also used by modules/groups' group-settings
+// service, so both personal and group webhook settings validate/send
+// identically instead of duplicating this logic.
+export { postDiscordMessage, assertValidWebhook } from "./settings.discord";

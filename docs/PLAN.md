@@ -317,6 +317,80 @@ opted-in user listing their events due in the next 7 days, and a user with
 
 ---
 
+## Phase 14 — Group Countdown: schema, RLS, and membership
+
+- [ ] `groups`, `group_members`, `group_settings` tables (`ARCHITECTURE.md` "Group
+      Countdown"); `events.group_id` column (nullable, null = personal).
+- [ ] `check_group_member_cap()` trigger (`before insert on group_members`) enforcing the
+      10-member cap at the database level, not just in the UI.
+- [ ] `create_group()` / `join_group_by_code()` `security definer` Postgres functions - the
+      *only* way `groups`/`group_members` rows are ever written; neither table gets a
+      client-facing insert policy, so a raw client insert or a guessed `group_id` can't
+      create a group or join one without going through these.
+- [ ] Replace `events`' SELECT/UPDATE/DELETE RLS policies with the
+      `user_id = auth.uid() or group_id in (select group_id from group_members where user_id = auth.uid())`
+      condition. INSERT is untouched - every insert already sets `user_id` to the acting
+      user regardless of `group_id`.
+- [ ] `modules/groups/` (repository → service → interface, per entity/table) + `types/group.ts`:
+      `groupsService.createGroup`/`joinGroup` translate the functions' raised Postgres
+      exceptions into friendly `ValidationError`s (the exact Vietnamese copy from
+      `UI_SPEC.md`), not raw error text.
+- [ ] `modules/events/` grows group-scoped siblings (`listByGroupAndRecurrence`,
+      `insertGroupEvent`, `updateGroupEvent`, `removeGroupEvent`,
+      `getGroupDashboardData`/`createGroupEvent`/`updateGroupEvent`/`deleteGroupEvent`) rather
+      than a forked module - same `assertValidInput`. The personal-scoped functions gain a
+      `.is("group_id", null)` guard so a user's own group-authored events don't leak into
+      their personal dashboard/digest.
+
+**Done when:** a second test account can join a group by code and both accounts see the same
+event set; the 11th join attempt is rejected with the cap message; a personal event created
+by either account never appears in the group view or vice versa.
+
+---
+
+## Phase 15 — Group Dashboard UI
+
+- [ ] `app/groups/page.tsx` + `components/GroupsListClient.tsx`: groups list ("N/10" each),
+      Create Group (name → invite code + copy button) and Join Group (code → navigates
+      straight into the group) flows.
+- [ ] `app/groups/[groupId]/page.tsx` + `components/GroupDashboardClient.tsx`: reuses
+      `HeroCountdownCard`, `Timeline`, `RecurringEventsSection`, `PastEventsSection`,
+      `EventForm`, `ConfirmDialog`, `EmptyState` **unchanged** - only the data (group-scoped)
+      and the mutation handlers (group-scoped `eventsInterface` functions) differ. A null
+      group from `getGroup()` (RLS returned nothing) renders a small "not found or not a
+      member" state instead of crashing.
+- [ ] Add an optional `showChecklist` prop (default `true`) to `Timeline`/
+      `RecurringEventsSection`/`PastEventsSection` down to the three card components -
+      `GroupDashboardClient` is the only caller passing `false`, since group event cards
+      aren't expandable yet (no checklist - Milestone 3). Default `true` means zero changes
+      to the personal `DashboardClient` call sites.
+- [ ] `components/GroupNav.tsx` (header: back link, group name, member count, Add Event,
+      Settings, log out) and `components/GroupSettingsModal.tsx` (invite code + copy, member
+      count, the same three webhook controls as `SettingsForm`, posting to
+      `groupSettingsInterface` instead).
+- [ ] Nav link from the personal dashboard to `/groups`.
+
+**Done when:** any member can add/edit/delete any event in the group and every member sees
+the change after a refresh; group event cards show no checklist affordance at all; the group
+Settings modal's invite code, member count, and webhook controls all work.
+
+---
+
+## Phase 16 — Group Discord digest (extend the existing Edge Function)
+
+- [ ] Extend `supabase/functions/daily-digest/index.ts` with a second pass over
+      `group_settings` (opted-in groups → that group's non-recurring events due within 7 days
+      → formatted message → POST to the group's webhook), mirroring the personal pass.
+- [ ] Send both passes (and every recipient within each) via `Promise.all`, not a sequential
+      loop, per `ARCHITECTURE.md`'s explicit note on why (runtime shouldn't grow linearly with
+      users/groups).
+
+**Done when:** manually invoking the deployed function sends one digest per opted-in group
+(distinct from any member's personal digest) listing that group's events due in the next 7
+days.
+
+---
+
 ## Cross-cutting risks to keep in view throughout
 
 - **RLS is the hard requirement** (PRD marks it as such) — verify it with a second test
@@ -331,3 +405,7 @@ opted-in user listing their events due in the next 7 days, and a user with
   `useCountdown`) is a real perf issue on a list of any size.
 - **Recurrence rollover math** (Phase 8) — must handle events overdue by more than one week,
   not just the common one-week case.
+- **The `group_id` personal/group leak** (Phase 14) — any query or repository method scoped
+  by `user_id` alone must also guard `.is("group_id", null)`, or a user's own group-authored
+  events (whose `user_id` still equals them) will incorrectly surface in their personal
+  dashboard/digest.

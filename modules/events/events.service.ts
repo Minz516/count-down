@@ -12,6 +12,10 @@ export interface DashboardData {
   nearestEvent: EventRecord | null;
 }
 
+/** Same shape as `DashboardData` - kept as a separate type since the two are populated by
+ * different queries (personal vs. group-scoped) even though the fields line up. */
+export type GroupDashboardData = DashboardData;
+
 /**
  * Re-validates what the form already checked client-side (docs/ARCHITECTURE_DESIGN.md
  * §2.3: "controllers assume already-valid input", but the service layer is the
@@ -62,5 +66,43 @@ export const eventsService = {
 
   deleteEvent(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
     return eventsRepository.remove(supabase, userId, id);
+  },
+
+  // --- Group-scoped variants (docs/ARCHITECTURE.md "Group Countdown") ---
+
+  async getGroupDashboardData(supabase: SupabaseClient, groupId: string): Promise<GroupDashboardData> {
+    const [timeline, recurring] = await Promise.all([
+      eventsRepository.listByGroupAndRecurrence(supabase, groupId, false),
+      eventsRepository.listByGroupAndRecurrence(supabase, groupId, true),
+    ]);
+
+    const nearestEvent =
+      timeline.find((event) => getEventStatus(event.deadline).status !== "past") ?? null;
+
+    return { timeline, recurring, nearestEvent };
+  },
+
+  createGroupEvent(
+    supabase: SupabaseClient,
+    actingUserId: string,
+    groupId: string,
+    input: EventInput,
+  ): Promise<EventRecord> {
+    assertValidInput(input);
+    return eventsRepository.insertGroupEvent(supabase, actingUserId, groupId, input);
+  },
+
+  updateGroupEvent(
+    supabase: SupabaseClient,
+    groupId: string,
+    id: string,
+    input: EventInput,
+  ): Promise<EventRecord> {
+    assertValidInput(input);
+    return eventsRepository.updateGroupEvent(supabase, groupId, id, input);
+  },
+
+  deleteGroupEvent(supabase: SupabaseClient, groupId: string, id: string): Promise<void> {
+    return eventsRepository.removeGroupEvent(supabase, groupId, id);
   },
 };

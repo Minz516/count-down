@@ -6,13 +6,21 @@ import type { TodoRecord } from "@/types/todo";
 
 interface RecurringEventsSectionProps {
   events: EventRecord[];
-  todosByEvent: Record<string, TodoRecord[]>;
+  todosByEvent?: Record<string, TodoRecord[]>;
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
 
 /** Pinned separately from the Timeline; does not participate in its sort order (docs/UI_SPEC.md). */
-export function RecurringEventsSection({ events, todosByEvent, onEdit, onDelete }: RecurringEventsSectionProps) {
+export function RecurringEventsSection({
+  events,
+  todosByEvent = {},
+  showChecklist = true,
+  onEdit,
+  onDelete,
+}: RecurringEventsSectionProps) {
   if (events.length === 0) return null;
 
   return (
@@ -24,6 +32,7 @@ export function RecurringEventsSection({ events, todosByEvent, onEdit, onDelete 
             key={event.id}
             event={event}
             todos={todosByEvent[event.id] ?? []}
+            showChecklist={showChecklist}
             onEdit={onEdit}
             onDelete={onDelete}
           />

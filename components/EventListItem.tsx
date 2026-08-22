@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
+import { clsx } from "clsx";
 import type { EventStatusInfo } from "@/modules/events/events.interface";
 import { formatTimelineDate } from "@/lib/dateFormat";
 import { StatusLabel } from "./StatusIndicator";
@@ -13,20 +14,32 @@ interface EventListItemProps {
   event: EventRecord;
   status: EventStatusInfo;
   todos: TodoRecord[];
+  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  showChecklist?: boolean;
   onEdit: (event: EventRecord) => void;
   onDelete: (event: EventRecord) => void;
 }
 
 /** Card content only - the status dot + connecting rail are owned by Timeline (docs/DESIGN.md §8.3). */
-export function EventListItem({ event, status, todos, onEdit, onDelete }: EventListItemProps) {
+export function EventListItem({
+  event,
+  status,
+  todos,
+  showChecklist = true,
+  onEdit,
+  onDelete,
+}: EventListItemProps) {
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
   return (
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
     // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist").
     <div
-      onClick={() => setChecklistExpanded((value) => !value)}
-      className="flex cursor-pointer flex-col rounded-lg border border-primary-container/10 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/20 hover:bg-surface-elevated"
+      onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
+      className={clsx(
+        "flex flex-col rounded-lg border border-primary-container/10 bg-surface-container transition-[transform,background-color,border-color] duration-150 hover:-translate-y-px hover:border-primary-container/20 hover:bg-surface-elevated",
+        showChecklist && "cursor-pointer",
+      )}
     >
       <div className="flex items-center gap-3 px-5 py-4">
         <div className="min-w-0 flex-1">
@@ -64,12 +77,14 @@ export function EventListItem({ event, status, todos, onEdit, onDelete }: EventL
         </div>
       </div>
 
-      <TodoChecklist
-        event={event}
-        initialTodos={todos}
-        expanded={checklistExpanded}
-        onToggleExpanded={() => setChecklistExpanded((value) => !value)}
-      />
+      {showChecklist && (
+        <TodoChecklist
+          event={event}
+          initialTodos={todos}
+          expanded={checklistExpanded}
+          onToggleExpanded={() => setChecklistExpanded((value) => !value)}
+        />
+      )}
     </div>
   );
 }

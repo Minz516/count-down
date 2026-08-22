@@ -16,6 +16,14 @@
      to show its own Todo Checklist
 3. **Settings** — Discord Webhook URL input, "enable daily digest" toggle,
    "send test message" button
+4. **Groups** (`/groups`) — list of groups the user belongs to (name + "N/10"
+   member count), "Create Group" (name -> shows the generated invite code
+   with a copy button) and "Join Group" (invite code input) flows
+5. **Group Dashboard** (`/groups/[groupId]`) — same layout as the personal
+   Dashboard (Hero Card, Timeline, Recurring section), scoped to one group's
+   events; event cards are **not** expandable here (no Todo Checklist yet -
+   Milestone 3). A "Group Settings" area (modal): invite code + copy button,
+   member count, and the same Discord webhook controls as personal Settings
 
 ## Hero Countdown Card (nearest event)
 - Large, visually prominent card pinned at the top of the dashboard
@@ -45,6 +53,9 @@
   - Description — optional textarea
 - On submit: if the deadline is already in the past, show a warning but
   still allow saving (see Assumptions in PRD.md)
+- Identical form on the Group Dashboard - same fields, no group-specific
+  additions; only which group (if any) the saved event belongs to differs,
+  which the form itself never collects
 
 ## Recurring Events Section
 - Pinned separately from the main timeline (e.g. dashed border, bottom of
@@ -83,9 +94,35 @@
 - Save persists the URL + toggle; an obviously-malformed webhook URL is
   rejected with a validation message before any network call
 
+## Groups
+- Groups list: one row per group the user belongs to - name, "N/10" member
+  count, links to that group's Dashboard
+- "Create Group": name input -> on success, shows the generated invite code
+  with a copy button
+- "Join Group": invite code input -> on success, goes straight to that
+  group's Dashboard; a full group shows "Nhóm đã đủ 10 thành viên", an
+  unrecognized code shows an equivalent invalid-code message - both inline,
+  no raw error text
+- Empty state (no groups yet): a message prompting the user to either create
+  or join one - two calls-to-action, not the single-CTA `EmptyState`
+  component used elsewhere
+
+## Group Dashboard
+- Header: back link to Groups, group name, "N/10 thành viên", Add Event,
+  Group Settings, log out
+- Body: identical Hero Card/Timeline/Recurring/Past Events sections and
+  color coding as the personal Dashboard, populated from that group's events
+  instead of the signed-in user's
+- Any member's Edit/Delete icon acts on any event in the group - there's no
+  per-row "only the creator can edit" restriction
+- Group Settings (modal): invite code + copy button, "N / 10 thành viên",
+  Discord Webhook URL input, "enable daily digest" toggle, "send test
+  message" button - same behavior as personal Settings, scoped to the group
+
 ## Empty State
 - No events yet -> friendly message + a clear call-to-action to add the
-  first event
+  first event (used identically on the personal Dashboard and an empty
+  Group Dashboard)
 
 ## Responsive Behavior
 - Mobile-first: everything stacks vertically
