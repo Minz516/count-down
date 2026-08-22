@@ -272,6 +272,13 @@ runs lint + build on every push/PR to `main`.
   run *before* the caller is authenticated) before ever calling `signInWithPassword`, which
   Supabase only ever accepts an email for. Pre-existing accounts (created before this
   feature) have no `profiles` row and simply keep signing in by email - no migration needed.
+- **"Confirm email" is enabled in this project's Supabase Auth settings** - `signUp()`
+  therefore returns a user but no session until the confirmation link is clicked.
+  `authRepository.signUp()`/`authService.signUp()` return `{ hasSession: boolean }` (not
+  `void`) so `AuthForm.tsx` can tell the two cases apart: `hasSession: true` redirects to
+  the dashboard as before, `hasSession: false` shows a "Check your email" panel instead of
+  redirecting - redirecting unconditionally would otherwise get the new user silently
+  bounced back to `/login` by `proxy.ts`, since there's no session yet.
 - **Password hashing is entirely Supabase Auth's job, not this app's** - `supabase.auth.signUp`/
   `signInWithPassword` send the raw password over HTTPS to Supabase's own auth server, which
   bcrypt-hashes it server-side before ever storing anything; this codebase never sees, stores,

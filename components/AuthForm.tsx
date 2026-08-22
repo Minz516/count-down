@@ -140,6 +140,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Set instead of redirecting when Supabase Auth's "Confirm email" setting is on
+  // (docs/PRODUCTION_READINESS_CHECKLIST.md §3) - signUp() then returns no session until
+  // the confirmation link is clicked, so pushing to "/" would just get bounced back to
+  // /login by proxy.ts with no explanation.
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -152,7 +157,17 @@ export function AuthForm({ mode }: AuthFormProps) {
       if (mode === "login") {
         await authInterface.signInWithIdentifier(supabase, identifier, password);
       } else {
-        await authInterface.signUp(supabase, { username, email, password, confirmPassword });
+        const { hasSession } = await authInterface.signUp(supabase, {
+          username,
+          email,
+          password,
+          confirmPassword,
+        });
+        if (!hasSession) {
+          setNeedsEmailConfirmation(true);
+          setSubmitting(false);
+          return;
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -175,10 +190,32 @@ export function AuthForm({ mode }: AuthFormProps) {
       </div>
 
       <div className="w-full max-w-sm rounded-lg border border-primary-container/15 bg-surface-container p-6">
-        <h2 className="font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
-        <p className="mt-1 font-body text-sm text-text-muted">{copy.subtitle}</p>
+        {needsEmailConfirmation ? (
+          <>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-primary-container/15 text-primary">
+                <Envelope size={24} />
+              </span>
+              <div>
+                <h2 className="font-display text-lg font-semibold text-on-surface">Check your email</h2>
+                <p className="mt-1 font-body text-sm text-text-muted">
+                  We sent a confirmation link to <span className="text-on-surface">{email}</span>. Click it to
+                  activate your account, then sign in.
+                </p>
+              </div>
+            </div>
+            <Link href="/login" className="mt-6 block">
+              <Button type="button" className="w-full">
+                Back to Sign In
+              </Button>
+            </Link>
+          </>
+        ) : (
+          <>
+            <h2 className="font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
+            <p className="mt-1 font-body text-sm text-text-muted">{copy.subtitle}</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {mode === "signup" && (
             <Field label="Username" icon={<User size={18} className="shrink-0 text-text-muted" />}>
               <input
@@ -249,12 +286,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           </Button>
         </form>
 
-        <p className="mt-6 text-center font-body text-sm text-text-muted">
-          {copy.switchPrompt}{" "}
-          <Link href={copy.switchHref} className="text-primary hover:underline">
-            {copy.switchLabel}
-          </Link>
-        </p>
+            <p className="mt-6 text-center font-body text-sm text-text-muted">
+              {copy.switchPrompt}{" "}
+              <Link href={copy.switchHref} className="text-primary hover:underline">
+                {copy.switchLabel}
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

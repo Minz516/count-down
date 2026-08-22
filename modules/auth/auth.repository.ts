@@ -13,9 +13,19 @@ export const authRepository = {
     if (error) throw new AppError("auth_failed", error.message);
   },
 
-  async signUp(supabase: SupabaseClient, email: string, password: string, username: string): Promise<void> {
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
+  /** Returns whether a session was issued immediately - false when Supabase Auth's
+   * "Confirm email" setting is on, since signUp() then returns a user but no session
+   * until the confirmation link is clicked (a Dashboard toggle, not something this
+   * codebase controls - see docs/PRODUCTION_READINESS_CHECKLIST.md §3). */
+  async signUp(
+    supabase: SupabaseClient,
+    email: string,
+    password: string,
+    username: string,
+  ): Promise<{ hasSession: boolean }> {
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
     if (error) throw new AppError("auth_failed", error.message);
+    return { hasSession: data.session !== null };
   },
 
   async signOut(supabase: SupabaseClient): Promise<void> {

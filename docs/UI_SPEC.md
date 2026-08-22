@@ -7,7 +7,12 @@
    wordmark. Every password field has a show/hide (eye icon) toggle. Signup's password
    field shows a live checklist below it - 8+ characters, an uppercase letter, a
    lowercase letter, a number, a special character - each ticking on as it's satisfied
-   while typing, not just surfaced after a failed submit.
+   while typing, not just surfaced after a failed submit. If Supabase Auth's "Confirm
+   email" setting is on (a Supabase Dashboard toggle - see
+   `docs/PRODUCTION_READINESS_CHECKLIST.md` §3), signup doesn't return a session
+   immediately; the form detects this and swaps to a "Check your email" panel (with a
+   link back to Sign In) instead of redirecting to the dashboard, since there's no
+   session yet to redirect with.
 2. **Dashboard** (main page)
    - Top nav: logo + "Countdown" wordmark, **Personal**/**Group** tabs (1-person
      icon / group icon, active tab underlined), Add Event, notifications, settings,

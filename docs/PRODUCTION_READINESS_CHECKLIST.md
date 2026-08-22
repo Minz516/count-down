@@ -137,12 +137,14 @@ Supabase Auth, email + password. Personal data isolated via RLS
 - [x] Row Level Security is **enabled** (not just "has policies") on
       every table containing user data — confirmed via `alter table ...
       enable row level security` on every table in `supabase/schema.sql`
-- [ ] Email confirmation setting in Supabase Auth is a deliberate choice,
+- [x] Email confirmation setting in Supabase Auth is a deliberate choice,
       not left on the default — decide whether users must verify their
-      email before first login — **this is a Supabase Dashboard toggle,
-      can't be checked or set from the codebase; decide and confirm it
-      yourself** (Authentication > Settings > "Confirm email" — see
-      `docs/SETUP.md`)
+      email before first login — confirmed **on** (screenshot review,
+      2026-08-23). This meant `supabase.auth.signUp()` returns no session
+      until the link is clicked; `AuthForm.tsx` previously redirected to
+      the dashboard unconditionally regardless, silently bouncing new
+      users back to `/login` via `proxy.ts` — fixed: it now detects the
+      no-session case and shows a "Check your email" panel instead
 - [x] Session handling: the Supabase client's auto-refresh-token behavior
       is relied on (not disabled), and there's a Next.js middleware or
       layout-level check that redirects unauthenticated users away from

@@ -15,7 +15,7 @@ export const authService = {
    * Validates the signup form's rules (docs/UI_SPEC.md "Login / Signup") before ever
    * calling Supabase - mirrors `events.service.ts`'s `assertValidInput` shape.
    */
-  async signUp(supabase: SupabaseClient, input: SignUpInput): Promise<void> {
+  async signUp(supabase: SupabaseClient, input: SignUpInput): Promise<{ hasSession: boolean }> {
     const username = input.username.trim();
     const email = input.email.trim();
 
@@ -38,7 +38,7 @@ export const authService = {
     }
 
     try {
-      await authRepository.signUp(supabase, email, input.password, username);
+      return await authRepository.signUp(supabase, email, input.password, username);
     } catch (err) {
       // Translates handle_new_user()'s raised Postgres exception (supabase/schema.sql)
       // into a friendly message - same pattern as groups.service.ts's joinGroup.
