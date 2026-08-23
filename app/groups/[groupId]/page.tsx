@@ -1,8 +1,8 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GroupDashboardClient } from "@/components/GroupDashboardClient";
 import { createClient } from "@/lib/supabase/server";
-import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface } from "@/modules/events/events.interface";
 import { groupsInterface, groupSettingsInterface } from "@/modules/groups/groups.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
@@ -16,11 +16,13 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   const { groupId } = await params;
 
   const supabase = await createClient();
-  const user = await authInterface.getCurrentUser(supabase);
+  // Set by proxy.ts from its own already-verified getUser() call - trusting it here
+  // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
+  const userId = (await headers()).get("x-user-id");
 
   // Defense in depth - proxy.ts already redirects unauthenticated requests,
   // this guards direct server-render edge cases (e.g. a stale/missing cookie).
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
@@ -33,7 +35,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
     eventsInterface.getGroupDashboardData(supabase, groupId),
     groupSettingsInterface.getSettings(supabase, groupId),
     groupsInterface.listGroupMembers(supabase, groupId),
-    todosInterface.listAllForUser(supabase, user.id),
+    todosInterface.listAllForUser(supabase, userId),
   ]);
 
   // RLS returns no row both when the group doesn't exist and when the

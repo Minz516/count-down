@@ -53,6 +53,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Forward the id of the user this middleware already verified via getUser() so
+  // protected pages can trust it instead of paying for a second getUser() round-trip
+  // (docs/FIX_NAVIGATION_LATENCY.md). Safe to trust: this header is set here, on the
+  // request, after JWT verification - a client-sent "x-user-id" can never survive since
+  // this construction always overwrites the header set. Not a new auth boundary - RLS
+  // still enforces all actual data access regardless of this header's value.
+  if (user) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-user-id", user.id);
+    // Rebuilding the response for the new request headers would otherwise drop any
+    // refreshed session cookies setAll() already staged on `response` above - carry
+    // them over explicitly so a token refresh on this request still sticks.
+    const pendingCookies = response.cookies.getAll();
+    response = NextResponse.next({ request: { headers: requestHeaders } });
+    for (const cookie of pendingCookies) {
+      response.cookies.set(cookie);
+    }
+  }
+
   return response;
 }
 

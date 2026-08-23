@@ -1,9 +1,9 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "@phosphor-icons/react/ssr";
 import { SettingsForm } from "@/components/SettingsForm";
 import { createClient } from "@/lib/supabase/server";
-import { authInterface } from "@/modules/auth/auth.interface";
 import { settingsInterface } from "@/modules/settings/settings.interface";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
@@ -13,15 +13,17 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const user = await authInterface.getCurrentUser(supabase);
+  // Set by proxy.ts from its own already-verified getUser() call - trusting it here
+  // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
+  const userId = (await headers()).get("x-user-id");
 
   // Defense in depth - proxy.ts already redirects unauthenticated requests,
   // this guards direct server-render edge cases (e.g. a stale/missing cookie).
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
-  const settings = await settingsInterface.getSettings(supabase, user.id);
+  const settings = await settingsInterface.getSettings(supabase, userId);
 
   return (
     <div className="min-h-dvh">
