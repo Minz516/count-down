@@ -273,6 +273,63 @@ begin
 end;
 $$;
 
+-- Deletion is creator-only. security definer, same "controlled write path" pattern
+-- as create_group()/join_group_by_code() - groups has no client-facing delete policy
+-- on purpose. Cascades (group_members, events, group_settings, and transitively
+-- todos/notifications) clean up everything else automatically - no manual deletes
+-- needed here.
+create or replace function public.delete_group(p_group_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_created_by uuid;
+begin
+  select created_by into v_created_by from public.groups where id = p_group_id;
+
+  -- Deliberately one generic exception for "doesn't exist", "creator's account
+  -- was since deleted (created_by went null via on delete set null)", and "caller
+  -- isn't the creator" - same "indistinguishable on purpose" reasoning as
+  -- groups.repository.ts's getById (don't let this become a group-existence oracle
+  -- for non-members, since security definer bypasses the groups SELECT policy).
+  if v_created_by is null or v_created_by <> auth.uid() then
+    raise exception 'Only the group creator can delete this group';
+  end if;
+
+  delete from public.groups where id = p_group_id;
+end;
+$$;
+
+-- Renaming is creator-only, same "controlled write path" + ownership-check shape as
+-- delete_group() - groups has no client-facing update policy on purpose. Length is
+-- enforced by the existing groups_name_length check constraint (mirrored client-side
+-- in modules/groups/groups.service.ts, same as create_group() relies on it too).
+create or replace function public.update_group_name(p_group_id uuid, p_name text)
+returns public.groups
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_created_by uuid;
+  v_group public.groups;
+begin
+  select created_by into v_created_by from public.groups where id = p_group_id;
+
+  -- Same "one generic exception" reasoning as delete_group() - see its comment.
+  if v_created_by is null or v_created_by <> auth.uid() then
+    raise exception 'Only the group creator can rename this group';
+  end if;
+
+  update public.groups set name = p_name where id = p_group_id
+  returning * into v_group;
+
+  return v_group;
+end;
+$$;
+
 -- Rate limiting for invite-code join attempts (docs/PRODUCTION_READINESS_CHECKLIST.md §8):
 -- groups.invite_code is only 8 characters, so without a cap it's brute-forceable through
 -- repeated calls to join_group_by_code() directly - RLS/policies don't limit call

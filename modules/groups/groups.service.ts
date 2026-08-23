@@ -93,6 +93,50 @@ export const groupsService = {
     }
   },
 
+  /**
+   * Renaming is creator-only, enforced by the update_group_name() RPC (supabase/schema.sql)
+   * via auth.uid() = created_by. Validation mirrors createGroup's (same NAME_MAX_LENGTH),
+   * and the RPC-exception translation mirrors deleteGroup's.
+   */
+  async renameGroup(supabase: SupabaseClient, groupId: string, name: string): Promise<GroupRecord> {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new ValidationError("Group name is required.");
+    }
+    if (trimmed.length > NAME_MAX_LENGTH) {
+      throw new ValidationError(`Group name must be ${NAME_MAX_LENGTH} characters or fewer.`);
+    }
+
+    try {
+      return await groupsRepository.updateName(supabase, groupId, trimmed);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("Only the group creator can rename this group")) {
+        throw new ValidationError("Only the group creator can rename this group.");
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Deletion is creator-only, enforced by the delete_group() RPC (supabase/schema.sql)
+   * via auth.uid() = created_by - this stays a thin pass-through, same shape as
+   * eventsService.deleteEvent, rather than re-checking ownership here. The UI is
+   * responsible for only showing the delete action to the creator; this translates
+   * the RPC's raised exception into a friendly error for whoever calls it anyway.
+   */
+  async deleteGroup(supabase: SupabaseClient, groupId: string): Promise<void> {
+    try {
+      await groupsRepository.remove(supabase, groupId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("Only the group creator can delete this group")) {
+        throw new ValidationError("Only the group creator can delete this group.");
+      }
+      throw err;
+    }
+  },
+
   /** A group's member roster (docs/UI_SPEC.md "Group Dashboard" - Members) - a member with
    * no `profiles` row (pre-existing account) still appears, just with `username: null`. */
   async listGroupMembers(supabase: SupabaseClient, groupId: string): Promise<GroupMemberRecord[]> {

@@ -58,6 +58,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   return (
     <GroupDashboardClient
       group={group}
+      currentUserId={userId}
       initialEvents={timeline}
       initialRecurringEvents={recurring}
       initialNearestEvent={nearestEvent}

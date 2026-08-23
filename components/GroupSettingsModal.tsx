@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Check, Copy, X } from "@phosphor-icons/react/ssr";
+import { Check, Copy, PencilSimple, X } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { createClient } from "@/lib/supabase/client";
-import { groupSettingsInterface } from "@/modules/groups/groups.interface";
+import { groupSettingsInterface, groupsInterface } from "@/modules/groups/groups.interface";
 import type { GroupRecord, GroupMemberRecord, GroupSettings } from "@/types/group";
 
 interface GroupSettingsModalProps {
   group: GroupRecord;
+  currentUserId: string;
   initialSettings: GroupSettings | null;
   initialMembers: GroupMemberRecord[];
   onClose: () => void;
@@ -26,11 +29,22 @@ const inputClass =
  */
 export function GroupSettingsModal({
   group,
+  currentUserId,
   initialSettings,
   initialMembers,
   onClose,
 }: GroupSettingsModalProps) {
+  const router = useRouter();
+  const isCreator = group.created_by === currentUserId;
+
   const [copied, setCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(group.name);
+  const [renaming, setRenaming] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // Tracked in state (not read straight from the prop each render) so the
   // placeholder reflects a webhook just saved this session too, not only
@@ -101,6 +115,39 @@ export function GroupSettingsModal({
     }
   }
 
+  async function handleRenameSubmit(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = nameInput.trim();
+    setNameError(null);
+    setRenaming(true);
+
+    try {
+      const supabase = createClient();
+      await groupsInterface.renameGroup(supabase, group.id, trimmed);
+      setEditingName(false);
+      router.refresh();
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setRenaming(false);
+    }
+  }
+
+  async function handleDeleteGroup() {
+    setError(null);
+    setDeleting(true);
+
+    try {
+      const supabase = createClient();
+      await groupsInterface.deleteGroup(supabase, group.id);
+      router.push("/groups");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setConfirmingDelete(false);
+      setDeleting(false);
+    }
+  }
+
   async function handleTestMessage() {
     setError(null);
     setMessage(null);
@@ -126,9 +173,60 @@ export function GroupSettingsModal({
         className="w-full max-w-md rounded-lg border border-primary-container/15 bg-surface-container p-6"
       >
         <div className="flex items-start justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="font-display text-xl font-semibold text-on-surface">Group Settings</h2>
-            <p className="mt-1 font-body text-sm text-text-muted">{group.name}</p>
+
+            {editingName ? (
+              <form onSubmit={handleRenameSubmit} className="mt-1 flex items-center gap-1">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(inputEvent) => setNameInput(inputEvent.target.value)}
+                  autoFocus
+                  className="w-full rounded border border-transparent bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={renaming}
+                  aria-label="Save group name"
+                  className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingName(false);
+                    setNameError(null);
+                  }}
+                  disabled={renaming}
+                  aria-label="Cancel"
+                  className="rounded p-1 text-text-muted hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              </form>
+            ) : (
+              <div className="mt-1 flex items-center gap-1">
+                <p className="truncate font-body text-sm text-text-muted">{group.name}</p>
+                {isCreator && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameInput(group.name);
+                      setNameError(null);
+                      setEditingName(true);
+                    }}
+                    aria-label="Edit group name"
+                    className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+                  >
+                    <PencilSimple size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {nameError && <p className="mt-1 font-body text-xs text-error">{nameError}</p>}
           </div>
           <button
             type="button"
@@ -233,7 +331,35 @@ export function GroupSettingsModal({
             </Button>
           </div>
         </form>
+
+        {isCreator && (
+          <div className="mt-6 flex items-center justify-between border-t border-error/20 pt-6">
+            <div>
+              <h3 className="font-display text-base font-semibold text-on-surface">Danger Zone</h3>
+              <p className="mt-1 font-body text-sm text-text-muted">
+                Permanently delete this group for every member.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={deleting}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete Group
+            </Button>
+          </div>
+        )}
       </motion.div>
+
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete this group?"
+          description={`"${group.name}" and all of its events, todos, and settings will be permanently deleted for every member. This can't be undone.`}
+          onConfirm={handleDeleteGroup}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   );
 }

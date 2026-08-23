@@ -84,6 +84,25 @@ export const groupsRepository = {
     return group;
   },
 
+  /** RPC-only, like create/joinByCode - groups has no client-facing delete policy;
+   * delete_group() itself checks the caller is the group's creator. */
+  async remove(supabase: SupabaseClient, groupId: string): Promise<void> {
+    const { error } = await supabase.rpc("delete_group", { p_group_id: groupId });
+    if (error) throw new DatabaseError(error.message);
+  },
+
+  /** RPC-only, like create/delete - groups has no client-facing update policy;
+   * update_group_name() itself checks the caller is the group's creator. Re-fetches
+   * afterward the same way joinByCode does - the RPC returns the bare `groups` row,
+   * without the embedded member_count aggregate the rest of this module expects. */
+  async updateName(supabase: SupabaseClient, groupId: string, name: string): Promise<GroupRecord> {
+    const { error } = await supabase.rpc("update_group_name", { p_group_id: groupId, p_name: name });
+    if (error) throw new DatabaseError(error.message);
+    const group = await groupsRepository.getById(supabase, groupId);
+    if (!group) throw new DatabaseError("Renamed the group but couldn't load it back.");
+    return group;
+  },
+
   /** Raw membership rows (no profile data) for one group, oldest-joined first. */
   async listMemberRows(supabase: SupabaseClient, groupId: string): Promise<MemberRow[]> {
     const { data, error } = await supabase

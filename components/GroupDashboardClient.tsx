@@ -21,6 +21,7 @@ import type { TodoRecord } from "@/types/todo";
 
 interface GroupDashboardClientProps {
   group: GroupRecord;
+  currentUserId: string;
   initialEvents: EventRecord[];
   initialRecurringEvents: EventRecord[];
   initialNearestEvent: EventRecord | null;
@@ -47,6 +48,7 @@ type ModalState =
  */
 export function GroupDashboardClient({
   group,
+  currentUserId,
   initialEvents,
   initialRecurringEvents,
   initialNearestEvent,
@@ -160,6 +162,7 @@ export function GroupDashboardClient({
           <GroupSettingsModal
             key="group-settings"
             group={group}
+            currentUserId={currentUserId}
             initialSettings={initialSettings}
             initialMembers={initialMembers}
             onClose={() => setSettingsOpen(false)}
