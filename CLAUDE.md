@@ -41,12 +41,16 @@ Some writes only have an RPC path (e.g. `create_group`, `join_group_by_code`, `g
 ## Data flow: server components fetch, client components mutate
 
 - Pages under `app/` are Server Components. They create a server-side Supabase client (`lib/supabase/server.ts`, cookie-based), call `*Interface` methods to fetch initial data, and pass it as props into a `"use client"` component (e.g. `app/page.tsx` → `components/DashboardClient.tsx`). Pages that render one user's private data set `export const dynamic = "force-dynamic"` explicitly so they're never statically cached/served across users.
+- Protected pages read the acting user id from the `x-user-id` request header — `(await headers()).get("x-user-id")` — **not** by calling `supabase.auth.getUser()` again. `proxy.ts` sets that header after it has already JWT-verified the user, so trusting it avoids a second Supabase Auth round-trip per navigation (`docs/FIX_NAVIGATION_LATENCY.md`). Pages still `redirect("/login")` when it's missing (defense in depth), and it's not an auth boundary — RLS is. Follow this pattern in any new protected page.
 - Client components create their own Supabase client (`lib/supabase/client.ts`) per mutation and call the same `*Interface` methods directly (no server actions / API route layer for CRUD) — e.g. `DashboardClient.tsx` calls `eventsInterface.createEvent(supabase, user.id, input)` on submit, then updates local state / re-fetches.
-- `types/*.ts` holds the shared record/input types (`EventRecord`, `EventInput`, etc.) used by both the module layer and components.
+- `types/*.ts` holds the shared record/input types (`EventRecord`, `EventInput`, etc.) used by both the module layer and components. `lib/` holds framework-agnostic helpers used across components: `useCountdown.ts` (the live 1s tick behind the hero countdown), `dateFormat.ts`, `passwordStrength.ts`.
 
 ## Other things to know
 
 - `supabase/functions/daily-digest/` is a Supabase Edge Function (Deno), deployed and scheduled separately (`supabase functions deploy daily-digest`) — not part of the Next.js build. It sends the Discord digest, rolls recurring events forward, cleans up expired events, and generates in-app notifications.
 - Sentry (`@sentry/nextjs`) is wired up (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`) but dormant until a DSN env var is set — don't assume it's active in dev/CI.
 - Path alias `@/*` maps to the repo root (see `tsconfig.json`).
+- Styling is Tailwind CSS v4 via the PostCSS plugin (`@tailwindcss/postcss`) — there is no `tailwind.config`; theme tokens and global styles live in `app/globals.css`.
 - `.claude/skills/DESIGN.md`, `TASTE.md`, `THEME.md` capture this project's frontend visual-design conventions (palette, type, motion) — check them before making UI/styling changes.
+- `docs/` holds the design record: `ARCHITECTURE_DESIGN.md` (the section-numbered spec that code comments cite as "§x.y"), `PRD.md`, `UI_SPEC.md`, `PRODUCTION_READINESS_CHECKLIST.md`, `FIX_NAVIGATION_LATENCY.md`, `SETUP.md`. Consult the relevant one before a non-trivial change; inline comments frequently point at a specific section.
+- `app/sentry-example-page/` and `app/api/sentry-example-api/` are leftover Sentry-wizard scaffolding, not real features — safe to ignore or delete.

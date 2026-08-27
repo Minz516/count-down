@@ -43,3 +43,12 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# local tooling / internal docs (kept out of the repo intentionally)
+/CLAUDE.md
+/.claude
+/docs
+/references
+
+# supabase local CLI state (machine-specific link info)
+/supabase/.temp
