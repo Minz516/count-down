@@ -6,7 +6,12 @@ import { motion } from "motion/react";
 import { Button } from "./Button";
 import { DateField } from "./DateField";
 import { TimeField } from "./TimeField";
-import { dayOfWeekLabel, fromDateTimeParts, toDateTimeParts } from "@/lib/dateFormat";
+import {
+  dayOfWeekLabel,
+  fromDateTimeParts,
+  nextDeadlineForDayOfWeek,
+  toDateTimeParts,
+} from "@/lib/dateFormat";
 import type { DayOfWeek, EventInput, EventRecord } from "@/types/event";
 
 interface EventFormProps {
@@ -43,14 +48,23 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
 
   // A one-time reference is enough here - this warning doesn't need to tick while the form is open.
   const [now] = useState(() => Date.now());
-  const deadlineIso = date && time ? fromDateTimeParts(date, time) : null;
-  const isPastDeadline = deadlineIso !== null && new Date(deadlineIso).getTime() < now;
+  // A weekly event has no calendar date - its deadline is the next occurrence of the chosen
+  // weekday + time, always computed forward, so it can never land in the past.
+  const deadlineIso = isRecurring
+    ? time
+      ? nextDeadlineForDayOfWeek(dayOfWeek, time)
+      : null
+    : date && time
+      ? fromDateTimeParts(date, time)
+      : null;
+  const isPastDeadline =
+    !isRecurring && deadlineIso !== null && new Date(deadlineIso).getTime() < now;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
     if (!name.trim() || !deadlineIso) {
-      setError("Name and deadline are required.");
+      setError(isRecurring ? "Name and time are required." : "Name and deadline are required.");
       return;
     }
 
@@ -110,9 +124,35 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
             />
           </Field>
 
+          <label className="flex items-center gap-2 font-body text-sm text-on-surface">
+            <input
+              type="checkbox"
+              checked={isRecurring}
+              onChange={(event) => setIsRecurring(event.target.checked)}
+              className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
+            />
+            Repeats weekly
+          </label>
+
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Deadline Date">
-              <DateField value={date} onChange={setDate} />
+            {/* A weekly event repeats on a weekday, so it collects a Day of week instead of a
+                calendar date - the deadline date is derived from it (see deadlineIso above). */}
+            <Field label={isRecurring ? "Day of week" : "Deadline Date"}>
+              {isRecurring ? (
+                <select
+                  value={dayOfWeek}
+                  onChange={(event) => setDayOfWeek(Number(event.target.value) as DayOfWeek)}
+                  className={inputClass}
+                >
+                  {([0, 1, 2, 3, 4, 5, 6] as const).map((day) => (
+                    <option key={day} value={day}>
+                      {dayOfWeekLabel(day)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <DateField value={date} onChange={setDate} />
+              )}
             </Field>
             <Field label="Deadline Time">
               <TimeField value={time} onChange={setTime} />
@@ -135,32 +175,6 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
               className={inputClass}
             />
           </Field>
-
-          <label className="flex items-center gap-2 font-body text-sm text-on-surface">
-            <input
-              type="checkbox"
-              checked={isRecurring}
-              onChange={(event) => setIsRecurring(event.target.checked)}
-              className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
-            />
-            Repeats weekly
-          </label>
-
-          {isRecurring && (
-            <Field label="Day of week">
-              <select
-                value={dayOfWeek}
-                onChange={(event) => setDayOfWeek(Number(event.target.value) as DayOfWeek)}
-                className={inputClass}
-              >
-                {([0, 1, 2, 3, 4, 5, 6] as const).map((day) => (
-                  <option key={day} value={day}>
-                    {dayOfWeekLabel(day)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
 
           {error && <p className="font-body text-sm text-error">{error}</p>}
 

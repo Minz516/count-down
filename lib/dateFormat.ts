@@ -69,6 +69,29 @@ export function fromDateTimeParts(date: string, time: string): string {
   return new Date(`${date}T${time}`).toISOString();
 }
 
+/**
+ * ISO deadline for the next future occurrence of weekday `day` (0 = Sunday .. 6 = Saturday)
+ * at local `time` ("HH:mm"). Weekly-recurring events collect a weekday + time instead of a
+ * calendar date; the result always lands on `day`, which is what `nextOccurrence()` and the
+ * server rollover job (supabase/cleanup_and_rollover.sql) rely on when they advance the
+ * stored deadline by whole weeks.
+ */
+export function nextDeadlineForDayOfWeek(
+  day: DayOfWeek,
+  time: string,
+  from: Date = new Date(),
+): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  const result = new Date(from);
+  result.setHours(hours, minutes, 0, 0);
+  result.setDate(result.getDate() + ((day - result.getDay() + 7) % 7));
+  if (result.getTime() <= from.getTime()) {
+    // Weekday matches today but that time has already passed - use next week's.
+    result.setDate(result.getDate() + 7);
+  }
+  return result.toISOString();
+}
+
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
