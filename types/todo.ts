@@ -1,5 +1,6 @@
-/** A row from the `todos` table (see docs/ARCHITECTURE.md). */
-export interface TodoRecord {
+/** A row from the `todos` table (see docs/ARCHITECTURE.md). Repository-internal - see
+ * modules/todos/todos.dto.ts for the DTO pages/components actually consume. */
+export interface TodoEntity {
   id: string;
   event_id: string;
   user_id: string;

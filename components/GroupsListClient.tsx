@@ -7,11 +7,10 @@ import { Check, Copy, Plus, UsersThree } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
-import { groupsInterface } from "@/modules/groups/groups.interface";
-import type { GroupRecord } from "@/types/group";
+import { groupsInterface, type GroupDTO } from "@/modules/groups/groups.interface";
 
 interface GroupsListClientProps {
-  initialGroups: GroupRecord[];
+  initialGroups: GroupDTO[];
 }
 
 const inputClass =
@@ -29,7 +28,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
   const [joining, setJoining] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [createdGroup, setCreatedGroup] = useState<GroupRecord | null>(null);
+  const [createdGroup, setCreatedGroup] = useState<GroupDTO | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function handleCreate(event: FormEvent) {

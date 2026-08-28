@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { GroupSettings, GroupSettingsInput } from "@/types/group";
+import type { GroupSettingsEntity, GroupSettingsInput } from "@/types/group";
 
 /**
  * All Supabase access for `group_settings` lives here - structurally
@@ -8,7 +8,7 @@ import type { GroupSettings, GroupSettingsInput } from "@/types/group";
  * `group_id` instead of `user_id` (docs/ARCHITECTURE.md "Group Countdown").
  */
 export const groupSettingsRepository = {
-  async get(supabase: SupabaseClient, groupId: string): Promise<GroupSettings | null> {
+  async get(supabase: SupabaseClient, groupId: string): Promise<GroupSettingsEntity | null> {
     const { data, error } = await supabase
       .from("group_settings")
       .select("*")
@@ -16,14 +16,14 @@ export const groupSettingsRepository = {
       .maybeSingle();
 
     if (error) throw new DatabaseError(error.message);
-    return data as GroupSettings | null;
+    return data as GroupSettingsEntity | null;
   },
 
   async upsert(
     supabase: SupabaseClient,
     groupId: string,
     input: GroupSettingsInput,
-  ): Promise<GroupSettings> {
+  ): Promise<GroupSettingsEntity> {
     const { data, error } = await supabase
       .from("group_settings")
       .upsert({ group_id: groupId, ...input }, { onConflict: "group_id" })
@@ -31,6 +31,6 @@ export const groupSettingsRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as GroupSettings;
+    return data as GroupSettingsEntity;
   },
 };

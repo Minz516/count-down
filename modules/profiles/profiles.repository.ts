@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AppError, DatabaseError } from "@/modules/shared/errors";
-import type { ProfileRecord } from "@/types/profile";
+import type { ProfileEntity } from "@/types/profile";
 
 const AVATAR_BUCKET = "avatars";
 
@@ -10,7 +10,7 @@ const AVATAR_BUCKET = "avatars";
  * `supabase.storage.from("avatars")` directly.
  */
 export const profilesRepository = {
-  async getProfile(supabase: SupabaseClient, userId: string): Promise<ProfileRecord | null> {
+  async getProfile(supabase: SupabaseClient, userId: string): Promise<ProfileEntity | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -18,24 +18,24 @@ export const profilesRepository = {
       .maybeSingle();
 
     if (error) throw new DatabaseError(error.message);
-    return data as ProfileRecord | null;
+    return data as ProfileEntity | null;
   },
 
   /** `null` entries in the map mean "no profile row" (a pre-existing account) - callers render a fallback, not an error. */
-  async getProfilesByIds(supabase: SupabaseClient, userIds: string[]): Promise<Map<string, ProfileRecord>> {
+  async getProfilesByIds(supabase: SupabaseClient, userIds: string[]): Promise<Map<string, ProfileEntity>> {
     if (userIds.length === 0) return new Map();
 
     const { data, error } = await supabase.from("profiles").select("*").in("id", userIds);
     if (error) throw new DatabaseError(error.message);
 
-    return new Map((data as ProfileRecord[]).map((profile) => [profile.id, profile]));
+    return new Map((data as ProfileEntity[]).map((profile) => [profile.id, profile]));
   },
 
   async updateProfile(
     supabase: SupabaseClient,
     userId: string,
     input: { username: string; avatar_url: string | null },
-  ): Promise<ProfileRecord> {
+  ): Promise<ProfileEntity> {
     const { data, error } = await supabase
       .from("profiles")
       .update(input)
@@ -52,7 +52,7 @@ export const profilesRepository = {
       }
       throw new DatabaseError(error.message);
     }
-    return data as ProfileRecord;
+    return data as ProfileEntity;
   },
 
   /** Uploads to a fixed per-user key (`{userId}/avatar`, no extension - contentType is set

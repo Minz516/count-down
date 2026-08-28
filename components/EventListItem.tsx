@@ -3,21 +3,20 @@
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
-import type { EventStatusInfo } from "@/modules/events/events.interface";
+import type { EventDTO, EventStatusInfo } from "@/modules/events/events.interface";
 import { formatTimelineDate } from "@/lib/dateFormat";
 import { StatusLabel } from "./StatusIndicator";
 import { TodoChecklist } from "./TodoChecklist";
-import type { EventRecord } from "@/types/event";
-import type { TodoRecord } from "@/types/todo";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface EventListItemProps {
-  event: EventRecord;
+  event: EventDTO;
   status: EventStatusInfo;
-  todos: TodoRecord[];
+  todos: TodoDTO[];
   /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
   showChecklist?: boolean;
-  onEdit: (event: EventRecord) => void;
-  onDelete: (event: EventRecord) => void;
+  onEdit: (event: EventDTO) => void;
+  onDelete: (event: EventDTO) => void;
 }
 
 /** Card content only - the status dot + connecting rail are owned by Timeline (docs/DESIGN.md §8.3). */

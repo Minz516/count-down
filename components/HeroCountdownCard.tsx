@@ -2,7 +2,7 @@
 
 import { useCountdown, type Countdown } from "@/lib/useCountdown";
 import { formatEventDate, formatEventTime } from "@/lib/dateFormat";
-import type { EventRecord } from "@/types/event";
+import type { EventDTO } from "@/modules/events/events.interface";
 
 const UNITS: { key: keyof Omit<Countdown, "isPast">; label: string }[] = [
   { key: "days", label: "Days" },
@@ -11,7 +11,7 @@ const UNITS: { key: keyof Omit<Countdown, "isPast">; label: string }[] = [
   { key: "seconds", label: "Sec" },
 ];
 
-export function HeroCountdownCard({ event }: { event: EventRecord }) {
+export function HeroCountdownCard({ event }: { event: EventDTO }) {
   const countdown = useCountdown(event.deadline);
 
   return (

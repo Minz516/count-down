@@ -12,10 +12,10 @@ import {
   nextDeadlineForDayOfWeek,
   toDateTimeParts,
 } from "@/lib/dateFormat";
-import type { DayOfWeek, EventInput, EventRecord } from "@/types/event";
+import type { DayOfWeek, EventDTO, EventInput } from "@/modules/events/events.interface";
 
 interface EventFormProps {
-  initialEvent?: EventRecord;
+  initialEvent?: EventDTO;
   onSubmit: (input: EventInput) => Promise<void>;
   onCancel: () => void;
 }

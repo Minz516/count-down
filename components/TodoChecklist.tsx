@@ -6,12 +6,12 @@ import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
-import type { TodoRecord } from "@/types/todo";
-import type { EventRecord } from "@/types/event";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
+import type { EventDTO } from "@/modules/events/events.interface";
 
 interface TodoChecklistProps {
-  event: EventRecord;
-  initialTodos: TodoRecord[];
+  event: EventDTO;
+  initialTodos: TodoDTO[];
   /** Controlled by the embedding card - clicking anywhere on the card toggles this, not just this header (see that card's onClick). */
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -62,7 +62,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
     }
   }
 
-  async function handleToggle(todo: TodoRecord) {
+  async function handleToggle(todo: TodoDTO) {
     const supabase = createClient();
     const user = await authInterface.getCurrentUser(supabase);
     if (!user) return;
@@ -71,7 +71,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
     setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   }
 
-  async function handleDelete(todo: TodoRecord) {
+  async function handleDelete(todo: TodoDTO) {
     const supabase = createClient();
     const user = await authInterface.getCurrentUser(supabase);
     if (!user) return;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Manrope } from "next/font/google";
+import { StoreProvider } from "@/components/StoreProvider";
 import "./globals.css";
 
 // Vietnamese subset is required: timeline status labels ("Đã qua", "Hôm nay",
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${hankenGrotesk.variable} ${manrope.variable} ${jetBrainsMono.variable}`}
     >
       <body className="min-h-dvh bg-surface-deep font-body text-on-surface antialiased">
-        {children}
+        <StoreProvider>{children}</StoreProvider>
       </body>
     </html>
   );

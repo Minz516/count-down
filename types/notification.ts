@@ -1,7 +1,9 @@
 /** A row from the `notifications` table (see docs/ARCHITECTURE.md "In-App Notifications"). */
 export type NotificationType = "event_passed" | "due_soon";
 
-export interface NotificationRecord {
+/** Repository-internal - see modules/notifications/notifications.dto.ts for the DTO
+ * pages/components actually consume. */
+export interface NotificationEntity {
   id: string;
   user_id: string;
   event_id: string | null;

@@ -7,4 +7,5 @@
  */
 export { groupsService as groupsInterface } from "./groups.service";
 export { groupSettingsService as groupSettingsInterface } from "./group-settings.service";
-export type { GroupRecord, GroupMemberRecord, GroupSettings, GroupSettingsInput } from "@/types/group";
+export type { GroupDTO, GroupMemberDTO, GroupSettingsDTO } from "./groups.dto";
+export type { GroupSettingsInput } from "@/types/group";

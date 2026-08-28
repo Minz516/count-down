@@ -6,43 +6,38 @@ import { PencilSimple, SignOut } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { EditProfileModal } from "./EditProfileModal";
 import { createClient } from "@/lib/supabase/client";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { notificationsCleared } from "@/lib/store/notificationsSlice";
+import { fetchSession, profileUpdated, sessionCleared } from "@/lib/store/sessionSlice";
 import { authInterface } from "@/modules/auth/auth.interface";
-import { profilesInterface } from "@/modules/profiles/profiles.interface";
-import type { ProfileRecord } from "@/types/profile";
 
 /**
  * Account icon that opens a small menu instead of signing out on the first
  * click (docs/UI_SPEC.md) - shared by Nav.tsx and GroupNav.tsx, which
  * previously each had their own inline icon-button-signs-out-immediately logic.
- * Self-sufficient (fetches its own user/profile) rather than taking props, so
- * both navs can keep rendering it with zero plumbing.
+ *
+ * The user/profile it shows comes from lib/store/sessionSlice.ts, not a local fetch:
+ * Nav and GroupNav render a fresh UserMenu instance on every tab switch (they're not
+ * behind a shared layout), so fetching per-mount meant re-hitting Supabase Auth + the
+ * profiles table on every navigation. Dispatching fetchSession() only while its status
+ * is still "idle" means the first mount fetches once and every later mount just reads
+ * the already-cached value from the store.
  */
 export function UserMenu() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const userId = useAppSelector((state) => state.session.userId);
+  const profile = useAppSelector((state) => state.session.profile);
+  const status = useAppSelector((state) => state.session.status);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      const supabase = createClient();
-      const user = await authInterface.getCurrentUser(supabase);
-      if (!user || cancelled) return;
-
-      setUserId(user.id);
-      const record = await profilesInterface.getProfile(supabase, user.id);
-      if (!cancelled) setProfile(record);
+    if (status === "idle") {
+      void dispatch(fetchSession());
     }
-
-    void loadProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [status, dispatch]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +62,10 @@ export function UserMenu() {
   async function handleLogout() {
     const supabase = createClient();
     await authInterface.signOut(supabase);
+    // Clear the cached session/notifications so a different account signing in on this
+    // same tab never briefly sees the previous user's avatar/notifications.
+    dispatch(sessionCleared());
+    dispatch(notificationsCleared());
     router.push("/login");
     router.refresh();
   }
@@ -121,7 +120,7 @@ export function UserMenu() {
           userId={userId}
           initialProfile={profile}
           onClose={() => setEditOpen(false)}
-          onSaved={setProfile}
+          onSaved={(updated) => dispatch(profileUpdated(updated))}
         />
       )}
     </div>

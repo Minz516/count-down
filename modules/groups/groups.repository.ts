@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { GroupRecord } from "@/types/group";
+import type { GroupEntity } from "@/types/group";
 
 /**
  * All Supabase access for `groups`/`group_members` lives here - nothing
@@ -20,7 +20,11 @@ interface GroupRow {
   member_count: { count: number }[];
 }
 
-function toGroupRecord(row: GroupRow): GroupRecord {
+/** Normalizes PostgREST's raw embedded-count wire shape into the flat entity - `preview_avatars`
+ * isn't part of this at all: it's filled in only in `GroupDTO`, by groups.service.ts's
+ * attachPreviewAvatars() (a cross-module join with `profiles` that a repository, scoped to
+ * its own table, never does - docs/ARCHITECTURE_DESIGN.md §2.1). */
+function toGroupEntity(row: GroupRow): GroupEntity {
   return {
     id: row.id,
     name: row.name,
@@ -28,9 +32,6 @@ function toGroupRecord(row: GroupRow): GroupRecord {
     created_by: row.created_by,
     created_at: row.created_at,
     member_count: row.member_count[0]?.count ?? 0,
-    // Filled in by groups.service.ts's attachPreviewAvatars() - repository
-    // methods only touch the `groups` table, not `profiles` too.
-    preview_avatars: [],
   };
 }
 
@@ -44,18 +45,18 @@ interface MemberRow {
 
 export const groupsRepository = {
   /** RLS already scopes `groups` to rows the caller is a member of - no extra filter needed. */
-  async listForUser(supabase: SupabaseClient): Promise<GroupRecord[]> {
+  async listForUser(supabase: SupabaseClient): Promise<GroupEntity[]> {
     const { data, error } = await supabase
       .from("groups")
       .select(GROUP_SELECT_WITH_MEMBER_COUNT)
       .order("created_at", { ascending: true });
 
     if (error) throw new DatabaseError(error.message);
-    return ((data ?? []) as unknown as GroupRow[]).map(toGroupRecord);
+    return ((data ?? []) as unknown as GroupRow[]).map(toGroupEntity);
   },
 
   /** `null` covers both "doesn't exist" and "exists but you're not a member" - RLS makes those indistinguishable, which is the point. */
-  async getById(supabase: SupabaseClient, groupId: string): Promise<GroupRecord | null> {
+  async getById(supabase: SupabaseClient, groupId: string): Promise<GroupEntity | null> {
     const { data, error } = await supabase
       .from("groups")
       .select(GROUP_SELECT_WITH_MEMBER_COUNT)
@@ -63,16 +64,16 @@ export const groupsRepository = {
       .maybeSingle();
 
     if (error) throw new DatabaseError(error.message);
-    return data ? toGroupRecord(data as unknown as GroupRow) : null;
+    return data ? toGroupEntity(data as unknown as GroupRow) : null;
   },
 
-  async create(supabase: SupabaseClient, name: string): Promise<GroupRecord> {
+  async create(supabase: SupabaseClient, name: string): Promise<GroupEntity> {
     const { data, error } = await supabase.rpc("create_group", { p_name: name }).single();
     if (error) throw new DatabaseError(error.message);
-    return toGroupRecord({ ...(data as GroupRow), member_count: [{ count: 1 }] });
+    return toGroupEntity({ ...(data as GroupRow), member_count: [{ count: 1 }] });
   },
 
-  async joinByCode(supabase: SupabaseClient, inviteCode: string): Promise<GroupRecord> {
+  async joinByCode(supabase: SupabaseClient, inviteCode: string): Promise<GroupEntity> {
     const { data, error } = await supabase
       .rpc("join_group_by_code", { p_invite_code: inviteCode })
       .single();
@@ -95,7 +96,7 @@ export const groupsRepository = {
    * update_group_name() itself checks the caller is the group's creator. Re-fetches
    * afterward the same way joinByCode does - the RPC returns the bare `groups` row,
    * without the embedded member_count aggregate the rest of this module expects. */
-  async updateName(supabase: SupabaseClient, groupId: string, name: string): Promise<GroupRecord> {
+  async updateName(supabase: SupabaseClient, groupId: string, name: string): Promise<GroupEntity> {
     const { error } = await supabase.rpc("update_group_name", { p_group_id: groupId, p_name: name });
     if (error) throw new DatabaseError(error.message);
     const group = await groupsRepository.getById(supabase, groupId);

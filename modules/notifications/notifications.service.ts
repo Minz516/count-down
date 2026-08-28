@@ -1,12 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notificationsRepository } from "./notifications.repository";
-import type { NotificationRecord } from "@/types/notification";
+import { toNotificationDTOs, type NotificationDTO } from "./notifications.dto";
 
 /** Thin passthrough - no business rules beyond what RLS and the table's unique
  * constraint already enforce (docs/ARCHITECTURE.md "In-App Notifications"). */
 export const notificationsService = {
-  listForUser(supabase: SupabaseClient, userId: string): Promise<NotificationRecord[]> {
-    return notificationsRepository.listForUser(supabase, userId);
+  async listForUser(supabase: SupabaseClient, userId: string): Promise<NotificationDTO[]> {
+    return toNotificationDTOs(await notificationsRepository.listForUser(supabase, userId));
   },
 
   markAsRead(supabase: SupabaseClient, userId: string, id: string): Promise<void> {

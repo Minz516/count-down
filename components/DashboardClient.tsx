@@ -14,20 +14,20 @@ import { EmptyState } from "./EmptyState";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
-import type { EventInput, EventRecord } from "@/types/event";
-import type { TodoRecord } from "@/types/todo";
+import type { EventDTO, EventInput } from "@/modules/events/events.interface";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface DashboardClientProps {
-  initialEvents: EventRecord[];
-  initialRecurringEvents: EventRecord[];
-  initialNearestEvent: EventRecord | null;
-  initialTodosByEvent: Record<string, TodoRecord[]>;
+  initialEvents: EventDTO[];
+  initialRecurringEvents: EventDTO[];
+  initialNearestEvent: EventDTO | null;
+  initialTodosByEvent: Record<string, TodoDTO[]>;
 }
 
 type ModalState =
   | { type: "add" }
-  | { type: "edit"; event: EventRecord }
-  | { type: "delete"; event: EventRecord }
+  | { type: "edit"; event: EventDTO }
+  | { type: "delete"; event: EventDTO }
   | null;
 
 export function DashboardClient({

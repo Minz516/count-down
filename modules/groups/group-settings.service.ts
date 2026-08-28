@@ -1,21 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { groupSettingsRepository } from "./group-settings.repository";
+import { toGroupSettingsDTO, type GroupSettingsDTO } from "./groups.dto";
 import { postDiscordMessage, assertValidWebhook } from "@/modules/settings/settings.interface";
 import { ValidationError } from "@/modules/shared/errors";
-import type { GroupSettings, GroupSettingsInput } from "@/types/group";
+import type { GroupSettingsInput } from "@/types/group";
 
 export const groupSettingsService = {
-  getSettings(supabase: SupabaseClient, groupId: string): Promise<GroupSettings | null> {
-    return groupSettingsRepository.get(supabase, groupId);
+  async getSettings(supabase: SupabaseClient, groupId: string): Promise<GroupSettingsDTO | null> {
+    const entity = await groupSettingsRepository.get(supabase, groupId);
+    return entity ? toGroupSettingsDTO(entity) : null;
   },
 
-  saveSettings(
+  async saveSettings(
     supabase: SupabaseClient,
     groupId: string,
     input: GroupSettingsInput,
-  ): Promise<GroupSettings> {
+  ): Promise<GroupSettingsDTO> {
     assertValidWebhook(input.discord_webhook_url);
-    return groupSettingsRepository.upsert(supabase, groupId, input);
+    return toGroupSettingsDTO(await groupSettingsRepository.upsert(supabase, groupId, input));
   },
 
   async sendTestMessage(webhookUrl: string | null): Promise<void> {

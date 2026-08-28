@@ -4,7 +4,8 @@
  * or settings.service.ts directly, and never call `supabase.from("user_settings")` themselves.
  */
 export { settingsService as settingsInterface } from "./settings.service";
-export type { UserSettings, UserSettingsInput } from "@/types/settings";
+export type { UserSettingsDTO } from "./settings.dto";
+export type { UserSettingsInput } from "@/types/settings";
 
 // Shared Discord helpers - also used by modules/groups' group-settings
 // service, so both personal and group webhook settings validate/send

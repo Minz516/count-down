@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { NotificationRecord } from "@/types/notification";
+import type { NotificationEntity } from "@/types/notification";
 
 const RECENT_LIMIT = 50;
 
@@ -12,7 +12,7 @@ const RECENT_LIMIT = 50;
  * client-facing insert policy for a regular user to use one against.
  */
 export const notificationsRepository = {
-  async listForUser(supabase: SupabaseClient, userId: string): Promise<NotificationRecord[]> {
+  async listForUser(supabase: SupabaseClient, userId: string): Promise<NotificationEntity[]> {
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
@@ -21,7 +21,7 @@ export const notificationsRepository = {
       .limit(RECENT_LIMIT);
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as NotificationRecord[];
+    return (data ?? []) as NotificationEntity[];
   },
 
   async markAsRead(supabase: SupabaseClient, userId: string, id: string): Promise<void> {

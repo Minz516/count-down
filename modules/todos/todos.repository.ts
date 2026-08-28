@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { TodoRecord } from "@/types/todo";
+import type { TodoEntity } from "@/types/todo";
 
 /**
  * All Supabase access for the `todos` table lives here - nothing outside this
@@ -15,7 +15,7 @@ export const todosRepository = {
    * card - `todos.service.ts`'s `groupByEvent` then splits the result client-
    * side, mirroring how `events.repository.ts` avoids N+1 queries.
    */
-  async listAllForUser(supabase: SupabaseClient, userId: string): Promise<TodoRecord[]> {
+  async listAllForUser(supabase: SupabaseClient, userId: string): Promise<TodoEntity[]> {
     const { data, error } = await supabase
       .from("todos")
       .select("*")
@@ -24,7 +24,7 @@ export const todosRepository = {
       .order("position", { ascending: true });
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as TodoRecord[];
+    return (data ?? []) as TodoEntity[];
   },
 
   async insert(
@@ -33,7 +33,7 @@ export const todosRepository = {
     eventId: string,
     content: string,
     position: number,
-  ): Promise<TodoRecord> {
+  ): Promise<TodoEntity> {
     const { data, error } = await supabase
       .from("todos")
       .insert({ event_id: eventId, user_id: userId, content, position })
@@ -41,10 +41,10 @@ export const todosRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as TodoRecord;
+    return data as TodoEntity;
   },
 
-  async setDone(supabase: SupabaseClient, userId: string, id: string, isDone: boolean): Promise<TodoRecord> {
+  async setDone(supabase: SupabaseClient, userId: string, id: string, isDone: boolean): Promise<TodoEntity> {
     const { data, error } = await supabase
       .from("todos")
       .update({ is_done: isDone })
@@ -54,7 +54,7 @@ export const todosRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as TodoRecord;
+    return data as TodoEntity;
   },
 
   async remove(supabase: SupabaseClient, userId: string, id: string): Promise<void> {

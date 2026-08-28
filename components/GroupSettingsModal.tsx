@@ -9,13 +9,13 @@ import { Button } from "./Button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { createClient } from "@/lib/supabase/client";
 import { groupSettingsInterface, groupsInterface } from "@/modules/groups/groups.interface";
-import type { GroupRecord, GroupMemberRecord, GroupSettings } from "@/types/group";
+import type { GroupDTO, GroupMemberDTO, GroupSettingsDTO } from "@/modules/groups/groups.interface";
 
 interface GroupSettingsModalProps {
-  group: GroupRecord;
+  group: GroupDTO;
   currentUserId: string;
-  initialSettings: GroupSettings | null;
-  initialMembers: GroupMemberRecord[];
+  initialSettings: GroupSettingsDTO | null;
+  initialMembers: GroupMemberDTO[];
   onClose: () => void;
 }
 

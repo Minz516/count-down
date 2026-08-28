@@ -6,14 +6,13 @@ import { X } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
-import { profilesInterface } from "@/modules/profiles/profiles.interface";
-import type { ProfileRecord } from "@/types/profile";
+import { profilesInterface, type ProfileDTO } from "@/modules/profiles/profiles.interface";
 
 interface EditProfileModalProps {
   userId: string;
-  initialProfile: ProfileRecord | null;
+  initialProfile: ProfileDTO | null;
   onClose: () => void;
-  onSaved: (profile: ProfileRecord) => void;
+  onSaved: (profile: ProfileDTO) => void;
 }
 
 const inputClass =

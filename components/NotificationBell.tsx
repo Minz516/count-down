@@ -3,42 +3,50 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCircle, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
-import { createClient } from "@/lib/supabase/client";
-import { authInterface } from "@/modules/auth/auth.interface";
-import { notificationsInterface } from "@/modules/notifications/notifications.interface";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  removeNotification,
+} from "@/lib/store/notificationsSlice";
+import { fetchSession } from "@/lib/store/sessionSlice";
 import { formatRelativeTime } from "@/lib/dateFormat";
-import type { NotificationRecord } from "@/types/notification";
+import type { NotificationDTO } from "@/modules/notifications/notifications.interface";
 
 /**
  * Account-scoped notification bell (event passed / due today-tomorrow -
  * generated server-side by supabase/functions/daily-digest/index.ts, never
- * created by the client) - self-sufficient like UserMenu.tsx, fetching its own
- * data on mount so Nav.tsx/GroupNav.tsx keep rendering it with zero props.
+ * created by the client) - shared by Nav.tsx/GroupNav.tsx like UserMenu.tsx.
+ *
+ * Reads from lib/store/sessionSlice.ts and lib/store/notificationsSlice.ts rather than
+ * fetching on every mount, for the same reason UserMenu.tsx does: Nav/GroupNav render a
+ * fresh instance on every tab switch, so a per-mount fetch meant re-hitting Supabase
+ * Auth + the notifications table on every navigation. Both fetches dispatch only while
+ * their slice's status is still "idle", so only the very first mount (of either this or
+ * UserMenu.tsx - each guards its own idle check the same way, so whichever mounts first
+ * wins and the other's dispatch is a no-op) does any network work.
  */
 export function NotificationBell() {
+  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<NotificationRecord[] | null>(null);
+  const userId = useAppSelector((state) => state.session.userId);
+  const sessionStatus = useAppSelector((state) => state.session.status);
+  const notifications = useAppSelector((state) => state.notifications.items);
+  const notificationsStatus = useAppSelector((state) => state.notifications.status);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      const supabase = createClient();
-      const user = await authInterface.getCurrentUser(supabase);
-      if (!user || cancelled) return;
-
-      setUserId(user.id);
-      const rows = await notificationsInterface.listForUser(supabase, user.id);
-      if (!cancelled) setNotifications(rows);
+    if (sessionStatus === "idle") {
+      void dispatch(fetchSession());
     }
+  }, [sessionStatus, dispatch]);
 
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useEffect(() => {
+    if (userId && notificationsStatus === "idle") {
+      void dispatch(fetchNotifications(userId));
+    }
+  }, [userId, notificationsStatus, dispatch]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,33 +70,21 @@ export function NotificationBell() {
 
   const unreadCount = notifications?.filter((notification) => !notification.is_read).length ?? 0;
 
-  async function handleMarkRead(notification: NotificationRecord) {
+  function handleMarkRead(notification: NotificationDTO) {
     if (!userId || notification.is_read) return;
-
-    setNotifications(
-      (current) =>
-        current?.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item)) ?? current,
-    );
-    const supabase = createClient();
-    await notificationsInterface.markAsRead(supabase, userId, notification.id);
+    void dispatch(markNotificationRead({ userId, id: notification.id }));
   }
 
-  async function handleMarkAllRead() {
+  function handleMarkAllRead() {
     if (!userId) return;
-
-    setNotifications((current) => current?.map((item) => ({ ...item, is_read: true })) ?? current);
-    const supabase = createClient();
-    await notificationsInterface.markAllAsRead(supabase, userId);
+    void dispatch(markAllNotificationsRead(userId));
   }
 
   /** A real delete, not a soft-hide - notifications.repository.ts's remove() is a plain
    * `.delete()` against the table, and the row is gone from the database, not just the list. */
-  async function handleDelete(notification: NotificationRecord) {
+  function handleDelete(notification: NotificationDTO) {
     if (!userId) return;
-
-    setNotifications((current) => current?.filter((item) => item.id !== notification.id) ?? current);
-    const supabase = createClient();
-    await notificationsInterface.remove(supabase, userId, notification.id);
+    void dispatch(removeNotification({ userId, id: notification.id }));
   }
 
   return (

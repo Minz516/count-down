@@ -1,8 +1,10 @@
 /** 0 = Sunday .. 6 = Saturday, matching Postgres `extract(dow from ...)`. */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-/** A row from the `events` table (see docs/ARCHITECTURE.md). */
-export interface EventRecord {
+/** A row from the `events` table (see docs/ARCHITECTURE.md). Repository-internal - the
+ * events module's DTO boundary (modules/events/events.dto.ts) is what pages/components
+ * actually consume; nothing outside modules/events/events.repository.ts should import this. */
+export interface EventEntity {
   id: string;
   user_id: string;
   name: string;

@@ -5,16 +5,16 @@ import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { formatTimelineDate } from "@/lib/dateFormat";
 import { TodoChecklist } from "./TodoChecklist";
-import type { EventRecord } from "@/types/event";
-import type { TodoRecord } from "@/types/todo";
+import type { EventDTO } from "@/modules/events/events.interface";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface PastEventCardProps {
-  event: EventRecord;
-  todos: TodoRecord[];
+  event: EventDTO;
+  todos: TodoDTO[];
   /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
   showChecklist?: boolean;
-  onEdit: (event: EventRecord) => void;
-  onDelete: (event: EventRecord) => void;
+  onEdit: (event: EventDTO) => void;
+  onDelete: (event: EventDTO) => void;
 }
 
 /**

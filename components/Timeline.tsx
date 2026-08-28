@@ -4,17 +4,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { EventListItem } from "./EventListItem";
 import { TimelineDot } from "./StatusIndicator";
 import { getEventStatus } from "@/modules/events/events.interface";
-import type { EventRecord } from "@/types/event";
-import type { TodoRecord } from "@/types/todo";
+import type { EventDTO } from "@/modules/events/events.interface";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface TimelineProps {
   /** Today/soon/later events only - past events live in PastEventsSection instead (docs/UI_SPEC.md). */
-  events: EventRecord[];
-  todosByEvent?: Record<string, TodoRecord[]>;
+  events: EventDTO[];
+  todosByEvent?: Record<string, TodoDTO[]>;
   /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
   showChecklist?: boolean;
-  onEdit: (event: EventRecord) => void;
-  onDelete: (event: EventRecord) => void;
+  onEdit: (event: EventDTO) => void;
+  onDelete: (event: EventDTO) => void;
 }
 
 /**

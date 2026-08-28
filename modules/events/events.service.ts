@@ -1,15 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { eventsRepository } from "./events.repository";
 import { getEventStatus } from "./events.status";
+import { toEventDTO, toEventDTOs, type EventDTO } from "./events.dto";
 import { ValidationError } from "@/modules/shared/errors";
-import type { EventInput, EventRecord } from "@/types/event";
+import type { EventInput } from "@/types/event";
 
 export interface DashboardData {
   /** Non-recurring events, past+today+future together, ascending by deadline. */
-  timeline: EventRecord[];
-  recurring: EventRecord[];
+  timeline: EventDTO[];
+  recurring: EventDTO[];
   /** First non-past Timeline item, or null if there isn't one - also renders as the Hero Card. */
-  nearestEvent: EventRecord | null;
+  nearestEvent: EventDTO | null;
 }
 
 /** Same shape as `DashboardData` - kept as a separate type since the two are populated by
@@ -65,10 +66,12 @@ export const eventsService = {
     // Two independent queries per docs/ARCHITECTURE.md: the Timeline never
     // includes recurring events, and the recurring section never joins the
     // Timeline's sort order.
-    const [timeline, recurring] = await Promise.all([
+    const [timelineEntities, recurringEntities] = await Promise.all([
       eventsRepository.listByRecurrence(supabase, userId, false),
       eventsRepository.listByRecurrence(supabase, userId, true),
     ]);
+    const timeline = toEventDTOs(timelineEntities);
+    const recurring = toEventDTOs(recurringEntities);
 
     const nearestEvent =
       timeline.find((event) => getEventStatus(event.deadline).status !== "past") ?? null;
@@ -76,23 +79,23 @@ export const eventsService = {
     return { timeline, recurring, nearestEvent };
   },
 
-  async createEvent(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventRecord> {
+  async createEvent(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventDTO> {
     assertValidInput(input);
     try {
-      return await eventsRepository.insert(supabase, userId, input);
+      return toEventDTO(await eventsRepository.insert(supabase, userId, input));
     } catch (err) {
       throw translateRateLimitError(err);
     }
   },
 
-  updateEvent(
+  async updateEvent(
     supabase: SupabaseClient,
     userId: string,
     id: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventDTO> {
     assertValidInput(input);
-    return eventsRepository.update(supabase, userId, id, input);
+    return toEventDTO(await eventsRepository.update(supabase, userId, id, input));
   },
 
   deleteEvent(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
@@ -102,10 +105,12 @@ export const eventsService = {
   // --- Group-scoped variants (docs/ARCHITECTURE.md "Group Countdown") ---
 
   async getGroupDashboardData(supabase: SupabaseClient, groupId: string): Promise<GroupDashboardData> {
-    const [timeline, recurring] = await Promise.all([
+    const [timelineEntities, recurringEntities] = await Promise.all([
       eventsRepository.listByGroupAndRecurrence(supabase, groupId, false),
       eventsRepository.listByGroupAndRecurrence(supabase, groupId, true),
     ]);
+    const timeline = toEventDTOs(timelineEntities);
+    const recurring = toEventDTOs(recurringEntities);
 
     const nearestEvent =
       timeline.find((event) => getEventStatus(event.deadline).status !== "past") ?? null;
@@ -118,23 +123,23 @@ export const eventsService = {
     actingUserId: string,
     groupId: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventDTO> {
     assertValidInput(input);
     try {
-      return await eventsRepository.insertGroupEvent(supabase, actingUserId, groupId, input);
+      return toEventDTO(await eventsRepository.insertGroupEvent(supabase, actingUserId, groupId, input));
     } catch (err) {
       throw translateRateLimitError(err);
     }
   },
 
-  updateGroupEvent(
+  async updateGroupEvent(
     supabase: SupabaseClient,
     groupId: string,
     id: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventDTO> {
     assertValidInput(input);
-    return eventsRepository.updateGroupEvent(supabase, groupId, id, input);
+    return toEventDTO(await eventsRepository.updateGroupEvent(supabase, groupId, id, input));
   },
 
   deleteGroupEvent(supabase: SupabaseClient, groupId: string, id: string): Promise<void> {

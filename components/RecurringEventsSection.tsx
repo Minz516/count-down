@@ -1,16 +1,16 @@
 "use client";
 
 import { RecurringEventCard } from "./RecurringEventCard";
-import type { EventRecord } from "@/types/event";
-import type { TodoRecord } from "@/types/todo";
+import type { EventDTO } from "@/modules/events/events.interface";
+import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface RecurringEventsSectionProps {
-  events: EventRecord[];
-  todosByEvent?: Record<string, TodoRecord[]>;
+  events: EventDTO[];
+  todosByEvent?: Record<string, TodoDTO[]>;
   /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
   showChecklist?: boolean;
-  onEdit: (event: EventRecord) => void;
-  onDelete: (event: EventRecord) => void;
+  onEdit: (event: EventDTO) => void;
+  onDelete: (event: EventDTO) => void;
 }
 
 /** Pinned separately from the Timeline; does not participate in its sort order (docs/UI_SPEC.md). */

@@ -5,4 +5,5 @@
  * `supabase.storage.from("avatars")` themselves.
  */
 export { profilesService as profilesInterface } from "./profiles.service";
-export type { ProfileRecord, ProfileInput } from "@/types/profile";
+export type { ProfileDTO } from "./profiles.dto";
+export type { ProfileInput } from "@/types/profile";

@@ -5,6 +5,8 @@
  */
 export { eventsService as eventsInterface } from "./events.service";
 export type { DashboardData, GroupDashboardData } from "./events.service";
+export type { EventDTO } from "./events.dto";
+export type { DayOfWeek, EventInput } from "@/types/event";
 
 export { getEventStatus } from "./events.status";
 export type { EventStatus, EventStatusInfo } from "./events.status";

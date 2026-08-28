@@ -4,11 +4,10 @@ import { useState, type FormEvent } from "react";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
-import { settingsInterface } from "@/modules/settings/settings.interface";
-import type { UserSettings } from "@/types/settings";
+import { settingsInterface, type UserSettingsDTO } from "@/modules/settings/settings.interface";
 
 interface SettingsFormProps {
-  initialSettings: UserSettings | null;
+  initialSettings: UserSettingsDTO | null;
 }
 
 const inputClass =

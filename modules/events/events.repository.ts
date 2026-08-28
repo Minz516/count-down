@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { EventInput, EventRecord } from "@/types/event";
+import type { EventInput, EventEntity } from "@/types/event";
 
 /**
  * All Supabase access for the `events` table lives here - nothing outside this
@@ -24,7 +24,7 @@ export const eventsRepository = {
     supabase: SupabaseClient,
     userId: string,
     isRecurring: boolean,
-  ): Promise<EventRecord[]> {
+  ): Promise<EventEntity[]> {
     const { data, error } = await supabase
       .from("events")
       .select("*")
@@ -34,10 +34,10 @@ export const eventsRepository = {
       .order("deadline", { ascending: true });
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as EventRecord[];
+    return (data ?? []) as EventEntity[];
   },
 
-  async insert(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventRecord> {
+  async insert(supabase: SupabaseClient, userId: string, input: EventInput): Promise<EventEntity> {
     const { data, error } = await supabase
       .from("events")
       .insert({ ...input, user_id: userId })
@@ -45,7 +45,7 @@ export const eventsRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as EventRecord;
+    return data as EventEntity;
   },
 
   async update(
@@ -53,7 +53,7 @@ export const eventsRepository = {
     userId: string,
     id: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventEntity> {
     const { data, error } = await supabase
       .from("events")
       .update(input)
@@ -64,7 +64,7 @@ export const eventsRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as EventRecord;
+    return data as EventEntity;
   },
 
   async remove(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
@@ -86,7 +86,7 @@ export const eventsRepository = {
     supabase: SupabaseClient,
     groupId: string,
     isRecurring: boolean,
-  ): Promise<EventRecord[]> {
+  ): Promise<EventEntity[]> {
     const { data, error } = await supabase
       .from("events")
       .select("*")
@@ -95,7 +95,7 @@ export const eventsRepository = {
       .order("deadline", { ascending: true });
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as EventRecord[];
+    return (data ?? []) as EventEntity[];
   },
 
   async insertGroupEvent(
@@ -103,7 +103,7 @@ export const eventsRepository = {
     actingUserId: string,
     groupId: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventEntity> {
     const { data, error } = await supabase
       .from("events")
       .insert({ ...input, user_id: actingUserId, group_id: groupId })
@@ -111,7 +111,7 @@ export const eventsRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as EventRecord;
+    return data as EventEntity;
   },
 
   async updateGroupEvent(
@@ -119,7 +119,7 @@ export const eventsRepository = {
     groupId: string,
     id: string,
     input: EventInput,
-  ): Promise<EventRecord> {
+  ): Promise<EventEntity> {
     const { data, error } = await supabase
       .from("events")
       .update(input)
@@ -129,7 +129,7 @@ export const eventsRepository = {
       .single();
 
     if (error) throw new DatabaseError(error.message);
-    return data as EventRecord;
+    return data as EventEntity;
   },
 
   async removeGroupEvent(supabase: SupabaseClient, groupId: string, id: string): Promise<void> {

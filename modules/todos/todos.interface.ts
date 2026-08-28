@@ -4,4 +4,5 @@
  * or todos.service.ts directly, and never call `supabase.from("todos")` themselves.
  */
 export { todosService as todosInterface } from "./todos.service";
-export type { TodoRecord, TodoInput } from "@/types/todo";
+export type { TodoDTO } from "./todos.dto";
+export type { TodoInput } from "@/types/todo";
