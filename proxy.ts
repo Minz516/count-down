@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 // "/auth/callback" is included so the OAuth code-exchange request (proxy.ts runs before
@@ -12,34 +13,63 @@ const AUTH_ROUTES = ["/login", "/signup", "/auth/callback"];
  * themselves), signed-in users are bounced away from /login and /signup.
  */
 export async function proxy(request: NextRequest) {
+  const isAuthRoute = AUTH_ROUTES.includes(request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
+  let user: User | null;
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            for (const { name, value } of cookiesToSet) {
+              request.cookies.set(name, value);
+            }
+            response = NextResponse.next({ request });
+            for (const { name, value, options } of cookiesToSet) {
+              response.cookies.set(name, value, options);
+            }
+          },
         },
       },
-    },
-  );
+    );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch (error) {
+    // getUser() normally resolves an invalid/expired session to { user: null } rather
+    // than throwing, but a corrupted or oddly-shaped session cookie (e.g. after a long
+    // idle period forces the first refresh in a while) can make the underlying cookie
+    // parsing throw instead. Without this, that throw reaches the page's Server
+    // Component render uncaught and Next.js shows a generic, unhelpful error screen
+    // (minified React error #441) instead of just sending the user to sign in again.
+    console.error("proxy: failed to resolve auth session", error);
 
-  const isAuthRoute = AUTH_ROUTES.includes(request.nextUrl.pathname);
+    if (isAuthRoute) {
+      // Already headed to /login (or mid OAuth callback) - let it proceed as signed-out
+      // rather than redirect-looping.
+      return NextResponse.next({ request });
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    const redirectResponse = NextResponse.redirect(url);
+    // Clear every Supabase auth cookie (including chunked "sb-...-auth-token.0/.1/..."
+    // pieces) so the corrupted session can't keep tripping this same throw on every
+    // subsequent request, including the very next one to /login.
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith("sb-")) {
+        redirectResponse.cookies.delete(cookie.name);
+      }
+    }
+    return redirectResponse;
+  }
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();

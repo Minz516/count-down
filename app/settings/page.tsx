@@ -23,7 +23,15 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const settings = await settingsInterface.getSettings(supabase, userId);
+  let settings: Awaited<ReturnType<typeof settingsInterface.getSettings>>;
+  try {
+    settings = await settingsInterface.getSettings(supabase, userId);
+  } catch (error) {
+    // See app/page.tsx for why this redirects instead of surfacing the generic
+    // Server Component error screen (minified React error #441).
+    console.error("SettingsPage: failed to load settings", error);
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-dvh">

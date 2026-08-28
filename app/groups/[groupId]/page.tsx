@@ -30,13 +30,26 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   // it's already scoped to the viewer's own user_id (docs/milestone3/ARCHITECTURE-milestone-3.md
   // "one thing to verify"), so it naturally covers this group's events too without a
   // group-specific query: each member only ever gets their own todos back, personal or group.
-  const [group, { timeline, recurring, nearestEvent }, settings, members, todos] = await Promise.all([
-    groupsInterface.getGroup(supabase, groupId),
-    eventsInterface.getGroupDashboardData(supabase, groupId),
-    groupSettingsInterface.getSettings(supabase, groupId),
-    groupsInterface.listGroupMembers(supabase, groupId),
-    todosInterface.listAllForUser(supabase, userId),
-  ]);
+  let group: Awaited<ReturnType<typeof groupsInterface.getGroup>>;
+  let dashboardData: Awaited<ReturnType<typeof eventsInterface.getGroupDashboardData>>;
+  let settings: Awaited<ReturnType<typeof groupSettingsInterface.getSettings>>;
+  let members: Awaited<ReturnType<typeof groupsInterface.listGroupMembers>>;
+  let todos: Awaited<ReturnType<typeof todosInterface.listAllForUser>>;
+  try {
+    [group, dashboardData, settings, members, todos] = await Promise.all([
+      groupsInterface.getGroup(supabase, groupId),
+      eventsInterface.getGroupDashboardData(supabase, groupId),
+      groupSettingsInterface.getSettings(supabase, groupId),
+      groupsInterface.listGroupMembers(supabase, groupId),
+      todosInterface.listAllForUser(supabase, userId),
+    ]);
+  } catch (error) {
+    // See app/page.tsx for why this redirects instead of surfacing the generic
+    // Server Component error screen (minified React error #441).
+    console.error("GroupDashboardPage: failed to load group data", error);
+    redirect("/login");
+  }
+  const { timeline, recurring, nearestEvent } = dashboardData;
 
   // RLS returns no row both when the group doesn't exist and when the
   // current user isn't a member of it - those two cases are deliberately

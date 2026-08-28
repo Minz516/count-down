@@ -22,7 +22,15 @@ export default async function GroupsPage() {
     redirect("/login");
   }
 
-  const groups = await groupsInterface.listGroupsForUser(supabase);
+  let groups: Awaited<ReturnType<typeof groupsInterface.listGroupsForUser>>;
+  try {
+    groups = await groupsInterface.listGroupsForUser(supabase);
+  } catch (error) {
+    // See app/page.tsx for why this redirects instead of surfacing the generic
+    // Server Component error screen (minified React error #441).
+    console.error("GroupsPage: failed to load groups", error);
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-dvh">

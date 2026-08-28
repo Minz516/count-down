@@ -24,10 +24,22 @@ export default async function DashboardPage() {
 
   // Two independent queries done once here, same shape as getDashboardData's
   // timeline/recurring split - avoids a per-event-card todos query.
-  const [{ timeline, recurring, nearestEvent }, todos] = await Promise.all([
-    eventsInterface.getDashboardData(supabase, userId),
-    todosInterface.listAllForUser(supabase, userId),
-  ]);
+  let dashboardData: Awaited<ReturnType<typeof eventsInterface.getDashboardData>>;
+  let todos: Awaited<ReturnType<typeof todosInterface.listAllForUser>>;
+  try {
+    [dashboardData, todos] = await Promise.all([
+      eventsInterface.getDashboardData(supabase, userId),
+      todosInterface.listAllForUser(supabase, userId),
+    ]);
+  } catch (error) {
+    // Most likely cause is a session that died between proxy.ts's check and this
+    // query (e.g. a JWT that expired in the gap after a long idle period) - send the
+    // user back to sign in instead of showing the generic Server Component error
+    // screen (minified React error #441).
+    console.error("DashboardPage: failed to load dashboard data", error);
+    redirect("/login");
+  }
+  const { timeline, recurring, nearestEvent } = dashboardData;
 
   return (
     <DashboardClient
