@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Button } from "./Button";
 import { useDialog } from "@/lib/useDialog";
@@ -18,7 +19,10 @@ export function ConfirmDialog({ title, description, onConfirm, onCancel, confirm
   const titleId = useId();
   const dialogRef = useDialog<HTMLDivElement>(onCancel);
 
-  return (
+  // Portalled to <body>: callers such as TodoChecklist render this inside a card that has a hover
+  // transform, and a transformed ancestor would otherwise become the containing block for `fixed`.
+  // Only ever mounted after a user action, so `document` always exists here.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
       <motion.div
         ref={dialogRef}
@@ -43,6 +47,7 @@ export function ConfirmDialog({ title, description, onConfirm, onCancel, confirm
           </Button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }

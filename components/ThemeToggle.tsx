@@ -65,7 +65,7 @@ export function ThemeMenuItem({ onSelect }: { onSelect?: () => void }) {
 }
 
 /** Standalone icon button for signed-out screens (login, signup). */
-export function ThemeIconButton({ className }: { className?: string }) {
+export function ThemeIconButton() {
   const [theme, toggle] = useTheme();
   const Icon = theme === "dark" ? Sun : Moon;
 
@@ -74,10 +74,7 @@ export function ThemeIconButton({ className }: { className?: string }) {
       type="button"
       onClick={toggle}
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className={
-        className ??
-        "rounded-lg p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
-      }
+      className="rounded-lg p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
     >
       <Icon size={20} />
     </button>
