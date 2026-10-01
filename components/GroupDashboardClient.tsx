@@ -18,6 +18,7 @@ import { eventsInterface, getEventStatus } from "@/modules/events/events.interfa
 import type { EventDTO, EventInput } from "@/modules/events/events.interface";
 import type { GroupDTO, GroupMemberDTO, GroupSettingsDTO } from "@/modules/groups/groups.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface GroupDashboardClientProps {
   group: GroupDTO;
@@ -56,6 +57,7 @@ export function GroupDashboardClient({
   initialMembers,
   initialTodosByEvent,
 }: GroupDashboardClientProps) {
+  const t = useT();
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -115,7 +117,7 @@ export function GroupDashboardClient({
 
             {activeEvents.length > 0 && (
               <section className="flex flex-col gap-4">
-                <h2 className="text-balance font-display text-xl font-medium text-on-surface">Timeline</h2>
+                <h2 className="text-balance font-display text-xl font-medium text-on-surface">{t("dashboard.timeline")}</h2>
                 <Timeline
                   events={activeEvents}
                   todosByEvent={initialTodosByEvent}
@@ -160,8 +162,8 @@ export function GroupDashboardClient({
         {modal?.type === "delete" && (
           <ConfirmDialog
             key={`delete-${modal.event.id}`}
-            title="Delete event?"
-            description={`"${modal.event.name}" will be permanently deleted for everyone in the group.`}
+            title={t("dashboard.deleteEvent.title")}
+            description={t("dashboard.deleteEvent.bodyGroup", { name: modal.event.name })}
             onConfirm={() => handleDelete(modal.event.id)}
             onCancel={() => setModal(null)}
           />

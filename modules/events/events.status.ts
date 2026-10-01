@@ -4,8 +4,6 @@ export type EventStatus = "past" | "today" | "soon" | "later";
 
 export interface EventStatusInfo {
   status: EventStatus;
-  /** Vietnamese status label per docs/UI_SPEC.md, e.g. "Hôm nay", "còn 3 ngày". */
-  label: string;
   daysRemaining: number;
 }
 
@@ -24,16 +22,16 @@ export function getEventStatus(deadline: string, now: Date = new Date()): EventS
   const daysRemaining = Math.ceil(diffMs / MS_PER_DAY);
 
   if (diffMs < 0) {
-    return { status: "past", label: "Đã qua", daysRemaining };
+    return { status: "past", daysRemaining };
   }
 
   if (deadlineDate.toDateString() === now.toDateString()) {
-    return { status: "today", label: "Hôm nay", daysRemaining };
+    return { status: "today", daysRemaining };
   }
 
   if (daysRemaining <= 7) {
-    return { status: "soon", label: `còn ${daysRemaining} ngày`, daysRemaining };
+    return { status: "soon", daysRemaining };
   }
 
-  return { status: "later", label: `còn ${daysRemaining} ngày`, daysRemaining };
+  return { status: "later", daysRemaining };
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { CalendarBlank } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { CalendarPopup } from "./CalendarPopup";
+import { useT } from "./LocaleProvider";
 
 interface DateFieldProps {
   /** "" or yyyy-mm-dd */
@@ -41,6 +42,7 @@ const segmentClass =
 
 /** Two ways to set a deadline date: type dd/mm/yyyy directly, or open the calendar (docs/DESIGN.md §8.5). */
 export function DateField({ value, onChange }: DateFieldProps) {
+  const t = useT();
   const [parts, setParts] = useState<DateParts>(() => splitValue(value));
   const [open, setOpen] = useState(false);
   const lastEmitted = useRef(value);
@@ -101,7 +103,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
           }}
           inputMode="numeric"
           placeholder="dd"
-          aria-label="Ngày"
+          aria-label={t("date.day")}
           maxLength={2}
           className={clsx(segmentClass, "min-w-0 flex-1")}
         />
@@ -127,7 +129,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
           }}
           inputMode="numeric"
           placeholder="mm"
-          aria-label="Tháng"
+          aria-label={t("date.month")}
           maxLength={2}
           className={clsx(segmentClass, "min-w-0 flex-1")}
         />
@@ -146,14 +148,14 @@ export function DateField({ value, onChange }: DateFieldProps) {
           onKeyDown={(event) => backspaceToPrevious(event, monthRef.current)}
           inputMode="numeric"
           placeholder="yyyy"
-          aria-label="Năm"
+          aria-label={t("date.year")}
           maxLength={4}
           className={clsx(segmentClass, "min-w-0 flex-[1.6]")}
         />
 
         <button
           type="button"
-          aria-label="Open calendar"
+          aria-label={t("date.openCalendar")}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}

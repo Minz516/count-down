@@ -3,6 +3,7 @@
 import { RecurringEventCard } from "./RecurringEventCard";
 import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface RecurringEventsSectionProps {
   events: EventDTO[];
@@ -21,11 +22,12 @@ export function RecurringEventsSection({
   onEdit,
   onDelete,
 }: RecurringEventsSectionProps) {
+  const t = useT();
   if (events.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-balance font-display text-xl font-medium text-on-surface">Recurring</h2>
+      <h2 className="text-balance font-display text-xl font-medium text-on-surface">{t("dashboard.recurring")}</h2>
       <div className="flex flex-col gap-3">
         {events.map((event) => (
           <RecurringEventCard

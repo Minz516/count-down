@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Clock } from "@phosphor-icons/react/ssr";
+import { useT } from "./LocaleProvider";
 
 interface TimeFieldProps {
   /** "" or HH:mm, always 24h. */
@@ -30,6 +31,7 @@ const segmentClass =
 
 /** 24-hour only, no AM/PM control anywhere - bypasses the browser's locale-dependent native time input. */
 export function TimeField({ value, onChange }: TimeFieldProps) {
+  const t = useT();
   const [parts, setParts] = useState<TimeParts>(() => splitValue(value));
   const lastEmitted = useRef(value);
   const hourRef = useRef<HTMLInputElement>(null);
@@ -78,7 +80,7 @@ export function TimeField({ value, onChange }: TimeFieldProps) {
         }}
         inputMode="numeric"
         placeholder="hh"
-        aria-label="Giờ"
+        aria-label={t("date.hour")}
         maxLength={2}
         className={segmentClass}
       />
@@ -103,7 +105,7 @@ export function TimeField({ value, onChange }: TimeFieldProps) {
         }}
         inputMode="numeric"
         placeholder="mm"
-        aria-label="Phút"
+        aria-label={t("date.minute")}
         maxLength={2}
         className={segmentClass}
       />

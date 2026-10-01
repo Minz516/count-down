@@ -8,6 +8,7 @@ import { LocalDate } from "./LocalDate";
 import { StatusLabel } from "./StatusIndicator";
 import { TodoChecklist } from "./TodoChecklist";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface EventListItemProps {
   event: EventDTO;
@@ -28,6 +29,7 @@ export function EventListItem({
   onEdit,
   onDelete,
 }: EventListItemProps) {
+  const t = useT();
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
   return (
@@ -62,7 +64,7 @@ export function EventListItem({
           <p className="line-clamp-2 font-body text-base font-semibold text-on-surface">{event.name}</p>
         </div>
 
-        <StatusLabel status={status.status} label={status.label} chip />
+        <StatusLabel status={status.status} daysRemaining={status.daysRemaining} chip />
 
         <div className="ml-auto flex items-center gap-1">
           <button
@@ -71,7 +73,7 @@ export function EventListItem({
               clickEvent.stopPropagation();
               onEdit(event);
             }}
-            aria-label={`Sửa ${event.name}`}
+            aria-label={t("event.edit", { name: event.name })}
             className="rounded p-3 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary sm:p-1.5 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <PencilSimple aria-hidden="true" size={16} />
@@ -82,7 +84,7 @@ export function EventListItem({
               clickEvent.stopPropagation();
               onDelete(event);
             }}
-            aria-label={`Xóa ${event.name}`}
+            aria-label={t("event.delete", { name: event.name })}
             className="rounded p-3 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error sm:p-1.5 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <Trash aria-hidden="true" size={16} />

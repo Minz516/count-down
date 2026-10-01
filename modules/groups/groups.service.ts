@@ -99,16 +99,16 @@ export const groupsService = {
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message.includes("10-member limit")) {
-        throw new ValidationError("Nhóm đã đủ 10 thành viên.");
+        throw new ValidationError("This group is full (10 members).");
       }
       if (message.includes("Invalid invite code")) {
-        throw new ValidationError("Mã mời không hợp lệ.");
+        throw new ValidationError("That invite code isn't valid.");
       }
       // Rate limit from join_group_by_code()'s group_join_attempts check
       // (supabase/migrations/20260822000000_production_readiness.sql, docs/
       // PRODUCTION_READINESS_CHECKLIST.md §8) - brute-forcing invite codes.
       if (message.includes("Too many join attempts")) {
-        throw new ValidationError("Bạn đã thử quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.");
+        throw new ValidationError("Too many attempts. Please wait a few minutes and try again.");
       }
       throw err;
     }

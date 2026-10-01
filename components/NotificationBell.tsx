@@ -13,6 +13,7 @@ import {
 import { fetchSession } from "@/lib/store/sessionSlice";
 import { formatRelativeTime } from "@/lib/dateFormat";
 import type { NotificationDTO } from "@/modules/notifications/notifications.interface";
+import { useT } from "./LocaleProvider";
 
 /**
  * Account-scoped notification bell (event passed / due today-tomorrow -
@@ -28,6 +29,7 @@ import type { NotificationDTO } from "@/modules/notifications/notifications.inte
  * wins and the other's dispatch is a no-op) does any network work.
  */
 export function NotificationBell() {
+  const t = useT();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const userId = useAppSelector((state) => state.session.userId);
@@ -92,7 +94,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-label="Notifications"
+        aria-label={t("nav.notifications")}
         aria-haspopup="menu"
         aria-expanded={open}
         className="relative rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
@@ -110,7 +112,7 @@ export function NotificationBell() {
         >
           <div className="flex items-center justify-between px-3 py-2.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-              Notifications
+              {t("nav.notifications")}
             </span>
             {unreadCount > 0 && (
               <button
@@ -119,17 +121,17 @@ export function NotificationBell() {
                 className="flex items-center gap-1 font-body text-xs text-primary transition-colors hover:text-on-surface"
               >
                 <CheckCircle aria-hidden="true" size={14} />
-                Mark All as Read
+                {t("notifications.markAll")}
               </button>
             )}
           </div>
 
           <div className="max-h-80 overflow-y-auto border-t border-primary-container/10">
             {notifications === null ? (
-              <p className="px-3 py-4 text-center font-body text-sm text-text-muted">Loading…</p>
+              <p className="px-3 py-4 text-center font-body text-sm text-text-muted">{t("common.loading")}</p>
             ) : notifications.length === 0 ? (
               <p className="px-3 py-4 text-center font-body text-sm text-text-muted">
-                No notifications yet.
+                {t("notifications.empty")}
               </p>
             ) : (
               notifications.map((notification) => (
@@ -166,7 +168,7 @@ export function NotificationBell() {
                       {notification.message}
                     </p>
                     <p className="mt-0.5 font-mono text-[11px] text-text-muted">
-                      {formatRelativeTime(notification.created_at)}
+                      {formatRelativeTime(notification.created_at, t)}
                     </p>
                   </div>
                   <button
@@ -175,7 +177,7 @@ export function NotificationBell() {
                       clickEvent.stopPropagation();
                       handleDelete(notification);
                     }}
-                    aria-label="Delete notification"
+                    aria-label={t("notifications.delete")}
                     className="shrink-0 rounded p-3 text-text-muted transition-opacity hover:text-error focus-visible:opacity-100 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
                   >
                     <Trash aria-hidden="true" size={14} />

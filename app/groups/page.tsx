@@ -4,6 +4,7 @@ import { Nav } from "@/components/Nav";
 import { GroupsListClient } from "@/components/GroupsListClient";
 import { createClient } from "@/lib/supabase/server";
 import { groupsInterface } from "@/modules/groups/groups.interface";
+import { getT } from "@/lib/i18n/server";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page lists one
 // signed-in user's own groups and must never be cached/statically served to another
@@ -11,6 +12,7 @@ import { groupsInterface } from "@/modules/groups/groups.interface";
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
+  const t = await getT();
   const supabase = await createClient();
   // Set by proxy.ts from its own already-verified getUser() call - trusting it here
   // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
@@ -37,7 +39,7 @@ export default async function GroupsPage() {
       <Nav />
 
       <main id="main" className="content-rise mx-auto max-w-[1120px] px-4 pt-8 pb-28 sm:px-8 sm:pb-12 lg:px-12">
-        <h1 className="sr-only">Groups</h1>
+        <h1 className="sr-only">{t("groups.title")}</h1>
         <GroupsListClient initialGroups={groups} />
       </main>
     </div>

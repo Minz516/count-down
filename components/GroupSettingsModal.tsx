@@ -13,6 +13,7 @@ import { groupSettingsInterface, groupsInterface } from "@/modules/groups/groups
 import type { GroupDTO, GroupMemberDTO, GroupSettingsDTO } from "@/modules/groups/groups.interface";
 import { focusIfFinePointer } from "@/lib/focus";
 import { useDialog } from "@/lib/useDialog";
+import { useT } from "./LocaleProvider";
 
 interface GroupSettingsModalProps {
   group: GroupDTO;
@@ -37,6 +38,7 @@ export function GroupSettingsModal({
   initialMembers,
   onClose,
 }: GroupSettingsModalProps) {
+  const t = useT();
   const router = useRouter();
   const isCreator = group.created_by === currentUserId;
 
@@ -90,9 +92,9 @@ export function GroupSettingsModal({
       });
       setSavedWebhookUrl(effectiveWebhookUrl);
       setWebhookInput("");
-      setMessage("Settings saved.");
+      setMessage(t("settings.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     } finally {
       setSaving(false);
     }
@@ -111,9 +113,9 @@ export function GroupSettingsModal({
       });
       setSavedWebhookUrl(null);
       setWebhookInput("");
-      setMessage("Webhook removed.");
+      setMessage(t("settings.removed"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     } finally {
       setSaving(false);
     }
@@ -131,7 +133,7 @@ export function GroupSettingsModal({
       setEditingName(false);
       router.refresh();
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setNameError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     } finally {
       setRenaming(false);
     }
@@ -146,7 +148,7 @@ export function GroupSettingsModal({
       await groupsInterface.deleteGroup(supabase, group.id);
       router.push("/groups");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
       setConfirmingDelete(false);
       setDeleting(false);
     }
@@ -159,9 +161,9 @@ export function GroupSettingsModal({
 
     try {
       await groupSettingsInterface.sendTestMessage(effectiveWebhookUrl);
-      setMessage("Test message sent - check the group's Discord channel.");
+      setMessage(t("settings.testSentGroup"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send the test message.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.sendTest"));
     } finally {
       setTesting(false);
     }
@@ -186,7 +188,7 @@ export function GroupSettingsModal({
       >
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="text-balance font-display text-xl font-semibold text-on-surface">Group Settings</h2>
+            <h2 id={titleId} className="text-balance font-display text-xl font-semibold text-on-surface">{t("groupSettings.title")}</h2>
 
             {editingName ? (
               <form onSubmit={handleRenameSubmit} className="mt-1 flex items-center gap-1">
@@ -196,14 +198,14 @@ export function GroupSettingsModal({
                   onChange={(inputEvent) => setNameInput(inputEvent.target.value)}
                   ref={focusIfFinePointer}
                   name="group_name"
-                  aria-label="Group name"
+                  aria-label={t("common.groupName")}
                   autoComplete="off"
                   className="w-full rounded border border-transparent bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
                 />
                 <button
                   type="submit"
                   disabled={renaming}
-                  aria-label="Save group name"
+                  aria-label={t("groupSettings.saveName")}
                   className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
                   <Check aria-hidden="true" size={16} />
@@ -215,7 +217,7 @@ export function GroupSettingsModal({
                     setNameError(null);
                   }}
                   disabled={renaming}
-                  aria-label="Cancel"
+                  aria-label={t("common.cancel")}
                   className="rounded p-1 text-text-muted hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
                   <X aria-hidden="true" size={16} />
@@ -232,7 +234,7 @@ export function GroupSettingsModal({
                       setNameError(null);
                       setEditingName(true);
                     }}
-                    aria-label="Edit group name"
+                    aria-label={t("groupSettings.editName")}
                     className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
                   >
                     <PencilSimple aria-hidden="true" size={14} />
@@ -246,7 +248,7 @@ export function GroupSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <X aria-hidden="true" size={20} />
@@ -257,14 +259,14 @@ export function GroupSettingsModal({
           <div className="flex items-center justify-between rounded border border-primary-container/15 bg-surface-container-lowest px-3 py-2">
             <div>
               <p className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-                Invite code
+                {t("common.inviteCode")}
               </p>
               <p translate="no" className="font-mono text-lg tracking-[0.15em] text-on-surface">{group.invite_code}</p>
             </div>
             <button
               type="button"
               onClick={handleCopy}
-              aria-label="Copy invite code"
+              aria-label={t("common.copyInviteCode")}
               className="rounded p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
             >
               {copied ? <Check aria-hidden="true" size={18} className="text-primary" /> : <Copy aria-hidden="true" size={18} />}
@@ -273,14 +275,14 @@ export function GroupSettingsModal({
 
           <div>
             <p className="font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-              {group.member_count} / 10 thành viên
+              {t("nav.members", { n: group.member_count })}
             </p>
             <ul className="mt-2 flex max-h-48 flex-col gap-2 overflow-y-auto">
               {initialMembers.map((member) => (
                 <li key={member.user_id} className="flex items-center gap-2.5">
                   <Avatar src={member.avatar_url} alt="" size={24} />
                   <span className="truncate font-body text-sm text-on-surface">
-                    {member.username ?? "Unnamed member"}
+                    {member.username ?? t("groupSettings.unnamed")}
                   </span>
                 </li>
               ))}
@@ -290,15 +292,15 @@ export function GroupSettingsModal({
 
         <form onSubmit={handleSave} className="mt-6 flex flex-col gap-4 border-t border-primary-container/10 pt-6">
           <div>
-            <h3 className="text-balance font-display text-base font-semibold text-on-surface">Discord Digest</h3>
+            <h3 className="text-balance font-display text-base font-semibold text-on-surface">{t("settings.digest")}</h3>
             <p className="mt-1 font-body text-sm text-text-muted">
-              Get a daily message listing this group&apos;s events due within the next 7 days.
+              {t("groupSettings.digestBody")}
             </p>
           </div>
 
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-              Discord Webhook URL
+              {t("settings.webhookUrl")}
             </span>
             <input
               type="url"
@@ -318,7 +320,7 @@ export function GroupSettingsModal({
                 disabled={saving}
                 className="-my-1 inline-flex min-h-11 items-center self-start font-body text-xs sm:min-h-8 text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
               >
-                Remove webhook
+                {t("settings.removeWebhook")}
               </button>
             )}
           </label>
@@ -331,7 +333,7 @@ export function GroupSettingsModal({
               onChange={(inputEvent) => setDigestEnabled(inputEvent.target.checked)}
               className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
             />
-            Enable daily digest
+            {t("settings.enableDigest")}
           </label>
 
           {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
@@ -344,10 +346,10 @@ export function GroupSettingsModal({
               disabled={!effectiveWebhookUrl || testing}
               onClick={handleTestMessage}
             >
-              {testing ? "Sending…" : "Send Test Message"}
+              {testing ? t("common.sending") : t("settings.sendTest")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save Settings"}
+              {saving ? t("common.saving") : t("settings.save")}
             </Button>
           </div>
         </form>
@@ -355,9 +357,9 @@ export function GroupSettingsModal({
         {isCreator && (
           <div className="mt-6 flex items-center justify-between border-t border-error/20 pt-6">
             <div>
-              <h3 className="text-balance font-display text-base font-semibold text-on-surface">Danger Zone</h3>
+              <h3 className="text-balance font-display text-base font-semibold text-on-surface">{t("groupSettings.dangerZone")}</h3>
               <p className="mt-1 font-body text-sm text-text-muted">
-                Permanently delete this group for every member.
+                {t("groupSettings.deleteHelp")}
               </p>
             </div>
             <Button
@@ -366,7 +368,7 @@ export function GroupSettingsModal({
               disabled={deleting}
               onClick={() => setConfirmingDelete(true)}
             >
-              Delete Group
+              {t("groupSettings.deleteGroup")}
             </Button>
           </div>
         )}
@@ -374,9 +376,9 @@ export function GroupSettingsModal({
 
       {confirmingRemove && (
         <ConfirmDialog
-          title="Remove Webhook?"
-          description="This group's daily digest stops until you add a webhook again."
-          confirmLabel="Remove"
+          title={t("settings.removeTitle")}
+          description={t("groupSettings.removeBody")}
+          confirmLabel={t("common.remove")}
           onConfirm={() => {
             setConfirmingRemove(false);
             void handleRemoveWebhook();
@@ -387,8 +389,8 @@ export function GroupSettingsModal({
 
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete this group?"
-          description={`"${group.name}" and all of its events, todos, and settings will be permanently deleted for every member. This can't be undone.`}
+          title={t("groupSettings.deleteTitle")}
+          description={t("groupSettings.deleteBody", { name: group.name })}
           onConfirm={handleDeleteGroup}
           onCancel={() => setConfirmingDelete(false)}
         />
