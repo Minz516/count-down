@@ -53,6 +53,53 @@ export interface GroupWithMembers {
   members: MemberRow[];
 }
 
+/** A member as returned by the group_with_members functions: membership plus profile in one row. */
+export interface MemberWithProfile extends MemberRow {
+  username: string | null;
+  avatar_url: string | null;
+}
+
+export interface GroupWithMemberProfiles {
+  group: GroupEntity;
+  /** Oldest-joined first. */
+  members: MemberWithProfile[];
+}
+
+/** `available: false` means the SQL functions are not installed yet (see below), so the caller
+ * falls back to the two-call path. A real failure still throws. */
+export type RpcResult<T> = { available: true; value: T } | { available: false };
+
+// supabase/migrations/20261002000000_group_with_members_rpc.sql adds two read-only functions that
+// return a group, its members and their profiles in ONE round trip. PostgREST answers PGRST202 (or
+// Postgres 42883) while they are missing. The "missing" verdict is remembered briefly so a deploy
+// that precedes the migration does not pay for a failing call on every request, and expires so a
+// long-lived server notices the migration without a restart.
+const RPC_MISSING_RETRY_MS = 60_000;
+let rpcMissingUntil = 0;
+
+/** Test hook: forget a remembered "functions are missing" verdict. */
+export function resetGroupRpcAvailability() {
+  rpcMissingUntil = 0;
+}
+
+async function callGroupRpc<T>(
+  supabase: SupabaseClient,
+  fn: "list_groups_with_members" | "get_group_with_members",
+  args: Record<string, unknown>,
+): Promise<RpcResult<T>> {
+  if (Date.now() < rpcMissingUntil) return { available: false };
+
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42883") {
+      rpcMissingUntil = Date.now() + RPC_MISSING_RETRY_MS;
+      return { available: false };
+    }
+    throw new DatabaseError(error.message);
+  }
+  return { available: true, value: data as T };
+}
+
 function toGroupWithMembers(row: GroupRow): GroupWithMembers {
   return {
     group: toGroupEntity(row),
@@ -130,6 +177,28 @@ export const groupsRepository = {
 
     if (error) throw new DatabaseError(error.message);
     return ((data ?? []) as unknown as GroupRow[]).map(toGroupWithMembers);
+  },
+
+  /**
+   * Every group the caller belongs to with its first `previewLimit` members' profiles, in a single
+   * call. Deliberately returns profile columns even though `profiles` belongs to another module:
+   * the point is one round trip, and the function runs as the caller so RLS still decides what is
+   * visible (docs/ARCHITECTURE_DESIGN.md section 2.3 is otherwise unchanged).
+   */
+  listWithMemberProfiles(
+    supabase: SupabaseClient,
+    previewLimit: number,
+  ): Promise<RpcResult<GroupWithMemberProfiles[]>> {
+    return callGroupRpc(supabase, "list_groups_with_members", { p_preview_limit: previewLimit });
+  },
+
+  /** One group with all members and their profiles in a single call; value is `null` when the group
+   * does not exist or the caller is not a member (indistinguishable, as with `getById`). */
+  getWithMemberProfiles(
+    supabase: SupabaseClient,
+    groupId: string,
+  ): Promise<RpcResult<GroupWithMemberProfiles | null>> {
+    return callGroupRpc(supabase, "get_group_with_members", { p_group_id: groupId });
   },
 
   /** One group with its member rows in one query; `null` as in `getById`. */

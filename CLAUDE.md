@@ -21,6 +21,8 @@ npm run test:a11y      # axe WCAG A/AA on /login and /signup, light+dark, deskto
 
 The only automated tests are the Playwright + axe accessibility checks in `tests/` (signed-out screens only, because the signed-in app needs a real Supabase project). CI (`.github/workflows/ci.yml`) runs `npm run lint` (which now enforces the full jsx-a11y rule set), `check:contrast`, `npm run build`, `check:bundle`, then `test:a11y`, on every push/PR to `main`, using placeholder Supabase env vars (build doesn't hit Supabase at build time; routes reading `cookies()` render dynamically at request time).
 
+Group reads: `groupsService.listGroupsForUser` and `getGroupWithMembers` use the `list_groups_with_members` / `get_group_with_members` SQL functions (`supabase/migrations/20261002000000_group_with_members_rpc.sql`) for one round trip, and fall back to the two-call path (groups+members, then profiles) while the functions are not installed. The functions are `security invoker`, so RLS still applies; keep the fallback in sync if the shape of `GroupDTO` or the member list changes.
+
 Database changes: run `supabase/schema.sql` in the Supabase SQL editor first (tables, RLS policies, RPC functions, the signup trigger, the `avatars` Storage bucket), then `supabase/cleanup_and_rollover.sql`, then anything under `supabase/migrations/` in timestamp order that isn't already folded into `schema.sql`.
 
 ## Architecture: the module layer
