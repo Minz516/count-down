@@ -27,6 +27,14 @@ function toPreviewDTO(entry: GroupWithMembers, profileMap: Map<string, ProfileEn
 
 export const groupsService = {
   async listGroupsForUser(supabase: SupabaseClient): Promise<GroupDTO[]> {
+    // One call when the SQL functions are installed, otherwise the two-call path below.
+    const joined = await groupsRepository.listWithMemberProfiles(supabase, PREVIEW_AVATAR_COUNT);
+    if (joined.available) {
+      return joined.value.map(({ group, members }) =>
+        toGroupDTO(group, members.slice(0, PREVIEW_AVATAR_COUNT).map((member) => member.avatar_url ?? null)),
+      );
+    }
+
     const entries = await groupsRepository.listWithMembers(supabase);
     const profileMap = await profilesInterface.getProfilesByIds(
       supabase,
@@ -43,6 +51,21 @@ export const groupsService = {
     supabase: SupabaseClient,
     groupId: string,
   ): Promise<{ group: GroupDTO | null; members: GroupMemberDTO[] }> {
+    const joined = await groupsRepository.getWithMemberProfiles(supabase, groupId);
+    if (joined.available) {
+      if (!joined.value) return { group: null, members: [] };
+      const { group, members } = joined.value;
+      return {
+        group: toGroupDTO(group, members.slice(0, PREVIEW_AVATAR_COUNT).map((member) => member.avatar_url ?? null)),
+        members: members.map((member) => ({
+          user_id: member.user_id,
+          username: member.username ?? null,
+          avatar_url: member.avatar_url ?? null,
+          joined_at: member.joined_at,
+        })),
+      };
+    }
+
     const entry = await groupsRepository.getWithMembers(supabase, groupId);
     if (!entry) return { group: null, members: [] };
 
