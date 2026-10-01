@@ -53,7 +53,7 @@ const COPY = {
 } as const;
 
 const inputWrapClass =
-  "flex min-h-11 items-center gap-2 rounded border border-outline-variant bg-surface-container-lowest px-3 py-2 focus-within:border-primary focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-primary/50";
+  "flex min-h-11 items-center gap-2 rounded border border-field-border bg-surface-container-lowest px-3 py-2 focus-within:border-primary focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-primary/50";
 const inputClass =
   "w-full bg-transparent font-body text-base text-on-surface placeholder:text-text-muted focus:outline-none";
 

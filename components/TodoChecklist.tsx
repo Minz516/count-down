@@ -169,7 +169,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               aria-label="New checklist item"
               autoComplete="off"
               maxLength={500}
-              className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
+              className="min-w-0 flex-1 rounded border border-field-border bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
             />
           </form>
 

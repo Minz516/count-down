@@ -23,7 +23,7 @@ interface GroupSettingsModalProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
+  "w-full rounded border border-field-border bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /**
  * Invite code + member count + the group's own Discord webhook (docs/milestone2/UI_SPEC-milestone-2.md
@@ -198,7 +198,7 @@ export function GroupSettingsModal({
                   name="group_name"
                   aria-label="Group name"
                   autoComplete="off"
-                  className="w-full rounded border border-transparent bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
+                  className="w-full rounded border border-field-border bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
                 />
                 <button
                   type="submit"

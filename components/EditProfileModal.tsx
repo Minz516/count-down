@@ -17,7 +17,7 @@ interface EditProfileModalProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
+  "w-full rounded border border-field-border bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /** Username + avatar upload, opened from UserMenu.tsx's "Edit profile" item. */
 export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: EditProfileModalProps) {
