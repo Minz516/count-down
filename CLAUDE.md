@@ -64,3 +64,13 @@ Some writes only have an RPC path (e.g. `create_group`, `join_group_by_code`, `g
 - `.claude/skills/DESIGN.md`, `TASTE.md`, `THEME.md` capture this project's frontend visual-design conventions (palette, type, motion) — check them before making UI/styling changes.
 - `docs/` holds the design record: `ARCHITECTURE_DESIGN.md` (the section-numbered spec that code comments cite as "§x.y"), `PRD.md`, `UI_SPEC.md`, `PRODUCTION_READINESS_CHECKLIST.md`, `FIX_NAVIGATION_LATENCY.md`, `SETUP.md`. Consult the relevant one before a non-trivial change; inline comments frequently point at a specific section.
 - `app/sentry-example-page/` and `app/api/sentry-example-api/` are leftover Sentry-wizard scaffolding, not real features — safe to ignore or delete.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
