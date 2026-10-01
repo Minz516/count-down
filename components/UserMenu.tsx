@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Gear, PencilSimple, SignOut } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { EditProfileModal } from "./EditProfileModal";
+import { LanguageMenuItem } from "./LanguageToggle";
 import { ThemeMenuItem } from "./ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { notificationsCleared } from "@/lib/store/notificationsSlice";
 import { fetchSession, profileUpdated, sessionCleared } from "@/lib/store/sessionSlice";
 import { authInterface } from "@/modules/auth/auth.interface";
+import { useT } from "./LocaleProvider";
 
 /**
  * Account icon that opens a small menu instead of signing out on the first
@@ -26,6 +28,7 @@ import { authInterface } from "@/modules/auth/auth.interface";
  * the already-cached value from the store.
  */
 export function UserMenu() {
+  const t = useT();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
@@ -77,7 +80,7 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-label="Account menu"
+        aria-label={t("nav.accountMenu")}
         aria-haspopup="menu"
         aria-expanded={open}
         className="rounded-full p-2.5 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
@@ -103,7 +106,7 @@ export function UserMenu() {
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
             <PencilSimple aria-hidden="true" size={16} />
-            Edit Profile
+            {t("menu.editProfile")}
           </button>
           {/* Settings lives in the menu on small screens, where the header has no room for a gear. */}
           <Link
@@ -113,9 +116,10 @@ export function UserMenu() {
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container sm:hidden"
           >
             <Gear aria-hidden="true" size={16} />
-            Settings
+            {t("nav.settings")}
           </Link>
           <ThemeMenuItem onSelect={() => setOpen(false)} />
+          <LanguageMenuItem onSelect={() => setOpen(false)} />
           <button
             type="button"
             role="menuitem"
@@ -123,7 +127,7 @@ export function UserMenu() {
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
             <SignOut aria-hidden="true" size={16} />
-            Log Out
+            {t("menu.logOut")}
           </button>
         </div>
       )}

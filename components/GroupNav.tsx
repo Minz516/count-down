@@ -5,6 +5,7 @@ import { ArrowLeft, Gear, Plus } from "@phosphor-icons/react/ssr";
 import { Button } from "./Button";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
+import { useT } from "./LocaleProvider";
 
 interface GroupNavProps {
   groupName: string;
@@ -19,6 +20,7 @@ interface GroupNavProps {
  * action bar so it is never truncated to a few letters, and the member count stays on one line.
  */
 export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }: GroupNavProps) {
+  const t = useT();
   return (
     <header className="border-b border-primary-container/10">
       <div className="mx-auto flex max-w-[1120px] flex-col px-4 sm:px-8 lg:px-12">
@@ -26,7 +28,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
             <Link
               href="/groups"
-              aria-label="Back to groups"
+              aria-label={t("nav.backToGroups")}
               className="shrink-0 rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
             >
               <ArrowLeft aria-hidden="true" size={20} />
@@ -34,7 +36,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
             <div className="hidden min-w-0 sm:block">
               <h1 className="truncate font-display text-lg font-semibold text-on-surface">{groupName}</h1>
               <p className="whitespace-nowrap font-mono text-[11px] tracking-[0.1em] text-text-muted uppercase">
-                {memberCount} / 10 thành viên
+                {t("nav.members", { n: memberCount })}
               </p>
             </div>
           </div>
@@ -42,12 +44,13 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Button onClick={onAddEvent} className="min-h-11 px-3 sm:px-4">
               <Plus aria-hidden="true" size={16} weight="bold" />
-              Add Event
+              <span className="sm:hidden">{t("nav.addEventShort")}</span>
+              <span className="hidden sm:inline">{t("nav.addEvent")}</span>
             </Button>
             <button
               type="button"
               onClick={onOpenSettings}
-              aria-label="Group settings"
+              aria-label={t("nav.groupSettings")}
               className="rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
             >
               <Gear aria-hidden="true" size={20} />
@@ -60,7 +63,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
         <div className="min-w-0 pb-4 sm:hidden">
           <h1 className="font-display text-xl font-semibold text-on-surface">{groupName}</h1>
           <p className="whitespace-nowrap font-mono text-[11px] tracking-[0.1em] text-text-muted uppercase">
-            {memberCount} / 10 thành viên
+            {t("nav.members", { n: memberCount })}
           </p>
         </div>
       </div>

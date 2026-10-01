@@ -1,27 +1,34 @@
 import type { DayOfWeek } from "@/types/event";
+import type { Locale, TFunction } from "@/lib/i18n";
 
-const DAY_NAMES_VI: Record<DayOfWeek, string> = {
-  0: "Chủ Nhật",
-  1: "Thứ Hai",
-  2: "Thứ Ba",
-  3: "Thứ Tư",
-  4: "Thứ Năm",
-  5: "Thứ Sáu",
-  6: "Thứ Bảy",
+const DAY_NAMES: Record<Locale, Record<DayOfWeek, string>> = {
+  en: { 0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday" },
+  vi: {
+    0: "Chủ Nhật",
+    1: "Thứ Hai",
+    2: "Thứ Ba",
+    3: "Thứ Tư",
+    4: "Thứ Năm",
+    5: "Thứ Sáu",
+    6: "Thứ Bảy",
+  },
 };
 
-const DAY_ABBR_VI: Record<DayOfWeek, string> = {
-  0: "CN",
-  1: "T2",
-  2: "T3",
-  3: "T4",
-  4: "T5",
-  5: "T6",
-  6: "T7",
+const DAY_ABBR: Record<Locale, Record<DayOfWeek, string>> = {
+  en: { 0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat" },
+  vi: {
+    0: "CN",
+    1: "T2",
+    2: "T3",
+    3: "T4",
+    4: "T5",
+    5: "T6",
+    6: "T7",
+  },
 };
 
-export function dayOfWeekLabel(day: DayOfWeek): string {
-  return DAY_NAMES_VI[day];
+export function dayOfWeekLabel(day: DayOfWeek, locale: Locale): string {
+  return DAY_NAMES[locale][day];
 }
 
 /** e.g. "15/11/2024" - dd/mm/yyyy, the app-wide date display format for viewing. */
@@ -40,10 +47,10 @@ export function formatEventTime(iso: string): string {
   return TIME_FORMAT.format(new Date(iso));
 }
 
-/** e.g. "T3, 18/08/2026, 14:30" - short Vietnamese weekday + dd/mm/yyyy + hh:mm, Timeline rows. */
-export function formatTimelineDate(iso: string): string {
+/** e.g. "T3, 18/08/2026, 14:30" (vi) or "Tue, 18/08/2026, 14:30" (en) - short weekday + dd/mm/yyyy + hh:mm, Timeline rows. */
+export function formatTimelineDate(iso: string, locale: Locale): string {
   const d = new Date(iso);
-  const abbr = DAY_ABBR_VI[d.getDay() as DayOfWeek];
+  const abbr = DAY_ABBR[locale][d.getDay() as DayOfWeek];
 
   return `${abbr}, ${formatEventDate(iso)}, ${formatEventTime(iso)}`;
 }
@@ -98,11 +105,11 @@ const DAY_MS = 24 * HOUR_MS;
 
 /** e.g. "5 phút trước" - coarse relative time for the notification bell, not meant for
  * anything precision-sensitive (deadlines/countdowns still use the absolute formatters above). */
-export function formatRelativeTime(iso: string): string {
+export function formatRelativeTime(iso: string, t: TFunction): string {
   const diffMs = Date.now() - new Date(iso).getTime();
 
-  if (diffMs < MINUTE_MS) return "vừa xong";
-  if (diffMs < HOUR_MS) return `${Math.floor(diffMs / MINUTE_MS)} phút trước`;
-  if (diffMs < DAY_MS) return `${Math.floor(diffMs / HOUR_MS)} giờ trước`;
-  return `${Math.floor(diffMs / DAY_MS)} ngày trước`;
+  if (diffMs < MINUTE_MS) return t("date.justNow");
+  if (diffMs < HOUR_MS) return t("date.minutesAgo", { n: Math.floor(diffMs / MINUTE_MS) });
+  if (diffMs < DAY_MS) return t("date.hoursAgo", { n: Math.floor(diffMs / HOUR_MS) });
+  return t("date.daysAgo", { n: Math.floor(diffMs / DAY_MS) });
 }

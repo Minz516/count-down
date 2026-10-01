@@ -1,5 +1,8 @@
+"use client";
+
 import { clsx } from "clsx";
 import type { EventStatus } from "@/modules/events/events.interface";
+import { useT } from "./LocaleProvider";
 
 // The one legitimate decorative-looking dot in the app - it carries real
 // semantic state (see docs/DESIGN.md §8.3), unlike a purely decorative dot.
@@ -54,14 +57,17 @@ const CHIP_CLASSES: Record<EventStatus, string> = {
 /** Color + text label always paired - never color alone (docs/TASTE.md). */
 export function StatusLabel({
   status,
-  label,
+  daysRemaining,
   chip = false,
 }: {
   status: EventStatus;
-  label: string;
+  daysRemaining: number;
   /** Tinted rounded-full background instead of bare colored text (docs/DESIGN.md §2). */
   chip?: boolean;
 }) {
+  const t = useT();
+  const label = status === "past" ? t("status.past") : status === "today" ? t("status.today") : t("status.daysLeft", { n: daysRemaining });
+
   return (
     <span
       className={clsx(

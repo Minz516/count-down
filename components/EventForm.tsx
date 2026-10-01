@@ -14,6 +14,7 @@ import {
 } from "@/lib/dateFormat";
 import type { DayOfWeek, EventDTO, EventInput } from "@/modules/events/events.interface";
 import { useDialog } from "@/lib/useDialog";
+import { useLocale, useT } from "./LocaleProvider";
 
 interface EventFormProps {
   initialEvent?: EventDTO;
@@ -36,6 +37,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) {
+  const t = useT();
+  const locale = useLocale();
   const initialParts = initialEvent ? toDateTimeParts(initialEvent.deadline) : { date: "", time: "" };
 
   const [name, setName] = useState(initialEvent?.name ?? "");
@@ -65,7 +68,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
     event.preventDefault();
 
     if (!name.trim() || !deadlineIso) {
-      setError(isRecurring ? "Name and time are required." : "Name and deadline are required.");
+      setError(isRecurring ? t("event.errorNameTime") : t("event.errorNameDeadline"));
       return;
     }
 
@@ -81,7 +84,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
         recurrence_day_of_week: isRecurring ? dayOfWeek : null,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
       setSubmitting(false);
     }
   }
@@ -106,14 +109,14 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
         <div className="flex items-start justify-between">
           <div>
             <h2 id={titleId} className="text-balance font-display text-xl font-semibold text-on-surface">
-              {initialEvent ? "Edit Event" : "New Event"}
+              {initialEvent ? t("event.editTitle") : t("event.new")}
             </h2>
-            <p className="mt-1 font-body text-sm text-text-muted">Define your next milestone.</p>
+            <p className="mt-1 font-body text-sm text-text-muted">{t("event.subtitle")}</p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="rounded p-3 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <X aria-hidden="true" size={20} />
@@ -121,12 +124,12 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <Field label="Event Name">
+          <Field label={t("event.name")}>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Project Launch…"
+              placeholder={t("event.namePlaceholder")}
               name="name"
               autoComplete="off"
               required
@@ -143,13 +146,13 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
               onChange={(event) => setIsRecurring(event.target.checked)}
               className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
             />
-            Repeats weekly
+            {t("event.repeatsWeekly")}
           </label>
 
           <div className="grid grid-cols-2 gap-4">
             {/* A weekly event repeats on a weekday, so it collects a Day of week instead of a
                 calendar date - the deadline date is derived from it (see deadlineIso above). */}
-            <Field label={isRecurring ? "Day of week" : "Deadline Date"}>
+            <Field label={isRecurring ? t("event.dayOfWeek") : t("event.deadlineDate")}>
               {isRecurring ? (
                 <select
                   name="recurrence_day_of_week"
@@ -159,7 +162,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
                 >
                   {([0, 1, 2, 3, 4, 5, 6] as const).map((day) => (
                     <option key={day} value={day}>
-                      {dayOfWeekLabel(day)}
+                      {dayOfWeekLabel(day, locale)}
                     </option>
                   ))}
                 </select>
@@ -167,22 +170,22 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
                 <DateField value={date} onChange={setDate} />
               )}
             </Field>
-            <Field label="Deadline Time">
+            <Field label={t("event.deadlineTime")}>
               <TimeField value={time} onChange={setTime} />
             </Field>
           </div>
 
           {isPastDeadline && (
             <p className="font-body text-sm text-accent-warning">
-              This deadline is in the past. You can still save it.
+              {t("event.pastWarning")}
             </p>
           )}
 
-          <Field label="Description (optional)">
+          <Field label={t("event.description")}>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Add some context…"
+              placeholder={t("event.descriptionPlaceholder")}
               name="description"
               autoComplete="off"
               rows={3}
@@ -195,10 +198,10 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
 
           <div className="mt-2 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : initialEvent ? "Save Changes" : "Save Event"}
+              {submitting ? t("common.saving") : initialEvent ? t("event.saveChanges") : t("event.save")}
             </Button>
           </div>
         </form>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { eventsInterface } from "@/modules/events/events.interface";
 import { groupsInterface, groupSettingsInterface } from "@/modules/groups/groups.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
+import { getT } from "@/lib/i18n/server";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
 // group's events/todos, scoped by the signed-in user's membership, and must never be
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function GroupDashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
 
+  const t = await getT();
   const supabase = await createClient();
   // Set by proxy.ts from its own already-verified auth check - trusting it here
   // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
@@ -56,12 +58,12 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   if (!group) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-        <h1 className="font-display text-xl font-semibold text-on-surface">Group not found</h1>
+        <h1 className="font-display text-xl font-semibold text-on-surface">{t("groups.notFound.title")}</h1>
         <p className="font-body text-sm text-text-muted">
-          This group doesn&apos;t exist, or you&apos;re not a member of it.
+          {t("groups.notFound.body")}
         </p>
         <Link href="/groups" className="font-body text-sm text-primary underline underline-offset-4">
-          Back to Groups
+          {t("groups.back")}
         </Link>
       </div>
     );

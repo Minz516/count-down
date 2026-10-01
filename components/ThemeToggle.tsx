@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "@phosphor-icons/react/ssr";
+import { useT } from "./LocaleProvider";
 
 type Theme = "light" | "dark";
 
@@ -45,6 +46,7 @@ function useTheme(): [Theme, () => void] {
 
 /** Row for the account menu (UserMenu.tsx). */
 export function ThemeMenuItem({ onSelect }: { onSelect?: () => void }) {
+  const t = useT();
   const [theme, toggle] = useTheme();
   const Icon = theme === "dark" ? Sun : Moon;
 
@@ -59,13 +61,14 @@ export function ThemeMenuItem({ onSelect }: { onSelect?: () => void }) {
       className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
     >
       <Icon size={16} />
-      {theme === "dark" ? "Light Mode" : "Dark Mode"}
+      {theme === "dark" ? t("theme.light") : t("theme.dark")}
     </button>
   );
 }
 
 /** Standalone icon button for signed-out screens (login, signup). */
 export function ThemeIconButton() {
+  const t = useT();
   const [theme, toggle] = useTheme();
   const Icon = theme === "dark" ? Sun : Moon;
 
@@ -73,7 +76,7 @@ export function ThemeIconButton() {
     <button
       type="button"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={theme === "dark" ? t("theme.toLight") : t("theme.toDark")}
       className="rounded-lg p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
     >
       <Icon size={20} />

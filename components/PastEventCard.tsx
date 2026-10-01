@@ -7,6 +7,7 @@ import { LocalDate } from "./LocalDate";
 import { TodoChecklist } from "./TodoChecklist";
 import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface PastEventCardProps {
   event: EventDTO;
@@ -23,6 +24,7 @@ interface PastEventCardProps {
  * 24h grace window before `supabase/cleanup_and_rollover.sql` hard-deletes it.
  */
 export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDelete }: PastEventCardProps) {
+  const t = useT();
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
   return (
@@ -64,7 +66,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
               clickEvent.stopPropagation();
               onEdit(event);
             }}
-            aria-label={`Sửa ${event.name}`}
+            aria-label={t("event.edit", { name: event.name })}
             className="rounded p-1 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <PencilSimple aria-hidden="true" size={14} />
@@ -75,7 +77,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
               clickEvent.stopPropagation();
               onDelete(event);
             }}
-            aria-label={`Xóa ${event.name}`}
+            aria-label={t("event.delete", { name: event.name })}
             className="rounded p-1 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <Trash aria-hidden="true" size={14} />

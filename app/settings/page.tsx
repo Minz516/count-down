@@ -4,6 +4,7 @@ import { Nav } from "@/components/Nav";
 import { SettingsForm } from "@/components/SettingsForm";
 import { createClient } from "@/lib/supabase/server";
 import { settingsInterface } from "@/modules/settings/settings.interface";
+import { getT } from "@/lib/i18n/server";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
 // signed-in user's own webhook settings and must never be cached/statically served to
@@ -11,6 +12,7 @@ import { settingsInterface } from "@/modules/settings/settings.interface";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  const t = await getT();
   const supabase = await createClient();
   // Set by proxy.ts from its own already-verified getUser() call - trusting it here
   // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
@@ -37,7 +39,7 @@ export default async function SettingsPage() {
       <Nav />
 
       <main id="main" className="content-rise mx-auto flex max-w-[560px] flex-col gap-6 px-4 pt-8 pb-28 sm:px-8 sm:pb-12">
-        <h1 className="font-display text-2xl font-semibold text-on-surface">Settings</h1>
+        <h1 className="font-display text-2xl font-semibold text-on-surface">{t("settings.title")}</h1>
         <SettingsForm initialSettings={settings} />
       </main>
     </div>

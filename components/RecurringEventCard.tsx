@@ -8,6 +8,7 @@ import { nextOccurrence, daysUntil } from "@/modules/events/events.interface";
 import { TodoChecklist } from "./TodoChecklist";
 import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useLocale, useT } from "./LocaleProvider";
 
 interface RecurringEventCardProps {
   event: EventDTO;
@@ -25,6 +26,8 @@ export function RecurringEventCard({
   onEdit,
   onDelete,
 }: RecurringEventCardProps) {
+  const t = useT();
+  const locale = useLocale();
   // Before the early return below - hooks can't run conditionally.
   const [checklistExpanded, setChecklistExpanded] = useState(false);
 
@@ -60,13 +63,13 @@ export function RecurringEventCard({
       <div className="flex items-center gap-3 px-5 py-4">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-xs tracking-[0.1em] text-secondary uppercase">
-            Lặp lại - {dayOfWeekLabel(event.recurrence_day_of_week)} hàng tuần
+            {t("status.recurring", { day: dayOfWeekLabel(event.recurrence_day_of_week, locale) })}
           </p>
           <p className="truncate font-body text-base font-semibold text-on-surface">{event.name}</p>
         </div>
 
         <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-xs tracking-[0.1em] text-primary tabular-nums uppercase">
-          còn {days} ngày
+          {t("status.daysLeft", { n: days })}
         </span>
 
         <div className="flex items-center gap-1">
@@ -76,7 +79,7 @@ export function RecurringEventCard({
               clickEvent.stopPropagation();
               onEdit(event);
             }}
-            aria-label={`Sửa ${event.name}`}
+            aria-label={t("event.edit", { name: event.name })}
             className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <PencilSimple aria-hidden="true" size={16} />
@@ -87,7 +90,7 @@ export function RecurringEventCard({
               clickEvent.stopPropagation();
               onDelete(event);
             }}
-            aria-label={`Xóa ${event.name}`}
+            aria-label={t("event.delete", { name: event.name })}
             className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <Trash aria-hidden="true" size={16} />

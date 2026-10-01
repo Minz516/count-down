@@ -3,6 +3,7 @@
 import { PastEventCard } from "./PastEventCard";
 import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface PastEventsSectionProps {
   events: EventDTO[];
@@ -28,11 +29,12 @@ export function PastEventsSection({
   onEdit,
   onDelete,
 }: PastEventsSectionProps) {
+  const t = useT();
   if (events.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">Past</h2>
+      <h2 className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">{t("dashboard.past")}</h2>
       <div className="flex flex-col gap-2">
         {events.map((event) => (
           <PastEventCard

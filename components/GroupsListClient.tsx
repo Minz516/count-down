@@ -9,6 +9,7 @@ import { Button } from "./Button";
 import { focusIfFinePointer } from "@/lib/focus";
 import { createClient } from "@/lib/supabase/client";
 import { groupsInterface, type GroupDTO } from "@/modules/groups/groups.interface";
+import { useT } from "./LocaleProvider";
 
 interface GroupsListClientProps {
   initialGroups: GroupDTO[];
@@ -19,6 +20,7 @@ const inputClass =
 
 /** Groups list + Create/Join flows (docs/milestone2/UI_SPEC-milestone-2.md "Groups (list)"). */
 export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
+  const t = useT();
   const router = useRouter();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -45,7 +47,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       setCreateOpen(false);
       router.refresh();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Couldn't create the group.");
+      setCreateError(err instanceof Error ? t.text(err.message) : t("error.createGroup"));
     } finally {
       setCreating(false);
     }
@@ -61,7 +63,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       const group = await groupsInterface.joinGroup(supabase, code);
       router.push(`/groups/${group.id}`);
     } catch (err) {
-      setJoinError(err instanceof Error ? err.message : "Couldn't join that group.");
+      setJoinError(err instanceof Error ? t.text(err.message) : t("error.joinGroup"));
       setJoining(false);
     }
   }
@@ -83,7 +85,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
           }}
         >
           <Plus aria-hidden="true" size={16} weight="bold" />
-          Create Group
+          {t("groups.create")}
         </Button>
         <Button
           variant="ghost"
@@ -92,7 +94,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
             setCreateOpen(false);
           }}
         >
-          Join Group
+          {t("groups.join")}
         </Button>
       </div>
 
@@ -100,7 +102,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
         <div className="flex max-w-xl items-center justify-between rounded-lg border border-primary-container/15 bg-surface-container px-4 py-3">
           <div>
             <p className="font-body text-sm text-on-surface">
-              &quot;{createdGroup.name}&quot; created - share this invite code:
+              {t("groups.createdShare", { name: createdGroup.name })}
             </p>
             <p translate="no" className="mt-1 font-mono text-lg tracking-[0.15em] text-on-surface">
               {createdGroup.invite_code}
@@ -109,7 +111,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
           <button
             type="button"
             onClick={handleCopyCreated}
-            aria-label="Copy invite code"
+            aria-label={t("common.copyInviteCode")}
             className="rounded p-3 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             {copied ? <Check aria-hidden="true" size={18} className="text-primary" /> : <Copy aria-hidden="true" size={18} />}
@@ -124,13 +126,13 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-              Group name
+              {t("common.groupName")}
             </span>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. COSC2087 classmates…"
+              placeholder={t("groups.namePlaceholder")}
               name="group_name"
               autoComplete="off"
               maxLength={100}
@@ -141,7 +143,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
           {createError && <p role="alert" className="font-body text-sm text-error">{createError}</p>}
           <div className="flex justify-end">
             <Button type="submit" disabled={creating}>
-              {creating ? "Creating…" : "Create"}
+              {creating ? t("common.creating") : t("common.create")}
             </Button>
           </div>
         </form>
@@ -154,13 +156,13 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-              Invite code
+              {t("common.inviteCode")}
             </span>
             <input
               type="text"
               value={code}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="e.g. A1B2C3D4…"
+              placeholder={t("groups.codePlaceholder")}
               name="invite_code"
               autoComplete="off"
               autoCapitalize="characters"
@@ -172,7 +174,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
           {joinError && <p role="alert" className="font-body text-sm text-error">{joinError}</p>}
           <div className="flex justify-end">
             <Button type="submit" disabled={joining}>
-              {joining ? "Joining…" : "Join"}
+              {joining ? t("common.joining") : t("common.join")}
             </Button>
           </div>
         </form>
@@ -181,9 +183,9 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       {initialGroups.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-primary-container/10 bg-surface-container px-6 py-16 text-center">
           <UsersThree aria-hidden="true" size={32} className="text-text-muted" />
-          <h2 className="text-balance font-display text-xl font-semibold text-on-surface">No groups yet</h2>
+          <h2 className="text-balance font-display text-xl font-semibold text-on-surface">{t("groups.empty.title")}</h2>
           <p className="max-w-sm font-body text-sm text-text-muted">
-            Create a group to share a timeline with others, or join one with an invite code.
+            {t("groups.empty.body")}
           </p>
         </div>
       ) : (

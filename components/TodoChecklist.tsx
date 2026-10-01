@@ -9,6 +9,7 @@ import { authInterface } from "@/modules/auth/auth.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
 import type { EventDTO } from "@/modules/events/events.interface";
+import { useT } from "./LocaleProvider";
 
 interface TodoChecklistProps {
   event: EventDTO;
@@ -29,6 +30,7 @@ interface TodoChecklistProps {
  * sync - unlike event CRUD, which DashboardClient's handlers refresh for.
  */
 export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded }: TodoChecklistProps) {
+  const t = useT();
   const [items, setItems] = useState(initialTodos);
   const [newContent, setNewContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -58,7 +60,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
       setItems((current) => [...current, todo]);
       setNewContent("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't add that item.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.addItem"));
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +108,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
           <CaretRight aria-hidden="true" size={12} className="text-text-muted" />
         )}
         <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-          {isGroupEvent ? "Bạn" : "Checklist"}
+          {isGroupEvent ? t("todo.you") : t("todo.checklist")}
         </span>
         {items.length > 0 && (
           <span className="ml-auto rounded-full bg-primary/12 px-2 py-0.5 font-mono text-[11px] text-primary tabular-nums">
@@ -127,7 +129,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
         >
           {isGroupEvent && (
             <p className="-mt-1 font-body text-xs text-text-muted italic">
-              Đây là checklist của riêng bạn.
+              {t("todo.privateNote")}
             </p>
           )}
           {items.map((item) => (
@@ -151,7 +153,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               <button
                 type="button"
                 onClick={() => setPendingDelete(item)}
-                aria-label={`Xóa ${item.content}`}
+                aria-label={t("todo.deleteItem", { content: item.content })}
                 className="rounded p-3 text-text-muted transition-opacity hover:text-error focus-visible:opacity-100 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
               >
                 <Trash aria-hidden="true" size={13} />
@@ -164,9 +166,9 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               type="text"
               value={newContent}
               onChange={(inputEvent) => setNewContent(inputEvent.target.value)}
-              placeholder="Add an item…"
+              placeholder={t("todo.addPlaceholder")}
               name="content"
-              aria-label="New checklist item"
+              aria-label={t("todo.newItem")}
               autoComplete="off"
               maxLength={500}
               className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
@@ -177,8 +179,8 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
 
           {pendingDelete && (
             <ConfirmDialog
-              title="Delete Checklist Item?"
-              description={`"${pendingDelete.content}" will be removed from this checklist.`}
+              title={t("todo.deleteTitle")}
+              description={t("todo.deleteBody", { content: pendingDelete.content })}
               onConfirm={() => {
                 const todo = pendingDelete;
                 setPendingDelete(null);

@@ -3,15 +3,17 @@
 import { useCountdown, type Countdown } from "@/lib/useCountdown";
 import { LocalDate } from "./LocalDate";
 import type { EventDTO } from "@/modules/events/events.interface";
+import { useT } from "./LocaleProvider";
 
-const UNITS: { key: keyof Omit<Countdown, "isPast">; label: string }[] = [
-  { key: "days", label: "Days" },
-  { key: "hours", label: "Hrs" },
-  { key: "minutes", label: "Min" },
-  { key: "seconds", label: "Sec" },
+const UNITS: { key: keyof Omit<Countdown, "isPast">; label: "hero.days" | "hero.hours" | "hero.minutes" | "hero.seconds" }[] = [
+  { key: "days", label: "hero.days" },
+  { key: "hours", label: "hero.hours" },
+  { key: "minutes", label: "hero.minutes" },
+  { key: "seconds", label: "hero.seconds" },
 ];
 
 export function HeroCountdownCard({ event }: { event: EventDTO }) {
+  const t = useT();
   const countdown = useCountdown(event.deadline);
 
   return (
@@ -39,7 +41,7 @@ export function HeroCountdownCard({ event }: { event: EventDTO }) {
                 {countdown ? String(countdown[key]).padStart(2, "0") : "--"}
               </span>
               <span className="mt-1 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-                {label}
+                {t(label)}
               </span>
             </div>
           </div>

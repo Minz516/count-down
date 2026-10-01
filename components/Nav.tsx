@@ -8,6 +8,7 @@ import { clsx } from "clsx";
 import { Button } from "./Button";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
+import { useT } from "./LocaleProvider";
 
 interface NavProps {
   /** Omitted on screens with no "add event" action (e.g. the Groups list) - hides the button entirely. */
@@ -15,8 +16,8 @@ interface NavProps {
 }
 
 const TABS = [
-  { href: "/", label: "Personal", icon: User, isActive: (path: string) => path === "/" },
-  { href: "/groups", label: "Group", icon: UsersThree, isActive: (path: string) => path.startsWith("/groups") },
+  { href: "/", label: "nav.personal" as const, icon: User, isActive: (path: string) => path === "/" },
+  { href: "/groups", label: "nav.group" as const, icon: UsersThree, isActive: (path: string) => path.startsWith("/groups") },
 ];
 
 /**
@@ -30,6 +31,7 @@ const TABS = [
  * inner width matches the page content width (max-w-[1120px]) so the two line up.
  */
 export function Nav({ onAddEvent }: NavProps) {
+  const t = useT();
   const pathname = usePathname();
 
   return (
@@ -42,7 +44,7 @@ export function Nav({ onAddEvent }: NavProps) {
               <span translate="no" className="font-display text-lg font-semibold text-on-surface">Countdown</span>
             </div>
 
-            <nav aria-label="Primary" className="hidden items-center gap-2 sm:flex">
+            <nav aria-label={t("nav.primary")} className="hidden items-center gap-2 sm:flex">
               {TABS.map(({ href, label, icon: Icon, isActive }) => {
                 const active = isActive(pathname);
                 return (
@@ -58,7 +60,7 @@ export function Nav({ onAddEvent }: NavProps) {
                     )}
                   >
                     <Icon aria-hidden="true" size={16} weight={active ? "bold" : "regular"} />
-                    {label}
+                    {t(label)}
                   </Link>
                 );
               })}
@@ -69,13 +71,14 @@ export function Nav({ onAddEvent }: NavProps) {
             {onAddEvent && (
               <Button onClick={onAddEvent} className="min-h-11 px-3 sm:px-4">
                 <Plus aria-hidden="true" size={16} weight="bold" />
-                Add Event
+                <span className="sm:hidden">{t("nav.addEventShort")}</span>
+                <span className="hidden sm:inline">{t("nav.addEvent")}</span>
               </Button>
             )}
             <NotificationBell />
             <Link
               href="/settings"
-              aria-label="Settings"
+              aria-label={t("nav.settings")}
               className="hidden rounded p-2 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:block"
             >
               <Gear aria-hidden="true" size={20} />
@@ -86,7 +89,7 @@ export function Nav({ onAddEvent }: NavProps) {
       </header>
 
       <nav
-        aria-label="Primary"
+        aria-label={t("nav.primary")}
         className="fixed inset-x-0 bottom-0 z-30 border-t border-primary-container/15 bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
       >
         <ul className="mx-auto grid max-w-md grid-cols-2">
@@ -110,7 +113,7 @@ export function Nav({ onAddEvent }: NavProps) {
                   >
                     <Icon aria-hidden="true" size={20} weight={active ? "bold" : "regular"} />
                   </span>
-                  {label}
+                  {t(label)}
                 </Link>
               </li>
             );
