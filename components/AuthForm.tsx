@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { authInterface, type OAuthProvider } from "@/modules/auth/auth.interface";
 import { PASSWORD_REQUIREMENTS } from "@/lib/passwordStrength";
 import { Button } from "./Button";
+import { ThemeIconButton } from "./ThemeToggle";
 
 const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: React.ReactNode }[] = [
   { provider: "google", label: "Google", icon: <GoogleLogo size={18} /> },
@@ -52,7 +53,7 @@ const COPY = {
 } as const;
 
 const inputWrapClass =
-  "flex items-center gap-2 rounded border border-transparent bg-surface-container-lowest px-3 py-2 focus-within:border-primary";
+  "flex min-h-11 items-center gap-2 rounded border border-outline-variant bg-surface-container-lowest px-3 py-2 focus-within:border-primary";
 const inputClass =
   "w-full bg-transparent font-body text-base text-on-surface placeholder:text-text-muted focus:outline-none";
 
@@ -98,7 +99,7 @@ function PasswordField({
         type={visible ? "text" : "password"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="********"
+        placeholder="Your password"
         required
         minLength={8}
         autoComplete={autoComplete}
@@ -214,7 +215,10 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-4">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center px-4">
+      <div className="absolute top-3 right-3 sm:top-5 sm:right-6">
+        <ThemeIconButton />
+      </div>
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="mb-3 flex items-center gap-2.5">
           <Image src="/logo.png" alt="" width={36} height={36} className="rounded-lg" />

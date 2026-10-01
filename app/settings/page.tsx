@@ -46,7 +46,7 @@ export default async function SettingsPage() {
         <span className="font-display text-lg font-semibold text-on-surface">Settings</span>
       </header>
 
-      <main className="mx-auto max-w-[560px] px-4 py-8 sm:px-12">
+      <main className="content-rise mx-auto max-w-[560px] px-4 py-8 sm:px-8">
         <SettingsForm initialSettings={settings} />
       </main>
     </div>

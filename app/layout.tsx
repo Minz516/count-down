@@ -29,12 +29,20 @@ export const metadata: Metadata = {
   icons: { icon: "/logo.png" },
 };
 
+// Runs before first paint so a saved light/dark choice never flashes the other theme.
+// Without a saved choice the CSS follows prefers-color-scheme on its own.
+const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${hankenGrotesk.variable} ${manrope.variable} ${jetBrainsMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh bg-surface-deep font-body text-on-surface antialiased">
         <StoreProvider>{children}</StoreProvider>
       </body>

@@ -119,7 +119,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
                 "size-8 rounded-full font-body text-sm transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2",
                 isSelected
-                  ? "bg-primary-container text-on-surface"
+                  ? "bg-primary-container text-on-primary-container"
                   : "text-on-surface hover:bg-surface-elevated",
                 isToday && !isSelected && "border border-primary/50",
               )}

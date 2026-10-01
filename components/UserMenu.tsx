@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PencilSimple, SignOut } from "@phosphor-icons/react/ssr";
+import { Gear, PencilSimple, SignOut } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { EditProfileModal } from "./EditProfileModal";
+import { ThemeMenuItem } from "./ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { notificationsCleared } from "@/lib/store/notificationsSlice";
@@ -78,7 +80,7 @@ export function UserMenu() {
         aria-label="Account menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="rounded-full transition-opacity hover:opacity-80"
+        className="rounded-full p-2.5 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
       >
         <Avatar src={profile?.avatar_url ?? null} alt="" size={26} />
       </button>
@@ -86,7 +88,7 @@ export function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-lg border border-primary-container/15 bg-surface-elevated py-1"
+          className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-primary-container/15 bg-surface-elevated py-1"
         >
           {profile && (
             <p className="truncate px-3 py-1.5 font-body text-xs text-text-muted">{profile.username}</p>
@@ -98,16 +100,27 @@ export function UserMenu() {
               setOpen(false);
               setEditOpen(true);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
             <PencilSimple size={16} />
             Edit profile
           </button>
+          {/* Settings lives in the menu on small screens, where the header has no room for a gear. */}
+          <Link
+            href="/settings"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container sm:hidden"
+          >
+            <Gear size={16} />
+            Settings
+          </Link>
+          <ThemeMenuItem onSelect={() => setOpen(false)} />
           <button
             type="button"
             role="menuitem"
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
             <SignOut size={16} />
             Log out

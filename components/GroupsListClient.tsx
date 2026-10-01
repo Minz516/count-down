@@ -96,7 +96,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       </div>
 
       {createdGroup && (
-        <div className="flex items-center justify-between rounded-lg border border-primary-container/15 bg-surface-container px-4 py-3">
+        <div className="flex max-w-xl items-center justify-between rounded-lg border border-primary-container/15 bg-surface-container px-4 py-3">
           <div>
             <p className="font-body text-sm text-on-surface">
               &quot;{createdGroup.name}&quot; created - share this invite code:
@@ -109,7 +109,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
             type="button"
             onClick={handleCopyCreated}
             aria-label="Copy invite code"
-            className="rounded p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+            className="rounded p-3 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} />}
           </button>
@@ -119,7 +119,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       {createOpen && (
         <form
           onSubmit={handleCreate}
-          className="flex flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
+          className="flex max-w-xl flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
@@ -147,7 +147,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       {joinOpen && (
         <form
           onSubmit={handleJoin}
-          className="flex flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
+          className="flex max-w-xl flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
@@ -180,7 +180,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {initialGroups.map((group) => (
             <li key={group.id}>
               <Link

@@ -36,7 +36,7 @@ export default async function GroupsPage() {
     <div className="min-h-dvh">
       <Nav />
 
-      <main className="mx-auto max-w-[640px] px-4 py-8 sm:px-12">
+      <main className="content-rise mx-auto max-w-[1120px] px-4 pt-8 pb-28 sm:px-8 sm:pb-12 lg:px-12">
         <GroupsListClient initialGroups={groups} />
       </main>
     </div>
