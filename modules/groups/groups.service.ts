@@ -1,57 +1,68 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { groupsRepository } from "./groups.repository";
+import { groupsRepository, type GroupWithMembers } from "./groups.repository";
 import { toGroupDTO, type GroupDTO, type GroupMemberDTO } from "./groups.dto";
 import { profilesInterface } from "@/modules/profiles/profiles.interface";
 import { ValidationError } from "@/modules/shared/errors";
-import type { GroupEntity } from "@/types/group";
+import type { ProfileEntity } from "@/types/profile";
 
 const PREVIEW_AVATAR_COUNT = 4;
 // Mirrors the `groups_name_length` check constraint added in
 // supabase/migrations/20260822000000_production_readiness.sql.
 const NAME_MAX_LENGTH = 100;
 
-/** Builds each group's DTO, filling in `preview_avatars` from `group_members`/`profiles` -
- * a repository method only ever touches its own table, so the cross-table (and
- * cross-module, for `profiles`) composition lives here instead (docs/ARCHITECTURE_DESIGN.md
+/** Builds a group's DTO, filling in `preview_avatars` from the already-fetched member rows
+ * and a profiles lookup - a repository method only ever touches its own table, so the
+ * cross-module composition with `profiles` lives here instead (docs/ARCHITECTURE_DESIGN.md
  * §2.3), same as `toGroupDTO`'s doc comment explains. */
-async function attachPreviewAvatars(supabase: SupabaseClient, groups: GroupEntity[]): Promise<GroupDTO[]> {
-  if (groups.length === 0) return [];
+function previewUserIds({ members }: GroupWithMembers): string[] {
+  return members.slice(0, PREVIEW_AVATAR_COUNT).map((member) => member.user_id);
+}
 
-  const memberRows = await groupsRepository.listMemberRowsForGroups(
-    supabase,
-    groups.map((group) => group.id),
-  );
-  const profileMap = await profilesInterface.getProfilesByIds(
-    supabase,
-    Array.from(new Set(memberRows.map((row) => row.user_id))),
-  );
-
-  const rowsByGroup: Record<string, typeof memberRows> = {};
-  for (const row of memberRows) {
-    (rowsByGroup[row.group_id] ??= []).push(row);
-  }
-
-  return groups.map((group) =>
-    toGroupDTO(
-      group,
-      (rowsByGroup[group.id] ?? [])
-        .slice(0, PREVIEW_AVATAR_COUNT)
-        .map((row) => profileMap.get(row.user_id)?.avatar_url ?? null),
-    ),
+function toPreviewDTO(entry: GroupWithMembers, profileMap: Map<string, ProfileEntity>): GroupDTO {
+  return toGroupDTO(
+    entry.group,
+    previewUserIds(entry).map((userId) => profileMap.get(userId)?.avatar_url ?? null),
   );
 }
 
 export const groupsService = {
   async listGroupsForUser(supabase: SupabaseClient): Promise<GroupDTO[]> {
-    const groups = await groupsRepository.listForUser(supabase);
-    return attachPreviewAvatars(supabase, groups);
+    const entries = await groupsRepository.listWithMembers(supabase);
+    const profileMap = await profilesInterface.getProfilesByIds(
+      supabase,
+      Array.from(new Set(entries.flatMap(previewUserIds))),
+    );
+    return entries.map((entry) => toPreviewDTO(entry, profileMap));
   },
 
-  async getGroup(supabase: SupabaseClient, groupId: string): Promise<GroupDTO | null> {
-    const group = await groupsRepository.getById(supabase, groupId);
-    if (!group) return null;
-    const [withPreview] = await attachPreviewAvatars(supabase, [group]);
-    return withPreview;
+  /** A group plus its member roster (docs/UI_SPEC.md "Group Dashboard" - Members) from a
+   * single groups query and a single profiles lookup. A member with no `profiles` row
+   * (pre-existing account) still appears, just with `username: null`. `group` is `null` when
+   * it doesn't exist or the caller isn't a member (RLS makes those indistinguishable). */
+  async getGroupWithMembers(
+    supabase: SupabaseClient,
+    groupId: string,
+  ): Promise<{ group: GroupDTO | null; members: GroupMemberDTO[] }> {
+    const entry = await groupsRepository.getWithMembers(supabase, groupId);
+    if (!entry) return { group: null, members: [] };
+
+    const profileMap = await profilesInterface.getProfilesByIds(
+      supabase,
+      entry.members.map((member) => member.user_id),
+    );
+
+    return {
+      group: toPreviewDTO(entry, profileMap),
+      members: entry.members.map((member) => {
+        const profile = profileMap.get(member.user_id);
+        return {
+          user_id: member.user_id,
+          username: profile?.username ?? null,
+          avatar_url: profile?.avatar_url ?? null,
+          joined_at: member.joined_at,
+        };
+      }),
+    };
   },
 
   // createGroup/joinGroup/renameGroup return a GroupDTO with an empty `preview_avatars`
@@ -145,25 +156,5 @@ export const groupsService = {
       }
       throw err;
     }
-  },
-
-  /** A group's member roster (docs/UI_SPEC.md "Group Dashboard" - Members) - a member with
-   * no `profiles` row (pre-existing account) still appears, just with `username: null`. */
-  async listGroupMembers(supabase: SupabaseClient, groupId: string): Promise<GroupMemberDTO[]> {
-    const rows = await groupsRepository.listMemberRows(supabase, groupId);
-    const profileMap = await profilesInterface.getProfilesByIds(
-      supabase,
-      rows.map((row) => row.user_id),
-    );
-
-    return rows.map((row) => {
-      const profile = profileMap.get(row.user_id);
-      return {
-        user_id: row.user_id,
-        username: profile?.username ?? null,
-        avatar_url: profile?.avatar_url ?? null,
-        joined_at: row.joined_at,
-      };
-    });
   },
 };

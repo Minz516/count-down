@@ -25,7 +25,7 @@ export function toGroupDTO(entity: GroupEntity, previewAvatars: (string | null)[
 
 /** One row of a group's member roster (docs/UI_SPEC.md "Group Dashboard" - Members) - a
  * join of a raw `group_members` row (groups.repository.ts's internal `MemberRow`) with
- * `profiles`, built in groups.service.ts's `listGroupMembers`. */
+ * `profiles`, built in groups.service.ts's `getGroupWithMembers`. */
 export interface GroupMemberDTO {
   user_id: string;
   /** `null` means no `profiles` row - a pre-existing account from before usernames existed. */

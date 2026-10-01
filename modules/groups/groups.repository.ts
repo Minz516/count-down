@@ -18,6 +18,7 @@ interface GroupRow {
   created_by: string | null;
   created_at: string;
   member_count: { count: number }[];
+  members: MemberRow[];
 }
 
 /** Normalizes PostgREST's raw embedded-count wire shape into the flat entity - `preview_avatars`
@@ -36,11 +37,27 @@ function toGroupEntity(row: GroupRow): GroupEntity {
 }
 
 const GROUP_SELECT_WITH_MEMBER_COUNT = "*, member_count:group_members(count)";
+// Same table family, so the membership rows ride along in the groups query (one round trip)
+// instead of a second group_members query after it.
+const GROUP_SELECT_WITH_MEMBERS = `${GROUP_SELECT_WITH_MEMBER_COUNT}, members:group_members(user_id, joined_at)`;
 
-interface MemberRow {
-  group_id: string;
+/** Raw membership row (no profile data). */
+export interface MemberRow {
   user_id: string;
   joined_at: string;
+}
+
+export interface GroupWithMembers {
+  group: GroupEntity;
+  /** Oldest-joined first. */
+  members: MemberRow[];
+}
+
+function toGroupWithMembers(row: GroupRow): GroupWithMembers {
+  return {
+    group: toGroupEntity(row),
+    members: [...row.members].sort((a, b) => a.joined_at.localeCompare(b.joined_at)),
+  };
 }
 
 export const groupsRepository = {
@@ -104,30 +121,26 @@ export const groupsRepository = {
     return group;
   },
 
-  /** Raw membership rows (no profile data) for one group, oldest-joined first. */
-  async listMemberRows(supabase: SupabaseClient, groupId: string): Promise<MemberRow[]> {
+  /** Every group the caller belongs to (RLS-scoped), each with its member rows, in one query. */
+  async listWithMembers(supabase: SupabaseClient): Promise<GroupWithMembers[]> {
     const { data, error } = await supabase
-      .from("group_members")
-      .select("group_id, user_id, joined_at")
-      .eq("group_id", groupId)
-      .order("joined_at", { ascending: true });
+      .from("groups")
+      .select(GROUP_SELECT_WITH_MEMBERS)
+      .order("created_at", { ascending: true });
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as MemberRow[];
+    return ((data ?? []) as unknown as GroupRow[]).map(toGroupWithMembers);
   },
 
-  /** Same as above but batched across every group in `groupIds` in one query - used to
-   * build each group's avatar preview without a per-card round trip. */
-  async listMemberRowsForGroups(supabase: SupabaseClient, groupIds: string[]): Promise<MemberRow[]> {
-    if (groupIds.length === 0) return [];
-
+  /** One group with its member rows in one query; `null` as in `getById`. */
+  async getWithMembers(supabase: SupabaseClient, groupId: string): Promise<GroupWithMembers | null> {
     const { data, error } = await supabase
-      .from("group_members")
-      .select("group_id, user_id, joined_at")
-      .in("group_id", groupIds)
-      .order("joined_at", { ascending: true });
+      .from("groups")
+      .select(GROUP_SELECT_WITH_MEMBERS)
+      .eq("id", groupId)
+      .maybeSingle();
 
     if (error) throw new DatabaseError(error.message);
-    return (data ?? []) as MemberRow[];
+    return data ? toGroupWithMembers(data as unknown as GroupRow) : null;
   },
 };
