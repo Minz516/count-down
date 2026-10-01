@@ -61,6 +61,8 @@ export function TimeField({ value, onChange }: TimeFieldProps) {
       <Clock size={16} className="shrink-0 text-text-muted" aria-hidden />
       <input
         ref={hourRef}
+          name="hour"
+          autoComplete="off"
         value={parts.hour}
         onChange={(event) => {
           const hour = event.target.value.replace(/\D/g, "").slice(0, 2);
@@ -85,6 +87,8 @@ export function TimeField({ value, onChange }: TimeFieldProps) {
       </span>
       <input
         ref={minuteRef}
+          name="minute"
+          autoComplete="off"
         value={parts.minute}
         onChange={(event) => {
           const minute = event.target.value.replace(/\D/g, "").slice(0, 2);

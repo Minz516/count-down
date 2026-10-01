@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 // "/auth/callback" is included so the OAuth code-exchange request (proxy.ts runs before
@@ -8,7 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const AUTH_ROUTES = ["/login", "/signup", "/auth/callback"];
 
 /**
- * Refreshes the Supabase session cookie on every request and redirects based on
+ * Refreshes the Supabase session cookie when needed and redirects based on
  * auth state: signed-out users are sent to /login (except on the auth routes
  * themselves), signed-in users are bounced away from /login and /signup.
  */
@@ -16,7 +15,7 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = AUTH_ROUTES.includes(request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
-  let user: User | null;
+  let userId: string | null;
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,11 +38,16 @@ export async function proxy(request: NextRequest) {
       },
     );
 
-    ({
-      data: { user },
-    } = await supabase.auth.getUser());
+    // getClaims() verifies the access token's signature locally against the project's
+    // cached JWKS (asymmetric signing keys) instead of a Supabase Auth round-trip like
+    // getUser(), which cost ~250ms+ on every page request and RSC fetch. It still
+    // refreshes an expired token via the refresh token (and stages the new cookies via
+    // setAll above), so sessions keep rolling. Trade-off: a session revoked server-side
+    // stays valid here until its access token expires - RLS remains the real boundary.
+    const { data } = await supabase.auth.getClaims();
+    userId = data?.claims.sub ?? null;
   } catch (error) {
-    // getUser() normally resolves an invalid/expired session to { user: null } rather
+    // getClaims() normally resolves an invalid/expired session to { data: null } rather
     // than throwing, but a corrupted or oddly-shaped session cookie (e.g. after a long
     // idle period forces the first refresh in a while) can make the underlying cookie
     // parsing throw instead. Without this, that throw reaches the page's Server
@@ -71,27 +75,27 @@ export async function proxy(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (!user && !isAuthRoute) {
+  if (!userId && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
+  if (userId && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  // Forward the id of the user this middleware already verified via getUser() so
+  // Forward the id of the user this middleware already verified (getClaims()) so
   // protected pages can trust it instead of paying for a second getUser() round-trip
   // (docs/FIX_NAVIGATION_LATENCY.md). Safe to trust: this header is set here, on the
   // request, after JWT verification - a client-sent "x-user-id" can never survive since
   // this construction always overwrites the header set. Not a new auth boundary - RLS
   // still enforces all actual data access regardless of this header's value.
-  if (user) {
+  if (userId) {
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", user.id);
+    requestHeaders.set("x-user-id", userId);
     // Rebuilding the response for the new request headers would otherwise drop any
     // refreshed session cookies setAll() already staged on `response` above - carry
     // them over explicitly so a token refresh on this request still sticks.

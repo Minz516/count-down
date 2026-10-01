@@ -81,16 +81,25 @@ export function DashboardClient({
     <div className="min-h-dvh">
       <Nav onAddEvent={() => setModal({ type: "add" })} />
 
-      <main className="mx-auto flex max-w-[800px] flex-col gap-12 px-4 py-8 sm:px-12">
+      <main id="main" className="content-rise mx-auto grid max-w-[1120px] gap-10 px-4 pt-8 pb-28 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12 lg:px-12">
+        <h1 className="sr-only">Personal Dashboard</h1>
         {!hasAnyEvents ? (
-          <EmptyState onAddEvent={() => setModal({ type: "add" })} />
+          <div className="lg:col-span-2">
+            <EmptyState onAddEvent={() => setModal({ type: "add" })} />
+          </div>
         ) : (
           <>
-            {initialNearestEvent && <HeroCountdownCard event={initialNearestEvent} />}
+            {initialNearestEvent && (
+              <div className="lg:sticky lg:top-8">
+                <HeroCountdownCard event={initialNearestEvent} />
+              </div>
+            )}
+
+            <div className={`flex min-w-0 flex-col gap-12 ${initialNearestEvent ? "" : "lg:col-span-2"}`}>
 
             {activeEvents.length > 0 && (
               <section className="flex flex-col gap-4">
-                <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
+                <h2 className="text-balance font-display text-xl font-medium text-on-surface">Timeline</h2>
                 <Timeline
                   events={activeEvents}
                   todosByEvent={initialTodosByEvent}
@@ -113,6 +122,7 @@ export function DashboardClient({
               onEdit={(event) => setModal({ type: "edit", event })}
               onDelete={(event) => setModal({ type: "delete", event })}
             />
+            </div>
           </>
         )}
       </main>

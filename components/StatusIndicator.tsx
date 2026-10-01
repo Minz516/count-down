@@ -66,7 +66,7 @@ export function StatusLabel({
     <span
       className={clsx(
         "font-mono text-xs tracking-[0.1em] tabular-nums uppercase",
-        chip ? clsx("rounded-full px-2 py-0.5", CHIP_CLASSES[status]) : LABEL_CLASSES[status],
+        chip ? clsx("whitespace-nowrap rounded-full px-2 py-0.5", CHIP_CLASSES[status]) : LABEL_CLASSES[status],
       )}
     >
       {label}

@@ -52,3 +52,6 @@ next-env.d.ts
 
 # supabase local CLI state (machine-specific link info)
 /supabase/.temp
+
+# Playwright CLI session snapshots and logs (contain signed-in page content and tokens)
+.playwright-cli/

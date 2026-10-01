@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useId, useEffect, useRef, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { X } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
 import { profilesInterface, type ProfileDTO } from "@/modules/profiles/profiles.interface";
+import { useDialog } from "@/lib/useDialog";
 
 interface EditProfileModalProps {
   userId: string;
@@ -16,7 +17,7 @@ interface EditProfileModalProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none";
+  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /** Username + avatar upload, opened from UserMenu.tsx's "Edit profile" item. */
 export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: EditProfileModalProps) {
@@ -74,9 +75,17 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
     }
   }
 
+  const titleId = useId();
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-deep/70 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
@@ -84,14 +93,14 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
         className="w-full max-w-sm rounded-lg border border-primary-container/15 bg-surface-container p-6"
       >
         <div className="flex items-start justify-between">
-          <h2 className="font-display text-lg font-semibold text-on-surface">Edit Profile</h2>
+          <h2 id={titleId} className="text-balance font-display text-lg font-semibold text-on-surface">Edit Profile</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+            className="rounded p-3 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <X size={20} />
+            <X aria-hidden="true" size={20} />
           </button>
         </div>
 
@@ -101,12 +110,13 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
             <input
               ref={fileInputRef}
               type="file"
+              name="avatar"
               accept="image/*"
               onChange={handleFileChange}
               className="hidden"
             />
             <Button type="button" variant="ghost" onClick={() => fileInputRef.current?.click()}>
-              Change avatar
+              Change Avatar
             </Button>
           </div>
 
@@ -118,20 +128,23 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
               type="text"
               value={username}
               onChange={(inputEvent) => setUsername(inputEvent.target.value)}
+              name="username"
+              spellCheck={false}
+              autoCapitalize="none"
               required
               autoComplete="username"
               className={inputClass}
             />
           </label>
 
-          {error && <p className="font-body text-sm text-error">{error}</p>}
+          {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving…" : "Save Profile"}
             </Button>
           </div>
         </form>

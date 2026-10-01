@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, Copy, Plus, UsersThree } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
+import { focusIfFinePointer } from "@/lib/focus";
 import { createClient } from "@/lib/supabase/client";
 import { groupsInterface, type GroupDTO } from "@/modules/groups/groups.interface";
 
@@ -14,7 +15,7 @@ interface GroupsListClientProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none";
+  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /** Groups list + Create/Join flows (docs/milestone2/UI_SPEC-milestone-2.md "Groups (list)"). */
 export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
@@ -81,7 +82,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
             setJoinOpen(false);
           }}
         >
-          <Plus size={16} weight="bold" />
+          <Plus aria-hidden="true" size={16} weight="bold" />
           Create Group
         </Button>
         <Button
@@ -96,12 +97,12 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       </div>
 
       {createdGroup && (
-        <div className="flex items-center justify-between rounded-lg border border-primary-container/15 bg-surface-container px-4 py-3">
+        <div className="flex max-w-xl items-center justify-between rounded-lg border border-primary-container/15 bg-surface-container px-4 py-3">
           <div>
             <p className="font-body text-sm text-on-surface">
               &quot;{createdGroup.name}&quot; created - share this invite code:
             </p>
-            <p className="mt-1 font-mono text-lg tracking-[0.15em] text-on-surface">
+            <p translate="no" className="mt-1 font-mono text-lg tracking-[0.15em] text-on-surface">
               {createdGroup.invite_code}
             </p>
           </div>
@@ -109,9 +110,9 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
             type="button"
             onClick={handleCopyCreated}
             aria-label="Copy invite code"
-            className="rounded p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+            className="rounded p-3 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} />}
+            {copied ? <Check aria-hidden="true" size={18} className="text-primary" /> : <Copy aria-hidden="true" size={18} />}
           </button>
         </div>
       )}
@@ -119,7 +120,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       {createOpen && (
         <form
           onSubmit={handleCreate}
-          className="flex flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
+          className="flex max-w-xl flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
@@ -129,16 +130,18 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. COSC2087 classmates"
+              placeholder="e.g. COSC2087 classmates…"
+              name="group_name"
+              autoComplete="off"
               maxLength={100}
               className={inputClass}
-              autoFocus
+              ref={focusIfFinePointer}
             />
           </label>
-          {createError && <p className="font-body text-sm text-error">{createError}</p>}
+          {createError && <p role="alert" className="font-body text-sm text-error">{createError}</p>}
           <div className="flex justify-end">
             <Button type="submit" disabled={creating}>
-              {creating ? "Creating..." : "Create"}
+              {creating ? "Creating…" : "Create"}
             </Button>
           </div>
         </form>
@@ -147,7 +150,7 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
       {joinOpen && (
         <form
           onSubmit={handleJoin}
-          className="flex flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
+          className="flex max-w-xl flex-col gap-3 rounded-lg border border-primary-container/15 bg-surface-container p-4"
         >
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
@@ -157,15 +160,19 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
               type="text"
               value={code}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="e.g. A1B2C3D4"
+              placeholder="e.g. A1B2C3D4…"
+              name="invite_code"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
               className={inputClass}
-              autoFocus
+              ref={focusIfFinePointer}
             />
           </label>
-          {joinError && <p className="font-body text-sm text-error">{joinError}</p>}
+          {joinError && <p role="alert" className="font-body text-sm text-error">{joinError}</p>}
           <div className="flex justify-end">
             <Button type="submit" disabled={joining}>
-              {joining ? "Joining..." : "Join"}
+              {joining ? "Joining…" : "Join"}
             </Button>
           </div>
         </form>
@@ -173,14 +180,14 @@ export function GroupsListClient({ initialGroups }: GroupsListClientProps) {
 
       {initialGroups.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-primary-container/10 bg-surface-container px-6 py-16 text-center">
-          <UsersThree size={32} className="text-text-muted" />
-          <h2 className="font-display text-xl font-semibold text-on-surface">No groups yet</h2>
+          <UsersThree aria-hidden="true" size={32} className="text-text-muted" />
+          <h2 className="text-balance font-display text-xl font-semibold text-on-surface">No groups yet</h2>
           <p className="max-w-sm font-body text-sm text-text-muted">
             Create a group to share a timeline with others, or join one with an invite code.
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {initialGroups.map((group) => (
             <li key={group.id}>
               <Link

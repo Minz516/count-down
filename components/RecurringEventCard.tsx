@@ -79,7 +79,7 @@ export function RecurringEventCard({
             aria-label={`Sửa ${event.name}`}
             className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <PencilSimple size={16} />
+            <PencilSimple aria-hidden="true" size={16} />
           </button>
           <button
             type="button"
@@ -90,7 +90,7 @@ export function RecurringEventCard({
             aria-label={`Xóa ${event.name}`}
             className="rounded p-1.5 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <Trash size={16} />
+            <Trash aria-hidden="true" size={16} />
           </button>
         </div>
       </div>

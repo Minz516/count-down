@@ -1,7 +1,7 @@
 import { SkeletonRow } from "@/components/SkeletonRow";
 
 /** Mirrors the dashboards' shell (components/DashboardClient.tsx): same container, two columns from lg. */
-export default function DashboardLoading() {
+export default function GroupDashboardLoading() {
   return (
     <div className="min-h-dvh">
       <div className="h-16 border-b border-primary-container/10" />

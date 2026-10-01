@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
-/* Design tokens sourced 1:1 from docs/THEME.md (Obsidian Chronos). */
+/* Design tokens sourced 1:1 from docs/THEME.md (Obsidian Chronos).
+   Dark is the base set. The light set below is built from the same cool slate family
+   (one palette, one accent: slate blue) and applies when the OS prefers light unless the
+   user picked a theme explicitly (data-theme on <html>, set by the inline script in
+   app/layout.tsx and the toggle in components/ThemeToggle.tsx). Off-black and off-white
+   only, never pure #000 or #fff. */
 :root {
+  color-scheme: dark;
   --surface: #101319;
   --surface-container-lowest: #0b0e14;
   --surface-container-low: #191c22;
@@ -20,6 +26,7 @@
   --primary: #bac7de;
   --primary-container: #5c697d;
   --on-primary: #243143;
+  --on-primary-container: #f1f4fa;
   --secondary: #b9c8dd;
   --tertiary: #dfc29e;
 
@@ -31,6 +38,76 @@
   --status-past: #7fb08a;
   --status-today: #e5484d;
   --status-soon: #e0b84f;
+}
+
+/* Light theme. Declared twice (OS preference, explicit choice) because CSS cannot share one
+   block between a media query and an attribute selector. Keep the two in sync. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --surface: #f7f8fb;
+    --surface-container-lowest: #eef1f6;
+    --surface-container-low: #f3f5f9;
+    --surface-container: #fdfdfe;
+    --surface-container-high: #e8ecf2;
+    --surface-container-highest: #dde3eb;
+    --surface-deep: #f1f3f7;
+    --surface-elevated: #ffffff;
+
+    --on-surface: #151a23;
+    --on-surface-variant: #3a4351;
+    --text-muted: #56627a;
+    --outline: #6b7585;
+    --outline-variant: #cdd4de;
+
+    --primary: #3f506a;
+    --primary-container: #475770;
+    --on-primary: #f4f7fb;
+    --on-primary-container: #f7f9fc;
+    --secondary: #4a5a72;
+    --tertiary: #7a5a2e;
+
+    --error: #b3261e;
+    --error-container: #fddad6;
+    --accent-warning: #9a4a3b;
+
+    --status-past: #2f7a45;
+    --status-today: #c9252c;
+    --status-soon: #8f6700;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface: #f7f8fb;
+  --surface-container-lowest: #eef1f6;
+  --surface-container-low: #f3f5f9;
+  --surface-container: #fdfdfe;
+  --surface-container-high: #e8ecf2;
+  --surface-container-highest: #dde3eb;
+  --surface-deep: #f1f3f7;
+  --surface-elevated: #ffffff;
+
+  --on-surface: #151a23;
+  --on-surface-variant: #3a4351;
+  --text-muted: #56627a;
+  --outline: #6b7585;
+  --outline-variant: #cdd4de;
+
+  --primary: #3f506a;
+  --primary-container: #475770;
+  --on-primary: #f4f7fb;
+  --on-primary-container: #f7f9fc;
+  --secondary: #4a5a72;
+  --tertiary: #7a5a2e;
+
+  --error: #b3261e;
+  --error-container: #fddad6;
+  --accent-warning: #9a4a3b;
+
+  --status-past: #2f7a45;
+  --status-today: #c9252c;
+  --status-soon: #8f6700;
 }
 
 @theme inline {
@@ -52,6 +129,7 @@
   --color-primary: var(--primary);
   --color-primary-container: var(--primary-container);
   --color-on-primary: var(--on-primary);
+  --color-on-primary-container: var(--on-primary-container);
   --color-secondary: var(--secondary);
   --color-tertiary: var(--tertiary);
 
@@ -77,7 +155,52 @@
   --radius-xl: 1.5rem;
 }
 
+html {
+  /* The fixed bottom tab bar (Nav.tsx, small screens) must never cover a focused or anchored element. */
+  scroll-padding-bottom: 5rem;
+}
+
+/* No double-tap-zoom delay on controls, and no default grey tap flash (they have their own
+   :active/hover states). */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+[role="button"],
+[role="menuitem"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--surface-deep);
   color: var(--on-surface);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Route content eases in (state transition: a new page replaced the old one). Transform and
+   opacity only, and disabled entirely for reduced-motion users. */
+@keyframes content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .content-rise {
+    animation: content-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }

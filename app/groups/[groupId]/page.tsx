@@ -16,7 +16,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   const { groupId } = await params;
 
   const supabase = await createClient();
-  // Set by proxy.ts from its own already-verified getUser() call - trusting it here
+  // Set by proxy.ts from its own already-verified auth check - trusting it here
   // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
   const userId = (await headers()).get("x-user-id");
 
@@ -30,17 +30,15 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
   // it's already scoped to the viewer's own user_id (docs/milestone3/ARCHITECTURE-milestone-3.md
   // "one thing to verify"), so it naturally covers this group's events too without a
   // group-specific query: each member only ever gets their own todos back, personal or group.
-  let group: Awaited<ReturnType<typeof groupsInterface.getGroup>>;
+  let groupWithMembers: Awaited<ReturnType<typeof groupsInterface.getGroupWithMembers>>;
   let dashboardData: Awaited<ReturnType<typeof eventsInterface.getGroupDashboardData>>;
   let settings: Awaited<ReturnType<typeof groupSettingsInterface.getSettings>>;
-  let members: Awaited<ReturnType<typeof groupsInterface.listGroupMembers>>;
   let todos: Awaited<ReturnType<typeof todosInterface.listAllForUser>>;
   try {
-    [group, dashboardData, settings, members, todos] = await Promise.all([
-      groupsInterface.getGroup(supabase, groupId),
+    [groupWithMembers, dashboardData, settings, todos] = await Promise.all([
+      groupsInterface.getGroupWithMembers(supabase, groupId),
       eventsInterface.getGroupDashboardData(supabase, groupId),
       groupSettingsInterface.getSettings(supabase, groupId),
-      groupsInterface.listGroupMembers(supabase, groupId),
       todosInterface.listAllForUser(supabase, userId),
     ]);
   } catch (error) {
@@ -49,6 +47,7 @@ export default async function GroupDashboardPage({ params }: { params: Promise<{
     console.error("GroupDashboardPage: failed to load group data", error);
     redirect("/login");
   }
+  const { group, members } = groupWithMembers;
   const { timeline, recurring, nearestEvent } = dashboardData;
 
   // RLS returns no row both when the group doesn't exist and when the

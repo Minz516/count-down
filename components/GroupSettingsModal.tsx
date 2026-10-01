@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { Check, Copy, PencilSimple, X } from "@phosphor-icons/react/ssr";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
+import { maskWebhookUrl } from "@/lib/webhook";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { createClient } from "@/lib/supabase/client";
 import { groupSettingsInterface, groupsInterface } from "@/modules/groups/groups.interface";
 import type { GroupDTO, GroupMemberDTO, GroupSettingsDTO } from "@/modules/groups/groups.interface";
+import { focusIfFinePointer } from "@/lib/focus";
+import { useDialog } from "@/lib/useDialog";
 
 interface GroupSettingsModalProps {
   group: GroupDTO;
@@ -20,7 +23,7 @@ interface GroupSettingsModalProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none";
+  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /**
  * Invite code + member count + the group's own Discord webhook (docs/milestone2/UI_SPEC-milestone-2.md
@@ -39,6 +42,7 @@ export function GroupSettingsModal({
 
   const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
@@ -163,9 +167,17 @@ export function GroupSettingsModal({
     }
   }
 
+  const titleId = useId();
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-deep/70 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
@@ -174,7 +186,7 @@ export function GroupSettingsModal({
       >
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl font-semibold text-on-surface">Group Settings</h2>
+            <h2 id={titleId} className="text-balance font-display text-xl font-semibold text-on-surface">Group Settings</h2>
 
             {editingName ? (
               <form onSubmit={handleRenameSubmit} className="mt-1 flex items-center gap-1">
@@ -182,8 +194,11 @@ export function GroupSettingsModal({
                   type="text"
                   value={nameInput}
                   onChange={(inputEvent) => setNameInput(inputEvent.target.value)}
-                  autoFocus
-                  className="w-full rounded border border-transparent bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus:outline-none"
+                  ref={focusIfFinePointer}
+                  name="group_name"
+                  aria-label="Group name"
+                  autoComplete="off"
+                  className="w-full rounded border border-transparent bg-surface-container-lowest px-2 py-1 font-body text-sm text-on-surface focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
                 />
                 <button
                   type="submit"
@@ -191,7 +206,7 @@ export function GroupSettingsModal({
                   aria-label="Save group name"
                   className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <Check size={16} />
+                  <Check aria-hidden="true" size={16} />
                 </button>
                 <button
                   type="button"
@@ -203,7 +218,7 @@ export function GroupSettingsModal({
                   aria-label="Cancel"
                   className="rounded p-1 text-text-muted hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <X size={16} />
+                  <X aria-hidden="true" size={16} />
                 </button>
               </form>
             ) : (
@@ -220,13 +235,13 @@ export function GroupSettingsModal({
                     aria-label="Edit group name"
                     className="rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
                   >
-                    <PencilSimple size={14} />
+                    <PencilSimple aria-hidden="true" size={14} />
                   </button>
                 )}
               </div>
             )}
 
-            {nameError && <p className="mt-1 font-body text-xs text-error">{nameError}</p>}
+            {nameError && <p role="alert" className="mt-1 font-body text-xs text-error">{nameError}</p>}
           </div>
           <button
             type="button"
@@ -234,7 +249,7 @@ export function GroupSettingsModal({
             aria-label="Close"
             className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <X size={20} />
+            <X aria-hidden="true" size={20} />
           </button>
         </div>
 
@@ -244,7 +259,7 @@ export function GroupSettingsModal({
               <p className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
                 Invite code
               </p>
-              <p className="font-mono text-lg tracking-[0.15em] text-on-surface">{group.invite_code}</p>
+              <p translate="no" className="font-mono text-lg tracking-[0.15em] text-on-surface">{group.invite_code}</p>
             </div>
             <button
               type="button"
@@ -252,7 +267,7 @@ export function GroupSettingsModal({
               aria-label="Copy invite code"
               className="rounded p-2 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
             >
-              {copied ? <Check size={18} className="text-primary" /> : <Copy size={18} />}
+              {copied ? <Check aria-hidden="true" size={18} className="text-primary" /> : <Copy aria-hidden="true" size={18} />}
             </button>
           </div>
 
@@ -275,7 +290,7 @@ export function GroupSettingsModal({
 
         <form onSubmit={handleSave} className="mt-6 flex flex-col gap-4 border-t border-primary-container/10 pt-6">
           <div>
-            <h3 className="font-display text-base font-semibold text-on-surface">Discord Digest</h3>
+            <h3 className="text-balance font-display text-base font-semibold text-on-surface">Discord Digest</h3>
             <p className="mt-1 font-body text-sm text-text-muted">
               Get a daily message listing this group&apos;s events due within the next 7 days.
             </p>
@@ -289,15 +304,19 @@ export function GroupSettingsModal({
               type="url"
               value={webhookInput}
               onChange={(inputEvent) => setWebhookInput(inputEvent.target.value)}
-              placeholder={savedWebhookUrl ?? "https://discord.com/api/webhooks/..."}
+              placeholder={savedWebhookUrl ? maskWebhookUrl(savedWebhookUrl) : "https://discord.com/api/webhooks/…"}
+          name="discord_webhook_url"
+          autoComplete="off"
+          spellCheck={false}
+          inputMode="url"
               className={inputClass}
             />
             {savedWebhookUrl && !trimmedInput && (
               <button
                 type="button"
-                onClick={handleRemoveWebhook}
+                onClick={() => setConfirmingRemove(true)}
                 disabled={saving}
-                className="self-start font-body text-xs text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
+                className="-my-1 inline-flex min-h-11 items-center self-start font-body text-xs sm:min-h-8 text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
               >
                 Remove webhook
               </button>
@@ -307,6 +326,7 @@ export function GroupSettingsModal({
           <label className="flex items-center gap-2 font-body text-sm text-on-surface">
             <input
               type="checkbox"
+              name="digest_enabled"
               checked={digestEnabled}
               onChange={(inputEvent) => setDigestEnabled(inputEvent.target.checked)}
               className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
@@ -314,8 +334,8 @@ export function GroupSettingsModal({
             Enable daily digest
           </label>
 
-          {error && <p className="font-body text-sm text-error">{error}</p>}
-          {message && <p className="font-body text-sm text-primary">{message}</p>}
+          {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
+          {message && <p role="status" className="font-body text-sm text-primary">{message}</p>}
 
           <div className="flex flex-wrap justify-end gap-3">
             <Button
@@ -324,10 +344,10 @@ export function GroupSettingsModal({
               disabled={!effectiveWebhookUrl || testing}
               onClick={handleTestMessage}
             >
-              {testing ? "Sending..." : "Send test message"}
+              {testing ? "Sending…" : "Send Test Message"}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving…" : "Save Settings"}
             </Button>
           </div>
         </form>
@@ -335,7 +355,7 @@ export function GroupSettingsModal({
         {isCreator && (
           <div className="mt-6 flex items-center justify-between border-t border-error/20 pt-6">
             <div>
-              <h3 className="font-display text-base font-semibold text-on-surface">Danger Zone</h3>
+              <h3 className="text-balance font-display text-base font-semibold text-on-surface">Danger Zone</h3>
               <p className="mt-1 font-body text-sm text-text-muted">
                 Permanently delete this group for every member.
               </p>
@@ -351,6 +371,19 @@ export function GroupSettingsModal({
           </div>
         )}
       </motion.div>
+
+      {confirmingRemove && (
+        <ConfirmDialog
+          title="Remove Webhook?"
+          description="This group's daily digest stops until you add a webhook again."
+          confirmLabel="Remove"
+          onConfirm={() => {
+            setConfirmingRemove(false);
+            void handleRemoveWebhook();
+          }}
+          onCancel={() => setConfirmingRemove(false)}
+        />
+      )}
 
       {confirmingDelete && (
         <ConfirmDialog
