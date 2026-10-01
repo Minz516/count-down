@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/client";
 import { authInterface, type OAuthProvider } from "@/modules/auth/auth.interface";
 import { PASSWORD_REQUIREMENTS } from "@/lib/passwordStrength";
 import { Button } from "./Button";
+import { LanguageButton } from "./LanguageToggle";
+import { useT } from "./LocaleProvider";
 import { ThemeIconButton } from "./ThemeToggle";
 
 const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: React.ReactNode }[] = [
@@ -35,19 +37,19 @@ interface AuthFormProps {
 
 const COPY = {
   login: {
-    title: "Welcome back",
-    subtitle: "Please enter your details to continue.",
-    submitLabel: "Sign In",
-    switchPrompt: "Don't have an account?",
-    switchLabel: "Sign Up",
+    title: "auth.signIn.title",
+    subtitle: "auth.signIn.subtitle",
+    submitLabel: "auth.signIn.submit",
+    switchPrompt: "auth.signIn.switchPrompt",
+    switchLabel: "auth.signIn.switchLabel",
     switchHref: "/signup",
   },
   signup: {
-    title: "Create your account",
-    subtitle: "Start tracking your deadlines.",
-    submitLabel: "Sign Up",
-    switchPrompt: "Already have an account?",
-    switchLabel: "Sign In",
+    title: "auth.signUp.title",
+    subtitle: "auth.signUp.subtitle",
+    submitLabel: "auth.signUp.submit",
+    switchPrompt: "auth.signUp.switchPrompt",
+    switchLabel: "auth.signUp.switchLabel",
     switchHref: "/login",
   },
 } as const;
@@ -91,6 +93,7 @@ function PasswordField({
   onChange: (value: string) => void;
   autoComplete: string;
 }) {
+  const t = useT();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -99,7 +102,7 @@ function PasswordField({
         type={visible ? "text" : "password"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Your password…"
+        placeholder={t("auth.placeholder.password")}
         name={autoComplete === "new-password" ? "new-password" : "password"}
         required
         minLength={8}
@@ -109,7 +112,7 @@ function PasswordField({
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? t("auth.hidePassword") : t("auth.showPassword")}
         className="shrink-0 rounded p-2 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
       >
         {visible ? <EyeSlash aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
@@ -121,6 +124,7 @@ function PasswordField({
 /** Live guidance while typing (signup only) - each requirement ticks off as it's met,
  * rather than only surfacing the rule after a failed submit. */
 function PasswordRequirementsList({ password }: { password: string }) {
+  const t = useT();
   return (
     <ul className="flex flex-col gap-1">
       {PASSWORD_REQUIREMENTS.map((requirement) => {
@@ -140,7 +144,7 @@ function PasswordRequirementsList({ password }: { password: string }) {
                 met ? "bg-primary" : "bg-outline-variant",
               )}
             />
-            {requirement.label}
+            {t.text(requirement.label)}
           </li>
         );
       })}
@@ -149,6 +153,7 @@ function PasswordRequirementsList({ password }: { password: string }) {
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const copy = COPY[mode];
@@ -161,7 +166,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   // Seeded from app/auth/callback/route.ts's ?error=oauth_failed redirect - a plain useState
   // initializer (not an effect) since it only needs to reflect the URL once, on mount.
   const [error, setError] = useState<string | null>(() =>
-    searchParams.get("error") === "oauth_failed" ? "That didn't work - please try again." : null,
+    searchParams.get("error") === "oauth_failed" ? t("auth.oauthFailed") : null,
   );
   const [submitting, setSubmitting] = useState(false);
   // Set instead of redirecting when Supabase Auth's "Confirm email" setting is on
@@ -194,7 +199,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
       setSubmitting(false);
       return;
     }
@@ -211,13 +216,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       // further redirect/loading-state handling needed here.
       await authInterface.signInWithOAuth(supabase, provider, `${window.location.origin}/auth/callback`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     }
   }
 
   return (
     <main id="main" className="relative flex min-h-dvh flex-col items-center justify-center px-4">
-      <div className="absolute top-3 right-3 sm:top-5 sm:right-6">
+      <div className="absolute top-3 right-3 flex items-center gap-1 sm:top-5 sm:right-6">
+        <LanguageButton />
         <ThemeIconButton />
       </div>
       <div className="mb-8 flex flex-col items-center text-center">
@@ -225,7 +231,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <Image src="/logo.png" alt="" width={36} height={36} priority className="rounded-lg" />
           <h1 translate="no" className="font-display text-2xl font-bold text-on-surface">Countdown</h1>
         </div>
-        <p className="font-body text-sm text-text-muted">Quiet Anticipation.</p>
+        <p className="font-body text-sm text-text-muted">{t("auth.tagline")}</p>
       </div>
 
       <div className="w-full max-w-sm rounded-lg border border-primary-container/15 bg-surface-container p-6">
@@ -236,23 +242,23 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <Envelope aria-hidden="true" size={24} />
               </span>
               <div>
-                <h2 className="text-balance font-display text-lg font-semibold text-on-surface">Check your email</h2>
+                <h2 className="text-balance font-display text-lg font-semibold text-on-surface">{t("auth.checkEmail.title")}</h2>
                 <p className="mt-1 font-body text-sm text-text-muted">
-                  We sent a confirmation link to <span className="text-on-surface">{email}</span>. Click it to
-                  activate your account, then sign in.
+                  {t("auth.checkEmail.before")} <span className="text-on-surface">{email}</span>.{" "}
+                  {t("auth.checkEmail.after")}
                 </p>
               </div>
             </div>
             <Link href="/login" className="mt-6 block">
               <Button type="button" className="w-full">
-                Back to Sign In
+                {t("auth.backToSignIn")}
               </Button>
             </Link>
           </>
         ) : (
           <>
-            <h2 className="text-balance font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
-            <p className="mt-1 font-body text-sm text-text-muted">{copy.subtitle}</p>
+            <h2 className="text-balance font-display text-lg font-semibold text-on-surface">{t(copy.title)}</h2>
+            <p className="mt-1 font-body text-sm text-text-muted">{t(copy.subtitle)}</p>
 
             <div className="mt-6 grid grid-cols-2 gap-2">
               {OAUTH_PROVIDERS.map(({ provider, label, icon }) => (
@@ -271,13 +277,13 @@ export function AuthForm({ mode }: AuthFormProps) {
 
             <div className="mt-6 flex items-center gap-3">
               <span className="h-px flex-1 bg-outline-variant" />
-              <span className="font-mono text-xs text-text-muted uppercase">or</span>
+              <span className="font-mono text-xs text-text-muted uppercase">{t("auth.or")}</span>
               <span className="h-px flex-1 bg-outline-variant" />
             </div>
 
             <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {mode === "signup" && (
-            <Field label="Username" icon={<User aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
+            <Field label={t("common.username")} icon={<User aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
               <input
                 type="text"
                 value={username}
@@ -294,7 +300,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           )}
 
           {mode === "signup" ? (
-            <Field label="Email Address" icon={<Envelope aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
+            <Field label={t("auth.field.email")} icon={<Envelope aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
               <input
                 type="email"
                 value={email}
@@ -311,7 +317,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             </Field>
           ) : (
             <Field
-              label="Username or Email"
+              label={t("auth.field.identifier")}
               icon={<User aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}
             >
               <input
@@ -330,7 +336,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           )}
 
           <PasswordField
-            label="Password"
+            label={t("auth.field.password")}
             value={password}
             onChange={setPassword}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -341,7 +347,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               <PasswordRequirementsList password={password} />
 
               <PasswordField
-                label="Confirm Password"
+                label={t("auth.field.confirmPassword")}
                 value={confirmPassword}
                 onChange={setConfirmPassword}
                 autoComplete="new-password"
@@ -352,14 +358,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
 
           <Button type="submit" disabled={submitting} className="mt-2 w-full">
-            {submitting ? "Please wait…" : copy.submitLabel}
+            {submitting ? t("common.pleaseWait") : t(copy.submitLabel)}
           </Button>
         </form>
 
             <p className="mt-6 text-center font-body text-sm text-text-muted">
-              {copy.switchPrompt}{" "}
+              {t(copy.switchPrompt)}{" "}
               <Link href={copy.switchHref} className="text-primary underline underline-offset-2 hover:text-on-surface">
-                {copy.switchLabel}
+                {t(copy.switchLabel)}
               </Link>
             </p>
           </>

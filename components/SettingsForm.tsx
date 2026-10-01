@@ -7,6 +7,7 @@ import { maskWebhookUrl } from "@/lib/webhook";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { settingsInterface, type UserSettingsDTO } from "@/modules/settings/settings.interface";
+import { useT } from "./LocaleProvider";
 
 interface SettingsFormProps {
   initialSettings: UserSettingsDTO | null;
@@ -17,6 +18,7 @@ const inputClass =
 
 /** Personal Discord webhook + daily digest preference (docs/UI_SPEC.md "Settings"). */
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
+  const t = useT();
   // Tracked in state (not read straight from the prop each render) so the
   // placeholder reflects a webhook just saved this session too, not only
   // what the page originally loaded with.
@@ -55,9 +57,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       });
       setSavedWebhookUrl(effectiveWebhookUrl);
       setWebhookInput("");
-      setMessage("Settings saved.");
+      setMessage(t("settings.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     } finally {
       setSaving(false);
     }
@@ -79,9 +81,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       });
       setSavedWebhookUrl(null);
       setWebhookInput("");
-      setMessage("Webhook removed.");
+      setMessage(t("settings.removed"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
     } finally {
       setSaving(false);
     }
@@ -94,9 +96,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
     try {
       await settingsInterface.sendTestMessage(effectiveWebhookUrl);
-      setMessage("Test message sent - check your Discord channel.");
+      setMessage(t("settings.testSent"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send the test message.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.sendTest"));
     } finally {
       setTesting(false);
     }
@@ -105,15 +107,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-6 rounded-lg border border-primary-container/15 bg-surface-container p-6">
       <div>
-        <h2 className="text-balance font-display text-xl font-semibold text-on-surface">Discord Digest</h2>
+        <h2 className="text-balance font-display text-xl font-semibold text-on-surface">{t("settings.digest")}</h2>
         <p className="mt-1 font-body text-sm text-text-muted">
-          Get a daily message listing events due within the next 7 days.
+          {t("settings.digestBody")}
         </p>
       </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-          Discord Webhook URL
+          {t("settings.webhookUrl")}
         </span>
         <input
           type="url"
@@ -133,7 +135,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             disabled={saving}
             className="-my-1 inline-flex min-h-11 items-center self-start font-body text-xs sm:min-h-8 sm:text-xs text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
           >
-            Remove webhook
+            {t("settings.removeWebhook")}
           </button>
         )}
       </label>
@@ -146,7 +148,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           onChange={(event) => setDigestEnabled(event.target.checked)}
           className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
         />
-        Enable daily digest
+        {t("settings.enableDigest")}
       </label>
 
       {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
@@ -159,18 +161,18 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           disabled={!effectiveWebhookUrl || testing}
           onClick={handleTestMessage}
         >
-          {testing ? "Sending…" : "Send Test Message"}
+          {testing ? t("common.sending") : t("settings.sendTest")}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save Settings"}
+          {saving ? t("common.saving") : t("settings.save")}
         </Button>
       </div>
 
       {confirmingRemove && (
         <ConfirmDialog
-          title="Remove Webhook?"
-          description="Daily digests stop until you add a webhook again."
-          confirmLabel="Remove"
+          title={t("settings.removeTitle")}
+          description={t("settings.removeBody")}
+          confirmLabel={t("common.remove")}
           onConfirm={() => {
             setConfirmingRemove(false);
             void handleRemoveWebhook();

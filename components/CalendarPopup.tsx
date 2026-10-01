@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { motion, useReducedMotion } from "motion/react";
+import { useLocale, useT } from "./LocaleProvider";
 
 interface CalendarPopupProps {
   /** "" or yyyy-mm-dd */
@@ -12,7 +13,10 @@ interface CalendarPopupProps {
   onClose: () => void;
 }
 
-const WEEKDAY_HEADER = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const WEEKDAY_HEADER = {
+  en: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+  vi: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+} as const;
 
 function parseSelected(selectedDate: string): Date | null {
   if (!selectedDate) return null;
@@ -28,6 +32,8 @@ function toIsoDate(year: number, month: number, day: number): string {
 /** Month-grid date picker, one visual step brighter than its surrounding surface
  * since this app uses tonal layering instead of shadows to separate it (docs/DESIGN.md §5). */
 export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopupProps) {
+  const t = useT();
+  const locale = useLocale();
   const selected = parseSelected(selectedDate);
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => selected ?? today);
@@ -55,14 +61,14 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
   const month = viewMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const leadingBlanks = (new Date(year, month, 1).getDay() + 6) % 7; // Monday-start offset
-  const monthLabel = viewMonth.toLocaleDateString("vi-VN", { month: "long", year: "numeric" });
+  const monthLabel = viewMonth.toLocaleDateString(locale === "vi" ? "vi-VN" : "en-GB", { month: "long", year: "numeric" });
 
   return (
     <motion.div
       ref={containerRef}
       role="dialog"
       aria-modal="false"
-      aria-label="Choose date"
+      aria-label={t("date.chooseDate")}
       initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.15 }}
@@ -71,7 +77,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
       <div className="flex items-center justify-between">
         <button
           type="button"
-          aria-label="Previous month"
+          aria-label={t("date.prevMonth")}
           onClick={() => setViewMonth(new Date(year, month - 1, 1))}
           className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
@@ -82,7 +88,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
         </span>
         <button
           type="button"
-          aria-label="Next month"
+          aria-label={t("date.nextMonth")}
           onClick={() => setViewMonth(new Date(year, month + 1, 1))}
           className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
@@ -91,7 +97,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
       </div>
 
       <div className="mt-3 grid grid-cols-7 gap-1">
-        {WEEKDAY_HEADER.map((label) => (
+        {WEEKDAY_HEADER[locale].map((label) => (
           <span
             key={label}
             className="flex size-8 items-center justify-center font-mono text-[10px] tracking-[0.05em] text-text-muted uppercase"

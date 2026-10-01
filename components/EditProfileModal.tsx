@@ -8,6 +8,7 @@ import { Button } from "./Button";
 import { createClient } from "@/lib/supabase/client";
 import { profilesInterface, type ProfileDTO } from "@/modules/profiles/profiles.interface";
 import { useDialog } from "@/lib/useDialog";
+import { useT } from "./LocaleProvider";
 
 interface EditProfileModalProps {
   userId: string;
@@ -21,6 +22,7 @@ const inputClass =
 
 /** Username + avatar upload, opened from UserMenu.tsx's "Edit profile" item. */
 export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: EditProfileModalProps) {
+  const t = useT();
   const [username, setUsername] = useState(initialProfile?.username ?? "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialProfile?.avatar_url ?? null);
@@ -70,7 +72,7 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
       onSaved(updated);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? t.text(err.message) : t("error.generic"));
       setSaving(false);
     }
   }
@@ -93,11 +95,11 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
         className="w-full max-w-sm rounded-lg border border-primary-container/15 bg-surface-container p-6"
       >
         <div className="flex items-start justify-between">
-          <h2 id={titleId} className="text-balance font-display text-lg font-semibold text-on-surface">Edit Profile</h2>
+          <h2 id={titleId} className="text-balance font-display text-lg font-semibold text-on-surface">{t("profile.title")}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="rounded p-3 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
             <X aria-hidden="true" size={20} />
@@ -116,13 +118,13 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
               className="hidden"
             />
             <Button type="button" variant="ghost" onClick={() => fileInputRef.current?.click()}>
-              Change Avatar
+              {t("profile.changeAvatar")}
             </Button>
           </div>
 
           <label className="flex flex-col gap-1.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
-              Username
+              {t("common.username")}
             </span>
             <input
               type="text"
@@ -141,10 +143,10 @@ export function EditProfileModal({ userId, initialProfile, onClose, onSaved }: E
 
           <div className="mt-2 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save Profile"}
+              {saving ? t("common.saving") : t("profile.save")}
             </Button>
           </div>
         </form>

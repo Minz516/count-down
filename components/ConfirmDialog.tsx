@@ -5,17 +5,19 @@ import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Button } from "./Button";
 import { useDialog } from "@/lib/useDialog";
+import { useT } from "./LocaleProvider";
 
 interface ConfirmDialogProps {
   title: string;
   description: string;
   onConfirm: () => void;
   onCancel: () => void;
-  /** Defaults to "Delete". */
+  /** Defaults to the translated "Delete". */
   confirmLabel?: string;
 }
 
-export function ConfirmDialog({ title, description, onConfirm, onCancel, confirmLabel = "Delete" }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, description, onConfirm, onCancel, confirmLabel }: ConfirmDialogProps) {
+  const t = useT();
   const titleId = useId();
   const dialogRef = useDialog<HTMLDivElement>(onCancel);
 
@@ -40,10 +42,10 @@ export function ConfirmDialog({ title, description, onConfirm, onCancel, confirm
         <p className="mt-2 font-body text-sm text-text-muted">{description}</p>
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="ghost" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="danger" onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t("common.delete")}
           </Button>
         </div>
       </motion.div>

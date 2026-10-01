@@ -16,6 +16,7 @@ import { authInterface } from "@/modules/auth/auth.interface";
 import { eventsInterface, getEventStatus } from "@/modules/events/events.interface";
 import type { EventDTO, EventInput } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
+import { useT } from "./LocaleProvider";
 
 interface DashboardClientProps {
   initialEvents: EventDTO[];
@@ -36,6 +37,7 @@ export function DashboardClient({
   initialNearestEvent,
   initialTodosByEvent,
 }: DashboardClientProps) {
+  const t = useT();
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
 
@@ -82,7 +84,7 @@ export function DashboardClient({
       <Nav onAddEvent={() => setModal({ type: "add" })} />
 
       <main id="main" className="content-rise mx-auto grid max-w-[1120px] gap-10 px-4 pt-8 pb-28 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12 lg:px-12">
-        <h1 className="sr-only">Personal Dashboard</h1>
+        <h1 className="sr-only">{t("dashboard.title")}</h1>
         {!hasAnyEvents ? (
           <div className="lg:col-span-2">
             <EmptyState onAddEvent={() => setModal({ type: "add" })} />
@@ -99,7 +101,7 @@ export function DashboardClient({
 
             {activeEvents.length > 0 && (
               <section className="flex flex-col gap-4">
-                <h2 className="text-balance font-display text-xl font-medium text-on-surface">Timeline</h2>
+                <h2 className="text-balance font-display text-xl font-medium text-on-surface">{t("dashboard.timeline")}</h2>
                 <Timeline
                   events={activeEvents}
                   todosByEvent={initialTodosByEvent}
@@ -150,8 +152,8 @@ export function DashboardClient({
         {modal?.type === "delete" && (
           <ConfirmDialog
             key={`delete-${modal.event.id}`}
-            title="Delete event?"
-            description={`"${modal.event.name}" will be permanently deleted.`}
+            title={t("dashboard.deleteEvent.title")}
+            description={t("dashboard.deleteEvent.body", { name: modal.event.name })}
             onConfirm={() => handleDelete(modal.event.id)}
             onCancel={() => setModal(null)}
           />
