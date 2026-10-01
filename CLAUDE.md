@@ -14,9 +14,12 @@ npm run build         # production build — also runs the TypeScript check
 npm run start         # start production server
 npm run lint           # ESLint (eslint-config-next core-web-vitals + typescript)
 npx tsc --noEmit       # type-check only, faster than a full build
+npm run check:contrast # WCAG contrast of the theme tokens in app/globals.css (no build needed)
+npm run check:bundle   # gzip client JS must stay under the budget (run after npm run build)
+npm run test:a11y      # axe WCAG A/AA on /login and /signup, light+dark, desktop+phone (needs a build; starts its own server on :3100)
 ```
 
-There is no test suite/framework configured in this repo. CI (`.github/workflows/ci.yml`) runs `npm run lint` then `npm run build` on every push/PR to `main`, using placeholder Supabase env vars (build doesn't hit Supabase at build time — routes reading `cookies()` render dynamically at request time).
+The only automated tests are the Playwright + axe accessibility checks in `tests/` (signed-out screens only, because the signed-in app needs a real Supabase project). CI (`.github/workflows/ci.yml`) runs `npm run lint` (which now enforces the full jsx-a11y rule set), `check:contrast`, `npm run build`, `check:bundle`, then `test:a11y`, on every push/PR to `main`, using placeholder Supabase env vars (build doesn't hit Supabase at build time; routes reading `cookies()` render dynamically at request time).
 
 Database changes: run `supabase/schema.sql` in the Supabase SQL editor first (tables, RLS policies, RPC functions, the signup trigger, the `avatars` Storage bucket), then `supabase/cleanup_and_rollover.sql`, then anything under `supabase/migrations/` in timestamp order that isn't already folded into `schema.sql`.
 

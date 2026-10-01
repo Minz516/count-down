@@ -358,7 +358,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
             <p className="mt-6 text-center font-body text-sm text-text-muted">
               {copy.switchPrompt}{" "}
-              <Link href={copy.switchHref} className="text-primary hover:underline">
+              <Link href={copy.switchHref} className="text-primary underline underline-offset-2 hover:text-on-surface">
                 {copy.switchLabel}
               </Link>
             </p>

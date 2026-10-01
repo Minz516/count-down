@@ -400,7 +400,7 @@ contrast in light.
 
 ### 11.2b Contrast (measured, not eyeballed)
 
-`npm run check:contrast` (scripts/check-contrast.cjs) reads the tokens from `app/globals.css` and checks
+`npm run check:contrast` (scripts/check-contrast.mjs) reads the tokens from `app/globals.css` and checks
 every text pair at 4.5:1, every status chip against its own 12% tint, and input borders at 3:1, in
 both themes. It also fails if the two light blocks drift apart. Run it after changing any color token.
 Input and field borders use `border-field-border`, not `border-outline-variant` (which is a decorative

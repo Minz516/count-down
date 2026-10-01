@@ -1,7 +1,7 @@
 // WCAG 2.x contrast check for the theme tokens in app/globals.css (dark base block and light block).
 // Run with `npm run check:contrast`. Exits 1 if any text pair is under 4.5:1, any UI boundary under 3:1,
 // or the two light blocks (media query and data-theme attribute) have drifted apart.
-const fs = require("fs");
+import fs from "node:fs";
 const css = fs.readFileSync("app/globals.css", "utf8");
 
 function block(startRe) {
