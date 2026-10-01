@@ -68,12 +68,11 @@ Some writes only have an RPC path (e.g. `create_group`, `join_group_by_code`, `g
 - `.github/workflows/backup.yml` is a weekly/on-demand `pg_dump` of the DB (needs the `SUPABASE_DB_URL` secret, direct connection not the pooler); worth triggering manually before running a risky migration.
 
 - `supabase/functions/daily-digest/` is a Supabase Edge Function (Deno), deployed and scheduled separately (`supabase functions deploy daily-digest`) — not part of the Next.js build. It sends the Discord digest, rolls recurring events forward, cleans up expired events, and generates in-app notifications.
-- Sentry (`@sentry/nextjs`) is wired up (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`) but dormant until a DSN env var is set — don't assume it's active in dev/CI.
+- Sentry (`@sentry/nextjs`) starts from `instrumentation.ts` (server and edge) and `instrumentation-client.ts` (browser), both using the shared options in `lib/sentryOptions.ts`, and only when `NEXT_PUBLIC_SENTRY_DSN` is set — it is inactive in dev and CI. The DSN comes from the environment, never from code. `sentryOptions` samples 10% of traces, keeps `sendDefaultPii` off, and scrubs Discord webhook URLs (secrets) from events, transactions and breadcrumbs: keep that scrub when changing it. Source maps upload on build only when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are set (the token is a real secret).
 - Path alias `@/*` maps to the repo root (see `tsconfig.json`).
 - Styling is Tailwind CSS v4 via the PostCSS plugin (`@tailwindcss/postcss`) — there is no `tailwind.config`; theme tokens and global styles live in `app/globals.css`.
 - `.claude/skills/DESIGN.md`, `TASTE.md`, `THEME.md` capture this project's frontend visual-design conventions (palette, type, motion) — check them before making UI/styling changes.
 - `docs/` holds the design record: `ARCHITECTURE_DESIGN.md` (the section-numbered spec that code comments cite as "§x.y"), `PRD.md`, `UI_SPEC.md`, `PRODUCTION_READINESS_CHECKLIST.md`, `FIX_NAVIGATION_LATENCY.md`, `SETUP.md`. Consult the relevant one before a non-trivial change; inline comments frequently point at a specific section.
-- `app/sentry-example-page/` and `app/api/sentry-example-api/` are leftover Sentry-wizard scaffolding, not real features — safe to ignore or delete.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
