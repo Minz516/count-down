@@ -61,6 +61,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
     <motion.div
       ref={containerRef}
       role="dialog"
+      aria-modal="false"
       aria-label="Choose date"
       initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -74,7 +75,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
           onClick={() => setViewMonth(new Date(year, month - 1, 1))}
           className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
-          <CaretLeft size={16} />
+          <CaretLeft aria-hidden="true" size={16} />
         </button>
         <span className="font-mono text-xs tracking-[0.1em] text-on-surface capitalize">
           {monthLabel}
@@ -85,7 +86,7 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
           onClick={() => setViewMonth(new Date(year, month + 1, 1))}
           className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
-          <CaretRight size={16} />
+          <CaretRight aria-hidden="true" size={16} />
         </button>
       </div>
 

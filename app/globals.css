@@ -155,6 +155,25 @@
   --radius-xl: 1.5rem;
 }
 
+html {
+  /* The fixed bottom tab bar (Nav.tsx, small screens) must never cover a focused or anchored element. */
+  scroll-padding-bottom: 5rem;
+}
+
+/* No double-tap-zoom delay on controls, and no default grey tap flash (they have their own
+   :active/hover states). */
+a,
+button,
+input,
+select,
+textarea,
+summary,
+[role="button"],
+[role="menuitem"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--surface-deep);
   color: var(--on-surface);

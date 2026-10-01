@@ -59,7 +59,7 @@ export function ThemeMenuItem({ onSelect }: { onSelect?: () => void }) {
       className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
     >
       <Icon size={16} />
-      {theme === "dark" ? "Light mode" : "Dark mode"}
+      {theme === "dark" ? "Light Mode" : "Dark Mode"}
     </button>
   );
 }

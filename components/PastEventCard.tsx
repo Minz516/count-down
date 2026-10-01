@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
-import { formatTimelineDate } from "@/lib/dateFormat";
+import { LocalDate } from "./LocalDate";
 import { TodoChecklist } from "./TodoChecklist";
 import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
@@ -53,7 +53,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
           <p className="truncate font-body text-sm text-text-muted">{event.name}</p>
           <p className="shrink-0 font-mono text-[11px] text-text-muted/70">
-            {formatTimelineDate(event.deadline)}
+            <LocalDate iso={event.deadline} kind="timeline" />
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
             aria-label={`Sửa ${event.name}`}
             className="rounded p-1 text-text-muted transition-colors hover:bg-surface-elevated hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <PencilSimple size={14} />
+            <PencilSimple aria-hidden="true" size={14} />
           </button>
           <button
             type="button"
@@ -78,7 +78,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
             aria-label={`Xóa ${event.name}`}
             className="rounded p-1 text-text-muted transition-colors hover:bg-surface-elevated hover:text-error focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <Trash size={14} />
+            <Trash aria-hidden="true" size={14} />
           </button>
         </div>
       </div>

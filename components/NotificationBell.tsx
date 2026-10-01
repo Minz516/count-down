@@ -97,7 +97,7 @@ export function NotificationBell() {
         aria-expanded={open}
         className="relative rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
       >
-        <Bell size={20} />
+        <Bell aria-hidden="true" size={20} />
         {unreadCount > 0 && (
           <span className="absolute top-0.5 right-0.5 flex size-2 rounded-full bg-error" />
         )}
@@ -118,15 +118,15 @@ export function NotificationBell() {
                 onClick={handleMarkAllRead}
                 className="flex items-center gap-1 font-body text-xs text-primary transition-colors hover:text-on-surface"
               >
-                <CheckCircle size={14} />
-                Mark all as read
+                <CheckCircle aria-hidden="true" size={14} />
+                Mark All as Read
               </button>
             )}
           </div>
 
           <div className="max-h-80 overflow-y-auto border-t border-primary-container/10">
             {notifications === null ? (
-              <p className="px-3 py-4 text-center font-body text-sm text-text-muted">Loading...</p>
+              <p className="px-3 py-4 text-center font-body text-sm text-text-muted">Loading…</p>
             ) : notifications.length === 0 ? (
               <p className="px-3 py-4 text-center font-body text-sm text-text-muted">
                 No notifications yet.
@@ -176,9 +176,9 @@ export function NotificationBell() {
                       handleDelete(notification);
                     }}
                     aria-label="Delete notification"
-                    className="shrink-0 rounded p-1 text-text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-error focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+                    className="shrink-0 rounded p-3 text-text-muted transition-opacity hover:text-error focus-visible:opacity-100 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
                   >
-                    <Trash size={14} />
+                    <Trash aria-hidden="true" size={14} />
                   </button>
                 </div>
               ))

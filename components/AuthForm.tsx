@@ -23,10 +23,10 @@ import { Button } from "./Button";
 import { ThemeIconButton } from "./ThemeToggle";
 
 const OAUTH_PROVIDERS: { provider: OAuthProvider; label: string; icon: React.ReactNode }[] = [
-  { provider: "google", label: "Google", icon: <GoogleLogo size={18} /> },
-  { provider: "facebook", label: "Facebook", icon: <FacebookLogo size={18} /> },
-  { provider: "discord", label: "Discord", icon: <DiscordLogo size={18} /> },
-  { provider: "github", label: "GitHub", icon: <GithubLogo size={18} /> },
+  { provider: "google", label: "Google", icon: <GoogleLogo aria-hidden="true" size={18} /> },
+  { provider: "facebook", label: "Facebook", icon: <FacebookLogo aria-hidden="true" size={18} /> },
+  { provider: "discord", label: "Discord", icon: <DiscordLogo aria-hidden="true" size={18} /> },
+  { provider: "github", label: "GitHub", icon: <GithubLogo aria-hidden="true" size={18} /> },
 ];
 
 interface AuthFormProps {
@@ -53,7 +53,7 @@ const COPY = {
 } as const;
 
 const inputWrapClass =
-  "flex min-h-11 items-center gap-2 rounded border border-outline-variant bg-surface-container-lowest px-3 py-2 focus-within:border-primary";
+  "flex min-h-11 items-center gap-2 rounded border border-outline-variant bg-surface-container-lowest px-3 py-2 focus-within:border-primary focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-primary/50";
 const inputClass =
   "w-full bg-transparent font-body text-base text-on-surface placeholder:text-text-muted focus:outline-none";
 
@@ -94,12 +94,13 @@ function PasswordField({
   const [visible, setVisible] = useState(false);
 
   return (
-    <Field label={label} icon={<LockKey size={18} className="shrink-0 text-text-muted" />}>
+    <Field label={label} icon={<LockKey aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
       <input
         type={visible ? "text" : "password"}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Your password"
+        placeholder="Your password…"
+        name={autoComplete === "new-password" ? "new-password" : "password"}
         required
         minLength={8}
         autoComplete={autoComplete}
@@ -109,9 +110,9 @@ function PasswordField({
         type="button"
         onClick={() => setVisible((current) => !current)}
         aria-label={visible ? "Hide password" : "Show password"}
-        className="shrink-0 rounded text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+        className="shrink-0 rounded p-2 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
       >
-        {visible ? <EyeSlash size={18} /> : <Eye size={18} />}
+        {visible ? <EyeSlash aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
       </button>
     </Field>
   );
@@ -215,14 +216,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center px-4">
+    <main id="main" className="relative flex min-h-dvh flex-col items-center justify-center px-4">
       <div className="absolute top-3 right-3 sm:top-5 sm:right-6">
         <ThemeIconButton />
       </div>
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="mb-3 flex items-center gap-2.5">
-          <Image src="/logo.png" alt="" width={36} height={36} className="rounded-lg" />
-          <h1 className="font-display text-2xl font-bold text-on-surface">Countdown</h1>
+          <Image src="/logo.png" alt="" width={36} height={36} priority className="rounded-lg" />
+          <h1 translate="no" className="font-display text-2xl font-bold text-on-surface">Countdown</h1>
         </div>
         <p className="font-body text-sm text-text-muted">Quiet Anticipation.</p>
       </div>
@@ -232,10 +233,10 @@ export function AuthForm({ mode }: AuthFormProps) {
           <>
             <div className="flex flex-col items-center gap-3 text-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-primary-container/15 text-primary">
-                <Envelope size={24} />
+                <Envelope aria-hidden="true" size={24} />
               </span>
               <div>
-                <h2 className="font-display text-lg font-semibold text-on-surface">Check your email</h2>
+                <h2 className="text-balance font-display text-lg font-semibold text-on-surface">Check your email</h2>
                 <p className="mt-1 font-body text-sm text-text-muted">
                   We sent a confirmation link to <span className="text-on-surface">{email}</span>. Click it to
                   activate your account, then sign in.
@@ -250,7 +251,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           </>
         ) : (
           <>
-            <h2 className="font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
+            <h2 className="text-balance font-display text-lg font-semibold text-on-surface">{copy.title}</h2>
             <p className="mt-1 font-body text-sm text-text-muted">{copy.subtitle}</p>
 
             <div className="mt-6 grid grid-cols-2 gap-2">
@@ -276,12 +277,15 @@ export function AuthForm({ mode }: AuthFormProps) {
 
             <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {mode === "signup" && (
-            <Field label="Username" icon={<User size={18} className="shrink-0 text-text-muted" />}>
+            <Field label="Username" icon={<User aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
               <input
                 type="text"
                 value={username}
                 onChange={(inputEvent) => setUsername(inputEvent.target.value)}
-                placeholder="janedoe"
+                placeholder="janedoe…"
+                name="username"
+                spellCheck={false}
+                autoCapitalize="none"
                 required
                 autoComplete="username"
                 className={inputClass}
@@ -290,12 +294,16 @@ export function AuthForm({ mode }: AuthFormProps) {
           )}
 
           {mode === "signup" ? (
-            <Field label="Email Address" icon={<Envelope size={18} className="shrink-0 text-text-muted" />}>
+            <Field label="Email Address" icon={<Envelope aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}>
               <input
                 type="email"
                 value={email}
                 onChange={(inputEvent) => setEmail(inputEvent.target.value)}
-                placeholder="name@example.com"
+                placeholder="name@example.com…"
+                name="email"
+                inputMode="email"
+                spellCheck={false}
+                autoCapitalize="none"
                 required
                 autoComplete="email"
                 className={inputClass}
@@ -304,13 +312,16 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : (
             <Field
               label="Username or Email"
-              icon={<User size={18} className="shrink-0 text-text-muted" />}
+              icon={<User aria-hidden="true" size={18} className="shrink-0 text-text-muted" />}
             >
               <input
                 type="text"
                 value={identifier}
                 onChange={(inputEvent) => setIdentifier(inputEvent.target.value)}
-                placeholder="janedoe or name@example.com"
+                placeholder="janedoe or name@example.com…"
+                name="identifier"
+                spellCheck={false}
+                autoCapitalize="none"
                 required
                 autoComplete="username"
                 className={inputClass}
@@ -338,10 +349,10 @@ export function AuthForm({ mode }: AuthFormProps) {
             </>
           )}
 
-          {error && <p className="font-body text-sm text-error">{error}</p>}
+          {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
 
           <Button type="submit" disabled={submitting} className="mt-2 w-full">
-            {submitting ? "Please wait..." : copy.submitLabel}
+            {submitting ? "Please wait…" : copy.submitLabel}
           </Button>
         </form>
 
@@ -354,6 +365,6 @@ export function AuthForm({ mode }: AuthFormProps) {
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 }

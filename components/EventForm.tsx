@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { X } from "@phosphor-icons/react/ssr";
 import { motion } from "motion/react";
 import { Button } from "./Button";
@@ -13,6 +13,7 @@ import {
   toDateTimeParts,
 } from "@/lib/dateFormat";
 import type { DayOfWeek, EventDTO, EventInput } from "@/modules/events/events.interface";
+import { useDialog } from "@/lib/useDialog";
 
 interface EventFormProps {
   initialEvent?: EventDTO;
@@ -21,7 +22,7 @@ interface EventFormProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none";
+  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -85,9 +86,17 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
     }
   }
 
+  const titleId = useId();
+  const dialogRef = useDialog<HTMLDivElement>(onCancel);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-deep/70 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
@@ -96,7 +105,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-display text-xl font-semibold text-on-surface">
+            <h2 id={titleId} className="text-balance font-display text-xl font-semibold text-on-surface">
               {initialEvent ? "Edit Event" : "New Event"}
             </h2>
             <p className="mt-1 font-body text-sm text-text-muted">Define your next milestone.</p>
@@ -105,9 +114,9 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="rounded p-1 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+            className="rounded p-3 text-text-muted hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
           >
-            <X size={20} />
+            <X aria-hidden="true" size={20} />
           </button>
         </div>
 
@@ -117,7 +126,9 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Project Launch"
+              placeholder="e.g. Project Launch…"
+              name="name"
+              autoComplete="off"
               required
               maxLength={200}
               className={inputClass}
@@ -127,6 +138,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
           <label className="flex items-center gap-2 font-body text-sm text-on-surface">
             <input
               type="checkbox"
+              name="is_recurring"
               checked={isRecurring}
               onChange={(event) => setIsRecurring(event.target.checked)}
               className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
@@ -140,9 +152,10 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
             <Field label={isRecurring ? "Day of week" : "Deadline Date"}>
               {isRecurring ? (
                 <select
+                  name="recurrence_day_of_week"
                   value={dayOfWeek}
                   onChange={(event) => setDayOfWeek(Number(event.target.value) as DayOfWeek)}
-                  className={inputClass}
+                  className={`${inputClass} [&>option]:bg-surface-container [&>option]:text-on-surface`}
                 >
                   {([0, 1, 2, 3, 4, 5, 6] as const).map((day) => (
                     <option key={day} value={day}>
@@ -169,21 +182,23 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Add some context..."
+              placeholder="Add some context…"
+              name="description"
+              autoComplete="off"
               rows={3}
               maxLength={2000}
               className={inputClass}
             />
           </Field>
 
-          {error && <p className="font-body text-sm text-error">{error}</p>}
+          {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving..." : "Save"}
+              {submitting ? "Saving…" : initialEvent ? "Save Changes" : "Save Event"}
             </Button>
           </div>
         </form>

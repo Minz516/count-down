@@ -25,19 +25,19 @@ export function dayOfWeekLabel(day: DayOfWeek): string {
 }
 
 /** e.g. "15/11/2024" - dd/mm/yyyy, the app-wide date display format for viewing. */
+const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+
 export function formatEventDate(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  return DATE_FORMAT.format(new Date(iso));
 }
 
 /** e.g. "14:30" - 24-hour hh:mm, the app-wide time display format for viewing. No
  * seconds: deadlines are only ever entered to minute precision (TimeField.tsx has no
  * seconds input), so a literal ":00" would just be noise, not information. */
+const TIME_FORMAT = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
 export function formatEventTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return TIME_FORMAT.format(new Date(iso));
 }
 
 /** e.g. "T3, 18/08/2026, 14:30" - short Vietnamese weekday + dd/mm/yyyy + hh:mm, Timeline rows. */

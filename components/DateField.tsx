@@ -81,6 +81,8 @@ export function DateField({ value, onChange }: DateFieldProps) {
       <div className="flex w-full items-center gap-1 rounded border border-transparent bg-surface-container-lowest px-3 py-2 focus-within:border-primary">
         <input
           ref={dayRef}
+          name="day"
+          autoComplete="off"
           value={parts.day}
           onChange={(event) => {
             const day = event.target.value.replace(/\D/g, "").slice(0, 2);
@@ -108,6 +110,8 @@ export function DateField({ value, onChange }: DateFieldProps) {
         </span>
         <input
           ref={monthRef}
+          name="month"
+          autoComplete="off"
           value={parts.month}
           onChange={(event) => {
             const month = event.target.value.replace(/\D/g, "").slice(0, 2);
@@ -132,6 +136,8 @@ export function DateField({ value, onChange }: DateFieldProps) {
         </span>
         <input
           ref={yearRef}
+          name="year"
+          autoComplete="off"
           value={parts.year}
           onChange={(event) => {
             const year = event.target.value.replace(/\D/g, "").slice(0, 4);
@@ -153,7 +159,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
           onClick={() => setOpen((o) => !o)}
           className="shrink-0 rounded p-1 text-text-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
         >
-          <CalendarBlank size={18} />
+          <CalendarBlank aria-hidden="true" size={18} />
         </button>
       </div>
 

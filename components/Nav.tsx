@@ -38,8 +38,8 @@ export function Nav({ onAddEvent }: NavProps) {
         <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-2 px-4 sm:gap-4 sm:px-8 lg:px-12">
           <div className="flex min-w-0 items-center gap-6 sm:gap-10">
             <div className="flex shrink-0 items-center gap-2">
-              <Image src="/logo.png" alt="" width={28} height={28} className="rounded-lg" />
-              <span className="font-display text-lg font-semibold text-on-surface">Countdown</span>
+              <Image src="/logo.png" alt="" width={28} height={28} priority className="rounded-lg" />
+              <span translate="no" className="font-display text-lg font-semibold text-on-surface">Countdown</span>
             </div>
 
             <nav aria-label="Primary" className="hidden items-center gap-2 sm:flex">
@@ -57,7 +57,7 @@ export function Nav({ onAddEvent }: NavProps) {
                         : "border-transparent text-text-muted hover:text-on-surface",
                     )}
                   >
-                    <Icon size={16} weight={active ? "bold" : "regular"} />
+                    <Icon aria-hidden="true" size={16} weight={active ? "bold" : "regular"} />
                     {label}
                   </Link>
                 );
@@ -68,7 +68,7 @@ export function Nav({ onAddEvent }: NavProps) {
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {onAddEvent && (
               <Button onClick={onAddEvent} className="min-h-11 px-3 sm:px-4">
-                <Plus size={16} weight="bold" />
+                <Plus aria-hidden="true" size={16} weight="bold" />
                 Add Event
               </Button>
             )}
@@ -78,7 +78,7 @@ export function Nav({ onAddEvent }: NavProps) {
               aria-label="Settings"
               className="hidden rounded p-2 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:block"
             >
-              <Gear size={20} />
+              <Gear aria-hidden="true" size={20} />
             </Link>
             <UserMenu />
           </div>
@@ -108,7 +108,7 @@ export function Nav({ onAddEvent }: NavProps) {
                       active && "bg-primary-container/20",
                     )}
                   >
-                    <Icon size={20} weight={active ? "bold" : "regular"} />
+                    <Icon aria-hidden="true" size={20} weight={active ? "bold" : "regular"} />
                   </span>
                   {label}
                 </Link>

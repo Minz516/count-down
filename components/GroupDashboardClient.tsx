@@ -98,7 +98,7 @@ export function GroupDashboardClient({
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className="content-rise mx-auto grid max-w-[1120px] gap-10 px-4 pt-8 pb-12 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12 lg:px-12">
+      <main id="main" className="content-rise mx-auto grid max-w-[1120px] gap-10 px-4 pt-8 pb-12 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12 lg:px-12">
         {!hasAnyEvents ? (
           <div className="lg:col-span-2">
             <EmptyState onAddEvent={() => setModal({ type: "add" })} />
@@ -115,7 +115,7 @@ export function GroupDashboardClient({
 
             {activeEvents.length > 0 && (
               <section className="flex flex-col gap-4">
-                <h2 className="font-display text-xl font-medium text-on-surface">Timeline</h2>
+                <h2 className="text-balance font-display text-xl font-medium text-on-surface">Timeline</h2>
                 <Timeline
                   events={activeEvents}
                   todosByEvent={initialTodosByEvent}

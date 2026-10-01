@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "./Button";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { maskWebhookUrl } from "@/lib/webhook";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { settingsInterface, type UserSettingsDTO } from "@/modules/settings/settings.interface";
@@ -11,7 +13,7 @@ interface SettingsFormProps {
 }
 
 const inputClass =
-  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none";
+  "w-full rounded border border-transparent bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /** Personal Discord webhook + daily digest preference (docs/UI_SPEC.md "Settings"). */
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
@@ -31,6 +33,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const trimmedInput = webhookInput.trim();
   const effectiveWebhookUrl = trimmedInput || savedWebhookUrl;
@@ -102,7 +105,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-6 rounded-lg border border-primary-container/15 bg-surface-container p-6">
       <div>
-        <h2 className="font-display text-xl font-semibold text-on-surface">Discord Digest</h2>
+        <h2 className="text-balance font-display text-xl font-semibold text-on-surface">Discord Digest</h2>
         <p className="mt-1 font-body text-sm text-text-muted">
           Get a daily message listing events due within the next 7 days.
         </p>
@@ -116,15 +119,19 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           type="url"
           value={webhookInput}
           onChange={(event) => setWebhookInput(event.target.value)}
-          placeholder={savedWebhookUrl ?? "https://discord.com/api/webhooks/..."}
+          placeholder={savedWebhookUrl ? maskWebhookUrl(savedWebhookUrl) : "https://discord.com/api/webhooks/…"}
+          name="discord_webhook_url"
+          autoComplete="off"
+          spellCheck={false}
+          inputMode="url"
           className={inputClass}
         />
         {savedWebhookUrl && !trimmedInput && (
           <button
             type="button"
-            onClick={handleRemoveWebhook}
+            onClick={() => setConfirmingRemove(true)}
             disabled={saving}
-            className="self-start font-body text-xs text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
+            className="-my-1 inline-flex min-h-11 items-center self-start font-body text-xs sm:min-h-8 sm:text-xs text-text-muted underline underline-offset-2 transition-colors hover:text-error disabled:pointer-events-none disabled:opacity-50"
           >
             Remove webhook
           </button>
@@ -134,6 +141,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       <label className="flex items-center gap-2 font-body text-sm text-on-surface">
         <input
           type="checkbox"
+          name="digest_enabled"
           checked={digestEnabled}
           onChange={(event) => setDigestEnabled(event.target.checked)}
           className="size-4 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
@@ -141,8 +149,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         Enable daily digest
       </label>
 
-      {error && <p className="font-body text-sm text-error">{error}</p>}
-      {message && <p className="font-body text-sm text-primary">{message}</p>}
+      {error && <p role="alert" className="font-body text-sm text-error">{error}</p>}
+      {message && <p role="status" className="font-body text-sm text-primary">{message}</p>}
 
       <div className="flex flex-wrap justify-end gap-3">
         <Button
@@ -151,12 +159,25 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           disabled={!effectiveWebhookUrl || testing}
           onClick={handleTestMessage}
         >
-          {testing ? "Sending..." : "Send test message"}
+          {testing ? "Sending…" : "Send Test Message"}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving…" : "Save Settings"}
         </Button>
       </div>
+
+      {confirmingRemove && (
+        <ConfirmDialog
+          title="Remove Webhook?"
+          description="Daily digests stop until you add a webhook again."
+          confirmLabel="Remove"
+          onConfirm={() => {
+            setConfirmingRemove(false);
+            void handleRemoveWebhook();
+          }}
+          onCancel={() => setConfirmingRemove(false)}
+        />
+      )}
     </form>
   );
 }

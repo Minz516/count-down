@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Manrope } from "next/font/google";
 import { StoreProvider } from "@/components/StoreProvider";
 import "./globals.css";
@@ -33,6 +33,14 @@ export const metadata: Metadata = {
 // Without a saved choice the CSS follows prefers-color-scheme on its own.
 const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
+// Mobile browser chrome follows the OS theme; matches --surface-deep in app/globals.css.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f1f3f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1115" },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -44,6 +52,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-dvh bg-surface-deep font-body text-on-surface antialiased">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded focus:bg-primary-container focus:px-4 focus:py-2 focus:font-body focus:text-sm focus:font-medium focus:text-on-primary-container"
+        >
+          Skip to Main Content
+        </a>
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>

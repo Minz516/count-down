@@ -25,7 +25,7 @@ export function RecurringEventsSection({
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="font-display text-xl font-medium text-on-surface">Recurring</h2>
+      <h2 className="text-balance font-display text-xl font-medium text-on-surface">Recurring</h2>
       <div className="flex flex-col gap-3">
         {events.map((event) => (
           <RecurringEventCard

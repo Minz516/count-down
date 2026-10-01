@@ -413,6 +413,25 @@ contrast in light.
 - [x] Single Add Event per screen
 - [x] No em-dash in UI copy or in this section
 
+### 11.5 Interface rules enforced by the review pass
+
+- Every modal uses `lib/useDialog.ts` plus `role="dialog"`, `aria-modal="true"` and `aria-labelledby`.
+  Escape closes, Tab is trapped, focus returns to the opener, background scroll is locked, and a
+  reload warns once the user has typed. Overlays carry `overscroll-contain`.
+- Every input has a `name`, a label (visible or `aria-label`), and `autoComplete` set deliberately.
+  Usernames, emails, codes and URLs also disable spellcheck. Placeholders end with an ellipsis.
+- Standalone inputs show a `:focus-visible` outline in addition to the border change. Compound
+  controls (icon plus input) use `focus-within`.
+- Phosphor icons are `aria-hidden`; the control around them carries the accessible name.
+- Errors use `role="alert"`, success and progress messages use `role="status"`.
+- Hover-only controls (checklist and notification delete) are always visible below `sm`.
+- Destructive actions confirm through `ConfirmDialog` (event, group, checklist item, webhook).
+- Secrets are masked in the UI: `lib/webhook.ts` `maskWebhookUrl`.
+- Dates render through `components/LocalDate.tsx` so the viewer's time zone is used and the server
+  never prints a different one. `lib/dateFormat.ts` uses `Intl.DateTimeFormat`.
+- Page shell: skip link to `#main`, one `h1` per page, `theme-color` per scheme, `touch-action:
+  manipulation` on controls, `scroll-padding-bottom` for the fixed tab bar.
+
 ## Appendix A: Slacc-inspired reference (kept for its light-mode structure)
 
 Reference material supplied for the light theme. What was taken: layered white canvases, near-black

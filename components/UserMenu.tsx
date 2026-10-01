@@ -102,8 +102,8 @@ export function UserMenu() {
             }}
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
-            <PencilSimple size={16} />
-            Edit profile
+            <PencilSimple aria-hidden="true" size={16} />
+            Edit Profile
           </button>
           {/* Settings lives in the menu on small screens, where the header has no room for a gear. */}
           <Link
@@ -112,7 +112,7 @@ export function UserMenu() {
             onClick={() => setOpen(false)}
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container sm:hidden"
           >
-            <Gear size={16} />
+            <Gear aria-hidden="true" size={16} />
             Settings
           </Link>
           <ThemeMenuItem onSelect={() => setOpen(false)} />
@@ -122,8 +122,8 @@ export function UserMenu() {
             onClick={handleLogout}
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-on-surface transition-colors hover:bg-surface-container"
           >
-            <SignOut size={16} />
-            Log out
+            <SignOut aria-hidden="true" size={16} />
+            Log Out
           </button>
         </div>
       )}

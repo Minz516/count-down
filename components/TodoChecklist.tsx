@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { CaretDown, CaretRight, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { createClient } from "@/lib/supabase/client";
 import { authInterface } from "@/modules/auth/auth.interface";
 import { todosInterface } from "@/modules/todos/todos.interface";
@@ -31,6 +32,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
   const [items, setItems] = useState(initialTodos);
   const [newContent, setNewContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<TodoDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const doneCount = items.filter((item) => item.is_done).length;
@@ -94,14 +96,14 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
         onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
         aria-expanded={expanded}
         className={clsx(
-          "flex w-full items-center gap-2 px-5 py-2.5 text-left transition-colors duration-150 hover:bg-surface-elevated",
+          "flex min-h-11 w-full items-center gap-2 px-5 py-2.5 text-left transition-colors duration-150 hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:-outline-offset-2",
           !expanded && "rounded-b-lg",
         )}
       >
         {expanded ? (
-          <CaretDown size={12} className="text-text-muted" />
+          <CaretDown aria-hidden="true" size={12} className="text-text-muted" />
         ) : (
-          <CaretRight size={12} className="text-text-muted" />
+          <CaretRight aria-hidden="true" size={12} className="text-text-muted" />
         )}
         <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
           {isGroupEvent ? "Bạn" : "Checklist"}
@@ -132,6 +134,8 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
             <div key={item.id} className="group flex items-center gap-2">
               <input
                 type="checkbox"
+                name="is_done"
+                aria-label={item.content}
                 checked={item.is_done}
                 onChange={() => handleToggle(item)}
                 className="size-4 shrink-0 rounded border-outline-variant bg-surface-container-lowest accent-primary-container"
@@ -146,11 +150,11 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               </span>
               <button
                 type="button"
-                onClick={() => handleDelete(item)}
+                onClick={() => setPendingDelete(item)}
                 aria-label={`Xóa ${item.content}`}
-                className="rounded p-1 text-text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-error focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
+                className="rounded p-3 text-text-muted transition-opacity hover:text-error focus-visible:opacity-100 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
               >
-                <Trash size={13} />
+                <Trash aria-hidden="true" size={13} />
               </button>
             </div>
           ))}
@@ -160,13 +164,29 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               type="text"
               value={newContent}
               onChange={(inputEvent) => setNewContent(inputEvent.target.value)}
-              placeholder="Add an item..."
+              placeholder="Add an item…"
+              name="content"
+              aria-label="New checklist item"
+              autoComplete="off"
               maxLength={500}
-              className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
             />
           </form>
 
-          {error && <p className="font-body text-xs text-error">{error}</p>}
+          {error && <p role="alert" className="font-body text-xs text-error">{error}</p>}
+
+          {pendingDelete && (
+            <ConfirmDialog
+              title="Delete Checklist Item?"
+              description={`"${pendingDelete.content}" will be removed from this checklist.`}
+              onConfirm={() => {
+                const todo = pendingDelete;
+                setPendingDelete(null);
+                void handleDelete(todo);
+              }}
+              onCancel={() => setPendingDelete(null)}
+            />
+          )}
         </div>
       )}
     </div>

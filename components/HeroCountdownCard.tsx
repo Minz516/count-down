@@ -1,7 +1,7 @@
 "use client";
 
 import { useCountdown, type Countdown } from "@/lib/useCountdown";
-import { formatEventDate, formatEventTime } from "@/lib/dateFormat";
+import { LocalDate } from "./LocalDate";
 import type { EventDTO } from "@/modules/events/events.interface";
 
 const UNITS: { key: keyof Omit<Countdown, "isPast">; label: string }[] = [
@@ -20,7 +20,7 @@ export function HeroCountdownCard({ event }: { event: EventDTO }) {
         {event.name}
       </h2>
       <p className="mt-2 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
-        {formatEventDate(event.deadline)}, {formatEventTime(event.deadline)}
+        <LocalDate iso={event.deadline} kind="date" />, <LocalDate iso={event.deadline} kind="time" />
       </p>
 
       <div className="mt-8 flex items-start justify-center gap-1 sm:gap-3">

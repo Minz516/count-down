@@ -29,10 +29,10 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
               aria-label="Back to groups"
               className="shrink-0 rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft aria-hidden="true" size={20} />
             </Link>
             <div className="hidden min-w-0 sm:block">
-              <p className="truncate font-display text-lg font-semibold text-on-surface">{groupName}</p>
+              <h1 className="truncate font-display text-lg font-semibold text-on-surface">{groupName}</h1>
               <p className="whitespace-nowrap font-mono text-[11px] tracking-[0.1em] text-text-muted uppercase">
                 {memberCount} / 10 thành viên
               </p>
@@ -41,7 +41,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Button onClick={onAddEvent} className="min-h-11 px-3 sm:px-4">
-              <Plus size={16} weight="bold" />
+              <Plus aria-hidden="true" size={16} weight="bold" />
               Add Event
             </Button>
             <button
@@ -50,7 +50,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
               aria-label="Group settings"
               className="rounded p-3 text-text-muted transition-colors hover:text-on-surface focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 sm:p-2"
             >
-              <Gear size={20} />
+              <Gear aria-hidden="true" size={20} />
             </button>
             <NotificationBell />
             <UserMenu />
@@ -58,7 +58,7 @@ export function GroupNav({ groupName, memberCount, onAddEvent, onOpenSettings }:
         </div>
 
         <div className="min-w-0 pb-4 sm:hidden">
-          <p className="font-display text-xl font-semibold text-on-surface">{groupName}</p>
+          <h1 className="font-display text-xl font-semibold text-on-surface">{groupName}</h1>
           <p className="whitespace-nowrap font-mono text-[11px] tracking-[0.1em] text-text-muted uppercase">
             {memberCount} / 10 thành viên
           </p>
