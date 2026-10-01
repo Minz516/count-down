@@ -59,7 +59,7 @@ export function TimeField({ value, onChange }: TimeFieldProps) {
   }
 
   return (
-    <div className="flex w-full items-center gap-1.5 rounded border border-transparent bg-surface-container-lowest px-3 py-2 focus-within:border-primary">
+    <div className="flex w-full items-center gap-1.5 rounded border border-field-border bg-surface-container-lowest px-3 py-2 focus-within:border-primary">
       <Clock size={16} className="shrink-0 text-text-muted" aria-hidden />
       <input
         ref={hourRef}

@@ -123,6 +123,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
         // neither must typing a space or pressing Enter while typing a new item (the
         // card's onKeyDown otherwise treats any bubbled Space/Enter as "toggle me").
         <div
+          role="presentation"
           className="flex flex-col gap-2 px-5 pb-4"
           onClick={(clickEvent) => clickEvent.stopPropagation()}
           onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
@@ -171,7 +172,7 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
               aria-label={t("todo.newItem")}
               autoComplete="off"
               maxLength={500}
-              className="min-w-0 flex-1 rounded border border-transparent bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
+              className="min-w-0 flex-1 rounded border border-field-border bg-surface-container-lowest px-2.5 py-1.5 font-body text-sm text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50"
             />
           </form>
 

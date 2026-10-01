@@ -80,7 +80,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
 
   return (
     <div className="relative">
-      <div className="flex w-full items-center gap-1 rounded border border-transparent bg-surface-container-lowest px-3 py-2 focus-within:border-primary">
+      <div className="flex w-full items-center gap-1 rounded border border-field-border bg-surface-container-lowest px-3 py-2 focus-within:border-primary">
         <input
           ref={dayRef}
           name="day"
