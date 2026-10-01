@@ -21,34 +21,35 @@ Tasks are ordered by measured impact. Tasks tracked in `tasks/todo.md`.
 ## Task List
 
 ### Phase 0: Baseline
-- [~] T1: partial - dev-server numbers only (no production-mode baseline taken)
+- [x] T1: Production-mode measurement (taken after the fixes, see "Results" below; no pre-fix production baseline exists)
 - [x] T2: Check Supabase JWT signing-key setup (decision gate for T3)
 
 ### Checkpoint: Baseline
-- [ ] Numbers recorded; decision made on T3 approach
+- [x] Numbers recorded; decision made on T3 approach (JWKS publishes an ES256 key, so getClaims() verifies locally)
 
 ### Phase 1: Biggest win
 - [x] T3: Replace `getUser()` in proxy with local claims verification
 
 ### Checkpoint: Proxy
-- [ ] lint + build pass; login, logout, expired-session, bad-cookie flows still work; per-route latency re-measured
+- [x] lint + build pass; per-route latency re-measured
+- [ ] Not exercised by hand: login, logout, expired-session and corrupted-cookie flows (the try/catch in proxy.ts is unchanged)
 
 ### Phase 2: Perceived speed
 - [x] T4: Per-route `loading.tsx` skeletons (groups, groups/[groupId], settings)
 - [-] T5: SKIPPED - force-dynamic has no perf cost and PRODUCTION_READINESS_CHECKLIST §9 wants it explicit; staleTimes rejected by user
 
 ### Checkpoint: Perceived speed
-- [ ] Tab switching shows skeleton instantly; no stale data after mutations
+- [x] Skeletons stream first (TTFB about 17 ms); no staleTimes was added, so no stale-data risk
 
 ### Phase 3: Data fetching
 - [x] T6: Collapse groups list query chain (`listForUser` -> members -> profiles) into one query
 - [x] T7: Group detail page: stop fetching members twice
 
 ### Checkpoint: Data
-- [ ] /groups and /groups/[id] return identical data to before; `npx tsc --noEmit` clean
+- [x] /groups and /groups/[id] checked in the browser: member count, preview avatar and member username unchanged; `npx tsc --noEmit` clean
 
 ### Phase 4: Optional / needs profiling
-- [ ] T8: (optional, not started) profile hydration + Nav shared layout
+- [ ] T8: (optional, not started) profile hydration + Nav shared layout. Long-task and CLS checks since showed no long tasks and CLS 0, so this is low priority
 
 ## Risks and Mitigations
 | Risk | Impact | Mitigation |
@@ -65,3 +66,19 @@ Tasks are ordered by measured impact. Tasks tracked in `tasks/todo.md`.
 - Which Supabase region vs. where will the app be deployed? Is the 500ms mostly network distance from this dev machine?
 - Is a group ID available for measuring `/groups/[groupId]` (not yet measured)?
 - Is a ~30s stale window on tab switches acceptable product-wise?
+
+## Results (production build, localhost, single machine)
+| Route | Before (dev, getUser) | After (production) |
+|---|---|---|
+| `/` | about 540 ms | 243 ms warm median |
+| `/groups` | about 540 ms | 381 ms |
+| `/groups/[id]` | about 540 ms | 435 ms |
+| `/settings` | about 540 ms | 199 ms |
+
+CLS 0 and no long tasks on all four routes. The before and after columns mix dev and production, so part of the gain is production mode.
+
+## Open follow-ups
+- A single database function returning a group with its members (needs a migration); the two group routes are still bound by two serial Supabase calls.
+- First-load JS is about 1.25 MB decoded: run a bundle analysis (Sentry and the Supabase client are the likely candidates).
+- Delete the leftover Sentry example routes (`app/sentry-example-page`, `app/api/sentry-example-api`).
+- Not verified: light-theme flash, Lighthouse, group settings modal with nested confirms, login and signup in light mode.

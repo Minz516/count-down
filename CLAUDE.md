@@ -53,6 +53,16 @@ Some writes only have an RPC path (e.g. `create_group`, `join_group_by_code`, `g
 - **Pure, non-DB helpers live inside their module** (e.g. `modules/events/events.recurrence.ts` → `nextOccurrence`, `events.status.ts` → `getEventStatus`), not in `lib/`. `nextOccurrence` mirrors the server-side weekly rollover in `supabase/cleanup_and_rollover.sql` so the UI shows a future date during the ~24h before the daily cron updates the stored `deadline` — keep the two in sync if either changes.
 - User-facing copy is Vietnamese (e.g. "Hôm nay", "còn 3 ngày", "Đã qua"); match that in new UI strings.
 
+## UI conventions (theme, shell, dialogs)
+
+- **Dark and light themes** are CSS variables in `app/globals.css`: dark on `:root`, light under `prefers-color-scheme: light` (unless `data-theme="dark"`) and under `:root[data-theme="light"]`. The light block is written twice (media query and attribute) and the two copies must stay in sync. An inline script in `app/layout.tsx` applies the saved choice (`localStorage["theme"]`) before paint; `components/ThemeToggle.tsx` is the toggle. Use `text-on-primary-container` on any `bg-primary-container` fill.
+- **Shell:** header and content share `max-w-[1120px]`. Below `sm` the top bar keeps one Add Event button and `Nav.tsx` renders a fixed bottom tab bar, so pages that show it need `pb-28` on mobile. From `lg` the dashboards are two columns (sticky hero, lists). Route `loading.tsx` skeletons must mirror the page they stand in for (same container and grid), otherwise the page jumps when content arrives.
+- **Modals** must use `lib/useDialog.ts` (Escape, focus trap and restore, scroll lock, unload warning) with `role="dialog"`, `aria-modal` and `aria-labelledby`. `ConfirmDialog` portals into `document.body` on purpose: cards with a hover transform would otherwise re-anchor its `fixed` overlay.
+- **Forms:** every input needs a `name`, a label (visible or `aria-label`), and a deliberate `autoComplete`. Webhook URLs are secrets: show them through `lib/webhook.ts` `maskWebhookUrl`.
+- **Dates** that depend on the viewer's time zone render through `components/LocalDate.tsx` (blank on the server, filled after hydration); `lib/dateFormat.ts` uses `Intl.DateTimeFormat`.
+- Full rules and the light token table: `.claude/skills/DESIGN.md` section 11.
+- A `.playwright-cli/` folder holds signed-in page snapshots and tokens from browser testing; it is git-ignored, never commit it.
+
 ## Other things to know
 
 - `.github/workflows/backup.yml` is a weekly/on-demand `pg_dump` of the DB (needs the `SUPABASE_DB_URL` secret, direct connection not the pooler); worth triggering manually before running a risky migration.
