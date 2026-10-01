@@ -21,34 +21,34 @@ Tasks are ordered by measured impact. Tasks tracked in `tasks/todo.md`.
 ## Task List
 
 ### Phase 0: Baseline
-- [ ] T1: Production-mode baseline measurement
-- [ ] T2: Check Supabase JWT signing-key setup (decision gate for T3)
+- [~] T1: partial - dev-server numbers only (no production-mode baseline taken)
+- [x] T2: Check Supabase JWT signing-key setup (decision gate for T3)
 
 ### Checkpoint: Baseline
 - [ ] Numbers recorded; decision made on T3 approach
 
 ### Phase 1: Biggest win
-- [ ] T3: Replace `getUser()` in proxy with local claims verification
+- [x] T3: Replace `getUser()` in proxy with local claims verification
 
 ### Checkpoint: Proxy
 - [ ] lint + build pass; login, logout, expired-session, bad-cookie flows still work; per-route latency re-measured
 
 ### Phase 2: Perceived speed
-- [ ] T4: Per-route `loading.tsx` skeletons (groups, groups/[groupId], settings)
-- [ ] T5: Drop redundant `force-dynamic` where safe (no `staleTimes` - a stale window was rejected)
+- [x] T4: Per-route `loading.tsx` skeletons (groups, groups/[groupId], settings)
+- [-] T5: SKIPPED - force-dynamic has no perf cost and PRODUCTION_READINESS_CHECKLIST §9 wants it explicit; staleTimes rejected by user
 
 ### Checkpoint: Perceived speed
 - [ ] Tab switching shows skeleton instantly; no stale data after mutations
 
 ### Phase 3: Data fetching
-- [ ] T6: Collapse groups list query chain (`listForUser` -> members -> profiles) into one query
-- [ ] T7: Group detail page: stop fetching members twice
+- [x] T6: Collapse groups list query chain (`listForUser` -> members -> profiles) into one query
+- [x] T7: Group detail page: stop fetching members twice
 
 ### Checkpoint: Data
 - [ ] /groups and /groups/[id] return identical data to before; `npx tsc --noEmit` clean
 
 ### Phase 4: Optional / needs profiling
-- [ ] T8: Profile hydration + 1s tick re-renders (Chrome trace) and decide on Nav shared layout / lazy modals
+- [ ] T8: (optional, not started) profile hydration + Nav shared layout
 
 ## Risks and Mitigations
 | Risk | Impact | Mitigation |
