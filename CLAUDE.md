@@ -47,7 +47,15 @@ Some writes only have an RPC path (e.g. `create_group`, `join_group_by_code`, `g
 - Client components create their own Supabase client (`lib/supabase/client.ts`) per mutation and call the same `*Interface` methods directly (no server actions / API route layer for CRUD) — e.g. `DashboardClient.tsx` calls `eventsInterface.createEvent(supabase, user.id, input)` on submit, then updates local state / re-fetches.
 - `types/*.ts` holds each domain's repository-internal `*Entity` type (the exact DB row shape, e.g. `EventEntity`) and its write-side `*Input` type (e.g. `EventInput`, already a plain data bag with no DB-assigned fields). Components never import from `types/*.ts` directly — they get `*Input` re-exported through `*.interface.ts`, and the `*DTO` type from the module's own `*.dto.ts` (see above). `lib/` holds framework-agnostic helpers used across components: `useCountdown.ts` (the live 1s tick behind the hero countdown), `dateFormat.ts`, `passwordStrength.ts`.
 
+## Client-side state and pure helpers
+
+- **Redux Toolkit store** (`lib/store/`, provided by `components/StoreProvider.tsx`) holds only cross-page client caches: `session` (user id + profile, fetched once via `fetchSession` when status is `"idle"`, updated in place by `profileUpdated`, reset by `sessionCleared` on sign-out) and `notifications`. Thunks there create their own browser Supabase client and go through `*Interface` like any component. Don't put page data (events, groups) in it — that comes from Server Component props.
+- **Pure, non-DB helpers live inside their module** (e.g. `modules/events/events.recurrence.ts` → `nextOccurrence`, `events.status.ts` → `getEventStatus`), not in `lib/`. `nextOccurrence` mirrors the server-side weekly rollover in `supabase/cleanup_and_rollover.sql` so the UI shows a future date during the ~24h before the daily cron updates the stored `deadline` — keep the two in sync if either changes.
+- User-facing copy is Vietnamese (e.g. "Hôm nay", "còn 3 ngày", "Đã qua"); match that in new UI strings.
+
 ## Other things to know
+
+- `.github/workflows/backup.yml` is a weekly/on-demand `pg_dump` of the DB (needs the `SUPABASE_DB_URL` secret, direct connection not the pooler); worth triggering manually before running a risky migration.
 
 - `supabase/functions/daily-digest/` is a Supabase Edge Function (Deno), deployed and scheduled separately (`supabase functions deploy daily-digest`) — not part of the Next.js build. It sends the Discord digest, rolls recurring events forward, cleans up expired events, and generates in-app notifications.
 - Sentry (`@sentry/nextjs`) is wired up (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`) but dormant until a DSN env var is set — don't assume it's active in dev/CI.
