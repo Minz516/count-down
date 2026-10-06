@@ -30,7 +30,7 @@ Build a "hello" server with one read-only tool at `/api/mcp`, deploy it to a Ver
 2. `tools/list` shows the tool and calling it returns a result.
 3. A missing or wrong `Authorization` header gets HTTP 401 without reaching the database.
 4. The route is reachable through `proxy.ts` only because of the explicit exemption; other routes still redirect to `/login`.
-5. It behaves the same on the deployed preview as locally (cold start, function duration).
+5. It behaves the same on the deployed preview as locally (cold start, function duration). **Check first:** Vercel Deployment Protection can put a sign-in wall in front of preview URLs, which would make Claude Code fail to connect for reasons unrelated to our code. Look at the project's Settings, Deployment Protection. If previews are protected, either use Vercel's protection-bypass header in the `--header` flags for the spike, or run the spike against a production deployment of the harmless read-only hello tool (it is still behind our own token). The production domain `chronocount.vercel.app` is the public address.
 **Go:** all five pass, then continue with the real tools. **No-go:** any of 1 to 3 cannot be made to work within the time box, then switch to the official SDK v2 with hand-written route glue, record why in this file, and re-run the spike.
 
 ## Tools

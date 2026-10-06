@@ -25,6 +25,7 @@ When the owner tells Claude Code (terminal) that an event happens on a date, Cla
 | Token expiry | Optional when creating a token, default none (lasts until revoked); the Settings list shows any expiry |
 | Existing events | New only. No back-fill of events already on the site; the first push handles events mentioned from now on |
 | Vault id property | `countdown_id` in each note's frontmatter, for example `countdown_id: vault:Personal/Passport.md#appointment` |
+| Production URL | `https://chronocount.vercel.app/api/mcp` (the site's own domain plus the route; no separate MCP domain; the token goes in the header, never the URL) |
 | MCP library | `mcp-handler` 2.x (Vercel Labs) on `@modelcontextprotocol/server` v2, chosen after comparing 6 options (see `SPEC-mcp-server.md`). A spike proves it first; fallback is the official SDK with hand-written Next.js glue |
 | Token storage on the owner's machine | `--scope user`, which stores the header in `~/.claude.json` outside any repo. Never in a `.mcp.json` inside the vault or any synced or committed folder |
 
@@ -58,7 +59,7 @@ Lint:       npm run lint
 Unit tests: npx playwright test tests/<file>.spec.ts
 All checks: npm run lint && npm run check:contrast && npm run build && npm run check:bundle && npm run test:a11y
 Claude Code (user side; syntax verified in the docs):
-  claude mcp add --transport http --scope user countdown https://<site-domain>/api/mcp --header "Authorization: Bearer <token>"
+  claude mcp add --transport http --scope user countdown https://chronocount.vercel.app/api/mcp --header "Authorization: Bearer <token>"
   claude mcp list        # shows configured servers
   /mcp                   # inside Claude Code: connection status
   claude mcp remove countdown
@@ -115,6 +116,4 @@ CI keeps running lint, contrast, build, bundle budget and the Playwright tests; 
 9. `npm run lint`, `build`, `check:bundle`, and all tests pass in CI.
 
 ## Open questions
-1. **Production domain:** the URL the token will be used against, needed for the setup guide in `docs/CLAUDE_CODE_EVENTS.md`. To be supplied by the owner.
-
-Resolved in review: token expiry, back-fill, vault id name, token storage, and the MCP library (see the decisions table above).
+None blocking. Resolved in review: token expiry, back-fill, vault id name, token storage, the MCP library and the production URL (see the decisions table above).
