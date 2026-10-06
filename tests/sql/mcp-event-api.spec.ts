@@ -255,15 +255,20 @@ test.describe("token check (api_token_user)", () => {
     const user = await newUser();
     const { token } = await makeToken(db, user);
 
-    // One transaction keeps now() fixed, so all calls land in the same minute bucket.
+    // One transaction keeps now() fixed, so all calls land in the same minute bucket. The outcome of
+    // the 61st call is recorded inside and asserted OUTSIDE: the aborted transaction is rolled back
+    // when it ends, and anything thrown in there must not be able to hide a failing assertion.
+    let sixtyFirst = "not attempted";
     await db.transaction(async (tx) => {
       for (let i = 1; i <= 60; i++) {
         await tx.query("select public.api_token_user($1)", [token]);
       }
-      await expect(tx.query("select public.api_token_user($1)", [token])).rejects.toThrow(/Rate limit reached/);
-    }).catch(() => {
-      // The aborted transaction is rolled back after the assertion above; that is expected.
-    });
+      sixtyFirst = await tx.query("select public.api_token_user($1)", [token]).then(
+        () => "NOT REFUSED",
+        (error: Error) => error.message,
+      );
+    }).catch(() => undefined);
+    expect(sixtyFirst).toBe("Rate limit reached");
   });
 
   test("failed token checks do not consume the rate limit of real tokens", async () => {
@@ -394,14 +399,19 @@ test.describe("mcp_create_event", () => {
     const user = await newUser();
     const { token } = await makeToken(db, user);
 
+    let twentyFirst = "not attempted";
     await db.transaction(async (tx) => {
       for (let i = 0; i < 20; i++) {
         await tx.query("select public.mcp_create_event($1, $2, now() + interval '1 day', null, null, false, null)", [token, `e${i}`]);
       }
-      await expect(
-        tx.query("select public.mcp_create_event($1, 'one too many', now() + interval '1 day', null, null, false, null)", [token]),
-      ).rejects.toThrow(/Too many events/);
+      twentyFirst = await tx
+        .query("select public.mcp_create_event($1, 'one too many', now() + interval '1 day', null, null, false, null)", [token])
+        .then(
+          () => "NOT REFUSED",
+          (error: Error) => error.message,
+        );
     }).catch(() => undefined);
+    expect(twentyFirst).toMatch(/Too many events/);
   });
 
   test("signed-out callers can run the function (that is the point) but cannot read events", async () => {
