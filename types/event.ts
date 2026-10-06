@@ -13,6 +13,8 @@ export interface EventEntity {
   created_at: string; // ISO timestamptz
   is_recurring: boolean;
   recurrence_day_of_week: DayOfWeek | null;
+  /** Stable id from the owner's vault for events pushed over MCP (supabase/migrations/*_mcp_tokens.sql); optional because it exists only once that migration has run. */
+  external_id?: string | null;
   /** null = personal event, set = belongs to that group (docs/ARCHITECTURE.md "Group Countdown"). */
   group_id: string | null;
 }
