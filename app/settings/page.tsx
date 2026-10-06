@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Nav } from "@/components/Nav";
+import { ApiTokensSection } from "@/components/ApiTokensSection";
 import { SettingsForm } from "@/components/SettingsForm";
 import { createClient } from "@/lib/supabase/server";
+import { apiTokensInterface } from "@/modules/apitokens/apitokens.interface";
 import { settingsInterface } from "@/modules/settings/settings.interface";
 import { getT } from "@/lib/i18n/server";
 
@@ -34,6 +36,17 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
+  // The token list must never take the page down: if it cannot be read (for example before the MCP
+  // migrations have been run) the section says so and the rest of Settings keeps working.
+  let tokens: Awaited<ReturnType<typeof apiTokensInterface.listTokens>> = [];
+  let tokensFailed = false;
+  try {
+    tokens = await apiTokensInterface.listTokens(supabase, userId);
+  } catch (error) {
+    console.error("SettingsPage: failed to load access tokens", error);
+    tokensFailed = true;
+  }
+
   return (
     <div className="min-h-dvh">
       <Nav />
@@ -41,6 +54,7 @@ export default async function SettingsPage() {
       <main id="main" className="content-rise mx-auto flex max-w-[560px] flex-col gap-6 px-4 pt-8 pb-28 sm:px-8 sm:pb-12">
         <h1 className="font-display text-2xl font-semibold text-on-surface">{t("settings.title")}</h1>
         <SettingsForm initialSettings={settings} />
+        <ApiTokensSection userId={userId} initialTokens={tokens} loadFailed={tokensFailed} />
       </main>
     </div>
   );
