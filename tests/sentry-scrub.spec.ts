@@ -69,3 +69,42 @@ test("passes primitives and empty values through", () => {
   expect(scrubSecrets(42)).toBe(42);
   expect(scrubSecrets({})).toEqual({});
 });
+
+// MCP access tokens ("cdt_" plus 64 hex characters, see supabase/migrations/*_mcp_tokens.sql) are secrets too.
+const MCP_TOKEN = "cdt_" + "0123456789abcdef".repeat(4);
+
+test.describe("MCP access tokens", () => {
+  test("a token is redacted wherever it appears, including inside an Authorization header value", () => {
+    const event = {
+      message: `rpc failed for ${MCP_TOKEN}`,
+      request: { headers: { authorization: `Bearer ${MCP_TOKEN}`, "user-agent": "claude-code" } },
+      breadcrumbs: [{ data: { url: `https://example.com/?t=${MCP_TOKEN}` } }],
+    };
+
+    const result = scrubSecrets(event);
+    const text = JSON.stringify(result);
+
+    expect(text).not.toContain(MCP_TOKEN);
+    expect(text).not.toContain("0123456789abcdef0123456789abcdef");
+    expect(result?.request.headers.authorization).toBe("Bearer [redacted]");
+    expect(result?.request.headers["user-agent"]).toBe("claude-code");
+    expect(result?.message).toBe("rpc failed for cdt_[redacted]");
+  });
+
+  test("any bearer value is redacted, even one that is not a well-formed token", () => {
+    const result = scrubSecrets({ headers: { authorization: "Bearer some-other-secret-value" } });
+    expect(result?.headers.authorization).toBe("Bearer [redacted]");
+  });
+
+  test("the short display prefix shown in Settings is not a secret and is left alone", () => {
+    const result = scrubSecrets({ message: "token cdt_ab12cd34 was revoked" });
+    expect(result?.message).toBe("token cdt_ab12cd34 was revoked");
+  });
+
+  test("webhook URLs and tokens are both redacted in one string", () => {
+    const result = scrubSecrets({
+      message: `${MCP_TOKEN} then https://discord.com/api/webhooks/123/secret-token`,
+    });
+    expect(result?.message).toBe("cdt_[redacted] then https://discord.com/api/webhooks/[redacted]");
+  });
+});

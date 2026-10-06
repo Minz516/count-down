@@ -3,6 +3,13 @@
 const WEBHOOK_URL = /https:\/\/(?:discord|discordapp)\.com\/api\/webhooks\/[^\s"'<>)]+/gi;
 const REDACTED = "https://discord.com/api/webhooks/[redacted]";
 
+// MCP access tokens (created in Settings, sent by Claude Code in the Authorization header) are secrets too.
+// Full tokens are "cdt_" plus 64 hex characters. Any "Bearer <value>" is redacted as well, in case a header
+// holds something that is not a well-formed token. The short "cdt_ab12cd34" prefix shown in Settings is only
+// a label and is deliberately left readable.
+const MCP_TOKEN = /cdt_[0-9a-f]{64}/gi;
+const BEARER_VALUE = /Bearer\s+[^\s"'<>)\x5c]+/gi;
+
 // Events normally nest well under this; the cap only guards against pathological input.
 const MAX_DEPTH = 25;
 
@@ -19,7 +26,12 @@ function isPlainObject(value: object): boolean {
  * and class instances (timers, errors, buffers) are left untouched rather than traversed.
  */
 function scrubInPlace(value: unknown, seen: WeakSet<object>, depth: number): unknown {
-  if (typeof value === "string") return value.replace(WEBHOOK_URL, REDACTED);
+  if (typeof value === "string") {
+    return value
+      .replace(WEBHOOK_URL, REDACTED)
+      .replace(BEARER_VALUE, "Bearer [redacted]")
+      .replace(MCP_TOKEN, "cdt_[redacted]");
+  }
   if (value === null || typeof value !== "object" || depth > MAX_DEPTH || seen.has(value)) return value;
   seen.add(value);
 

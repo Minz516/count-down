@@ -27,9 +27,10 @@ export function useDialog<T extends HTMLElement>(onClose: () => void) {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Focus the first field, else the panel itself. Skipped for coarse pointers so a phone's
+    // Focus the element marked data-autofocus (the field the user will type in), else the first focusable
+    // element, else the panel itself. Skipped for coarse pointers so a phone's
     // on-screen keyboard doesn't pop up the moment a dialog opens.
-    const first = panel.querySelector<HTMLElement>(FOCUSABLE);
+    const first = panel.querySelector<HTMLElement>("[data-autofocus]") ?? panel.querySelector<HTMLElement>(FOCUSABLE);
     const preferField = window.matchMedia("(pointer: fine)").matches;
     (preferField && first ? first : panel).focus({ preventScroll: true });
 

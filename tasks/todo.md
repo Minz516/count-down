@@ -66,7 +66,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 - [ ] **Owner reviews and runs migrations 1 and 2 in the Supabase SQL editor**; existing app pages still load
 - [ ] Review with owner before proceeding
 
-### T4: Zone-aware time helper  [S]
+### T4: Zone-aware time helper  [S]  - DONE (18 tests)
 **Description:** `lib/mcp/time.ts`: local date, optional time (default 23:59) and IANA zone (default Asia/Ho_Chi_Minh) to a UTC instant via `Intl`; zone-aware "next occurrence of weekday at time" for weekly events (not the runtime-local `nextDeadlineForDayOfWeek`); reject invalid dates and zones; return local and UTC.
 **Acceptance criteria:**
 - [ ] 23:59 Ho Chi Minh is 16:59 UTC
@@ -78,7 +78,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `lib/mcp/time.ts`, `tests/mcp-time.spec.ts`
 **Scope:** Small.
 
-### T5: Anon client and `modules/mcpevents` (create)  [M]
+### T5: Anon client and `modules/mcpevents` (create)  [M]  - DONE (17 tests)
 **Description:** `lib/supabase/anon.ts` (session-less client from `@supabase/supabase-js`, no cookies); `modules/mcpevents` interface, service, repository, dto for `mcp_create_event`; service maps database errors to the safe messages (`Invalid token`, rate limit, invalid input) and never includes the token.
 **Acceptance criteria:**
 - [ ] No token text in any error message
@@ -88,7 +88,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `lib/supabase/anon.ts`, `modules/mcpevents/*` (4), `tests/mcpevents.spec.ts`
 **Scope:** Medium.
 
-### T6: `create_event` tool, route wiring, redaction  [M]
+### T6: `create_event` tool, route wiring, redaction  [M]  - DONE (15 contract tests, 4 scrub tests)
 **Description:** `lib/mcp/tools/create-event.ts` (zod schema, handler using T4 and T5, result with local and UTC times), tool registry, route builds the handler per request with the token in a closure; add the `cdt_` pattern to `lib/sentryOptions.ts` scrubbing; server `instructions` text.
 **Acceptance criteria:**
 - [ ] Date-only input stores 23:59 Asia/Ho_Chi_Minh
@@ -100,7 +100,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `lib/mcp/tools/create-event.ts`, `lib/mcp/registry.ts`, `app/api/mcp/route.ts`, `lib/sentryOptions.ts`, `tests/mcp-tools-create.spec.ts`
 **Scope:** Medium.
 
-### T7: `modules/apitokens`  [M]
+### T7: `modules/apitokens`  [M]  - DONE (14 tests)
 **Description:** interface, service, repository, dto: list safe columns, `create_api_token`, `revoke_api_token`; friendly error for the limit of 10.
 **Acceptance criteria:**
 - [ ] `token_hash` is never selected
@@ -110,7 +110,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `modules/apitokens/*` (4), `types/apitoken.ts`, `tests/apitokens.spec.ts`
 **Scope:** Medium.
 
-### T8: Settings section, create, list, revoke  [M]
+### T8: Settings section, create, list, revoke  [M]  - DONE (checked on the real account; creating a real token is the owner's step at Checkpoint A)
 **Description:** `components/ApiTokensSection.tsx` and `components/ApiTokenCreateDialog.tsx` on `/settings`: list (name, prefix, created, last used, status), create dialog (name; token shown once with copy button and the ready `claude mcp add` command for `https://chronocount.vercel.app/api/mcp`, cleared on close), revoke through `ConfirmDialog`. EN and VI strings.
 **Acceptance criteria:**
 - [ ] The token is absent from the DOM after the dialog closes
