@@ -5,17 +5,17 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 ---
 ## Phase 0
 
-### T0: Spike, `mcp-handler` hello tool  [S]  (branch `feat/mcp-spike`)
+### T0: Spike, `mcp-handler` hello tool  [S]  (branch `feat/mcp-spike`)  - code done, owner checks pending
 **Description:** Add the approved libraries, a route `app/api/mcp/route.ts` with one read-only `ping` tool, and an exact-path early return for `/api/mcp` in `proxy.ts` placed before any session work (not in `AUTH_ROUTES`, which would bounce signed-in users). Read the `Authorization` header; 401 without it. No database.
 **Acceptance criteria:**
-- [ ] `claude mcp add --transport http --scope user ...` connects and `/mcp` shows it connected
-- [ ] `tools/list` shows `ping`; calling it returns a result
-- [ ] Missing or wrong header gives 401 before any database code
-- [ ] Only the exact path `/api/mcp` skips the sign-in redirect; `/api/mcp/x`, `/`, `/groups` still redirect when signed out
+- [ ] **Owner:** `claude mcp add --transport http ...` connects and `/mcp` shows it connected (see the T0 handoff for the exact command)
+- [x] `tools/list` shows `ping`; calling it returns a result (tested in-process and over real HTTP on a production build)
+- [x] Missing or wrong header gives 401 before any database code (no database exists in the spike)
+- [x] Only the exact path `/api/mcp` skips the sign-in redirect; `/api/mcp/x`, `/`, `/groups` still redirect when signed out
 - [ ] Same behaviour on a Vercel **preview**, reached with the Protection Bypass header (production stays untouched); the bypass secret is not committed and is revoked afterwards
 **Verification:**
-- [ ] `npx playwright test tests/mcp-spike.spec.ts` (proxy rule and 401)
-- [ ] `npm run build`
+- [x] `npx playwright test tests/mcp-spike.spec.ts` (12 tests: proxy rule, 401s, tools/list, tools/call)
+- [x] `npm run build`, lint, type-check, bundle budget, full suite (32 tests)
 - [ ] Manual: connect from Claude Code locally and on Vercel
 **Dependencies:** none
 **Files:** `app/api/mcp/route.ts`, `proxy.ts`, `package.json`, `package-lock.json`, `tests/mcp-spike.spec.ts`

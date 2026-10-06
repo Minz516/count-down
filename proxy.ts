@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // its Route Handler, at a point where no session exists yet) isn't redirected to /login
 // before it gets a chance to run (app/auth/callback/route.ts).
 const AUTH_ROUTES = ["/login", "/signup", "/auth/callback"];
+const MCP_PATH = "/api/mcp";
 
 /**
  * Refreshes the Supabase session cookie when needed and redirects based on
@@ -12,6 +13,14 @@ const AUTH_ROUTES = ["/login", "/signup", "/auth/callback"];
  * themselves), signed-in users are bounced away from /login and /signup.
  */
 export async function proxy(request: NextRequest) {
+  // The MCP endpoint authenticates with its own bearer token (app/api/mcp/route.ts), not a browser
+  // session, so it must skip the sign-in redirect and the cookie refresh. Exact path only: a
+  // look-alike such as /api/mcp/x or /api/mcpx still goes through the normal checks. This is not
+  // in AUTH_ROUTES because that list also bounces signed-in users away.
+  if (request.nextUrl.pathname === MCP_PATH) {
+    return NextResponse.next({ request });
+  }
+
   const isAuthRoute = AUTH_ROUTES.includes(request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
