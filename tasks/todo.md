@@ -12,7 +12,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 - [ ] `tools/list` shows `ping`; calling it returns a result
 - [ ] Missing or wrong header gives 401 before any database code
 - [ ] Only the exact path `/api/mcp` skips the sign-in redirect; `/api/mcp/x`, `/`, `/groups` still redirect when signed out
-- [ ] Same behaviour on the Vercel deployment (Deployment Protection checked first)
+- [ ] Same behaviour on a Vercel **preview**, reached with the Protection Bypass header (production stays untouched); the bypass secret is not committed and is revoked afterwards
 **Verification:**
 - [ ] `npx playwright test tests/mcp-spike.spec.ts` (proxy rule and 401)
 - [ ] `npm run build`

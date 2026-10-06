@@ -49,7 +49,7 @@ Slice F vault integration (T17 guide + snippet, T18 manual scenarios, T19 docs +
 ## Human actions (only the owner can do these)
 | When | Action |
 |---|---|
-| Before T0 | Check Vercel Deployment Protection; approve the PGlite dev dependency (needed by T3) |
+| Before T0 check 5 | Create a Protection Bypass for Automation secret in Vercel (Settings, Deployment Protection); keep it private; revoke it after the spike. Standard Protection was confirmed: previews are protected, the production domain is public. Also approve the PGlite dev dependency (needed by T3) |
 | Checkpoint A | Run migrations `1` and `2` in the Supabase SQL editor; create a real token in Settings; register it with `claude mcp add` |
 | Checkpoint B | Run migrations for update, list and delete as each slice lands |
 | Slice F | Run the nine manual scenarios with real Claude Code |
@@ -118,7 +118,7 @@ Already approved: `mcp-handler@^2`, `@modelcontextprotocol/server@^2`, `zod@^4.2
 | Risk | Impact | Mitigation |
 |---|---|---|
 | `mcp-handler` 2.x (new, thin auth docs) fails the spike | High | Spike first, time-boxed; fallback recorded in the spec |
-| Vercel Deployment Protection blocks preview URLs | Med | Check first; bypass header, or test on production behind our own token |
+| Vercel Deployment Protection blocks preview URLs | Med | Confirmed on: previews protected, production public. Deployed spike check uses a preview with the bypass header; the secret is never committed and is revoked afterwards |
 | A `security definer` function leaks another user's data | High | Owner always from the token; SQL tests for isolation and group events |
 | Token leaks via logs or Sentry | High | Never logged; `cdt_` scrubbed (T6); test asserts it |
 | A migration breaks the live app | High | Additive only; one small file per slice; rollback `drop` lines included; run only after review |
