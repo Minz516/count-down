@@ -2,95 +2,130 @@
 
 Spec: `SPEC.md` plus `SPEC-event-api.md`, `SPEC-token-ui.md`, `SPEC-mcp-server.md`, `SPEC-vault-integration.md`. Task list: `tasks/todo.md`. Status: DRAFT for review, nothing built yet.
 
+Revision 2: re-planned with the `agent-skills:planning-and-task-breakdown` rules. Changes from revision 1: tasks are now **vertical slices** (one complete path at a time) instead of layers; every slice ships its own small migration; token revoke moves into the first slice; code facts found while reading the codebase were folded into the tasks and the spec (see "Findings from reading the code").
+
 ## Overview
 A hosted MCP server inside this Next.js app (`https://chronocount.vercel.app/api/mcp`) that lets Claude Code create, update, list and delete the owner's personal events using a revocable per-user token. The vault stays the source of truth; each pushed event carries a stable `external_id` (`countdown_id` in the note) so repeats update instead of duplicating.
 
 ## Architecture decisions
-- **No service-role key.** The route calls token-checked `security definer` functions with the public anon key, the same "controlled write path" pattern as `create_group`. Row level security stays the real boundary.
-- **Token** = `cdt_` plus 256 random bits, stored as SHA-256, shown once, revocable, optional expiry (default none), max 10 active, 60 calls per minute per token.
-- **Library:** `mcp-handler` 2.x on `@modelcontextprotocol/server` v2 and `zod` v4, proven by a spike before anything depends on it. Fallback: official SDK with hand-written route glue.
-- **Migration is additive and safe to run early.** Same approach as the group-members functions: add objects only, never change existing policies.
-- **One branch and one PR per module**, merged in dependency order. Each module leaves `main` working and passing CI.
-- **New module `modules/apitokens/`** (token management) and **`modules/mcpevents/`** (token-authenticated event calls) follow the interface/service/repository layering. The route never calls `supabase.rpc` directly.
+- **No service-role key.** The route calls token-checked `security definer` functions with the public anon key (same "controlled write path" as `create_group`). Row level security stays the real boundary.
+- **Token** = `cdt_` plus 64 hex characters built from two `gen_random_uuid()` values (about 244 random bits, built into Postgres, no `pgcrypto` needed), stored as `sha256`, shown once, revocable, optional expiry (default none), max 10 active, 60 calls per minute per token.
+- **Plain Supabase client for the route.** `lib/supabase/server.ts` reads cookies, so the MCP route uses a session-less client from `@supabase/supabase-js` (new `lib/supabase/anon.ts`).
+- **Library:** `mcp-handler` 2.x on `@modelcontextprotocol/server` v2 and `zod` v4, proven by a spike first. Fallback: official SDK with hand-written route glue.
+- **Time zone:** weekly events need a time-zone-aware "next occurrence". The existing `nextDeadlineForDayOfWeek` uses the runtime's local zone (UTC on Vercel), so the MCP path gets its own zone-aware helper.
+- **One migration per slice**, each additive and safe to run on its own, so the owner can review and run them one at a time.
+- **One file per tool** (`lib/mcp/tools/<tool>.ts`) plus a small registry, so slices B, C and D do not collide.
+- **Tests run in the existing Playwright runner** (`npx playwright test`), including SQL tests on PGlite, so CI needs no new job.
+- **Modules** `modules/apitokens/` and `modules/mcpevents/` follow the interface/service/repository layering; the route never calls `supabase.rpc` directly.
+
+## Findings from reading the code
+| Finding | Consequence |
+|---|---|
+| `nextDeadlineForDayOfWeek` (`lib/dateFormat.ts`) uses `Date` local time | New zone-aware helper in `lib/mcp/time.ts` (T4); spec corrected |
+| `lib/supabase/server.ts` needs `cookies()` | New `lib/supabase/anon.ts` (T5) |
+| `proxy.ts` treats `AUTH_ROUTES` as "bounce signed-in users", so `/api/mcp` cannot be added there | Separate exact-path early return before any session work (T0) |
+| Schema uses no `pgcrypto` or `digest()` | Token built from built-ins (`gen_random_uuid`, `sha256`); no extension dependency |
+| CI already runs `playwright test` (all files) on Node 20 | SQL and unit tests join it; Node 20 satisfies `mcp-handler` |
+| `zod`, `mcp-handler`, `@modelcontextprotocol/server`, `@electric-sql/pglite` not installed | Install in T0 (approved three) and T3 (PGlite needs approval) |
+| `app/api/` has no routes now | `app/api/mcp/route.ts` is the only API route |
 
 ## Dependency graph
 ```
-spike (mcp-handler works on Vercel + Claude Code)      <- riskiest, no DB needed, goes first
-event-api  (migration: tokens, external_id, mcp_* functions, SQL tests)
-   |-- token-ui   (Settings: create/list/revoke)
-   `-- mcp-server (route, time helper, four tools, scrub, contract tests)   <- also needs the spike result
-            `-- vault-integration (setup guide, instruction snippet, manual scenarios)
+T0 spike (library works on Vercel + Claude Code)                 <- riskiest, no database
+   |
+Slice A: "Claude Code creates a real event end to end"
+   T1 schema + token functions -> T2 mcp_create_event -> T3 SQL tests
+   T4 time helper    T5 anon client + mcpevents(create)    T6 create_event tool + token redaction
+   T7 apitokens module -> T8 Settings: create, list, revoke
+   --- checkpoint A (owner runs migration, makes a real token, creates a real event) ---
+Slice B update   (T9 migration + SQL tests -> T10 tool)
+Slice C list     (T11 migration + SQL tests -> T12 tool)      <- B, C, D independent after A
+Slice D delete   (T13 migration + SQL tests -> T14 tool)
+   --- checkpoint B (all four tools work with real Claude Code) ---
+Slice E token UI polish (T15 expiry + empty state + strings, T16 accessibility + mobile)
+Slice F vault integration (T17 guide + snippet, T18 manual scenarios, T19 docs + wrap-up)
 ```
 
-## Human actions (things only the owner can do)
+## Human actions (only the owner can do these)
 | When | Action |
 |---|---|
-| Before Phase 1 ends | Check Vercel project Settings, Deployment Protection (are previews protected?) |
-| Phase 2 checkpoint | Run the reviewed migration in the Supabase SQL editor |
-| Phase 3 checkpoint | Create a real token in Settings (it is shown once); register the server with `claude mcp add` |
-| Phase 5 | Run the nine manual scenarios with real Claude Code and confirm results |
-| Any time | Open and merge each PR (the repo's rules need the owner) |
+| Before T0 | Check Vercel Deployment Protection; approve the PGlite dev dependency (needed by T3) |
+| Checkpoint A | Run migrations `1` and `2` in the Supabase SQL editor; create a real token in Settings; register it with `claude mcp add` |
+| Checkpoint B | Run migrations for update, list and delete as each slice lands |
+| Slice F | Run the nine manual scenarios with real Claude Code |
+| Every slice | Open and merge each PR (the repo's rules need the owner) |
 
 ## Task list
 
 ### Phase 0: Prove the riskiest assumption
-- [ ] **T0** Spike: `mcp-handler` hello tool at `/api/mcp`, proxy exemption, connect Claude Code (S)
+- [ ] **T0** Spike: `mcp-handler` hello tool at `/api/mcp`, exact-path proxy exemption, connect Claude Code (S)
 
 ### Checkpoint 0: Spike go/no-go
-- [ ] All five spike checks pass (or fallback chosen and recorded in `SPEC-mcp-server.md`)
+- [ ] Five spike checks pass, or the fallback is chosen and recorded in `SPEC-mcp-server.md`
 
-### Phase 1: `event-api` (database layer)
-- [ ] **T1** Schema: `events.external_id`, `api_tokens`, `api_token_usage`, RLS and column grants (S)
-- [ ] **T2** Token functions: `create_api_token`, `revoke_api_token`, internal `api_token_user` with rate limit (M)
-- [ ] **T3** `mcp_create_event` and `mcp_update_event` (M)
-- [ ] **T4** `mcp_list_events` and `mcp_delete_event` (S)
-- [ ] **T5** SQL test harness on PGlite covering the ten criteria of `SPEC-event-api.md` (M)
+### Phase 1: Slice A, Claude Code creates a real event end to end
+- [ ] **T1** Schema and token functions (migration 1) (M)
+- [ ] **T2** `mcp_create_event` with `external_id` upsert (migration 2) (M)
+- [ ] **T3** SQL tests on PGlite for T1 and T2 (M)
 
-### Checkpoint 1: Database layer
-- [ ] All SQL tests pass; owner reviews and runs the migration in Supabase; manual query check; existing app still works (`npm run build`, groups and events pages load)
+### Checkpoint A1: Database
+- [ ] SQL tests pass; owner reviews migrations 1 and 2 and runs them in Supabase; app pages still load
 
-### Phase 2: Parallel slices
-`mcp-server` and `token-ui` can proceed independently once Checkpoint 1 passes.
-- [ ] **T6** Time helper `lib/mcp/time.ts` with tests (S)
-- [ ] **T7** `modules/mcpevents` (interface, service, repository, dto) with a fake-client test (M)
-- [ ] **T8** Tools `create_event` and `update_event` plus contract tests (M)
-- [ ] **T9** Tools `list_events` and `delete_event` plus contract tests (M)
-- [ ] **T10** Token redaction in Sentry scrub and log-safety tests (S)
-- [ ] **T11** `modules/apitokens` (interface, service, repository, dto) with a fake-client test (M)
-- [ ] **T12** Settings section: list and empty state, EN + VI strings (M)
-- [ ] **T13** Create dialog (show once, copy, command) and revoke with confirm (M)
-- [ ] **T14** Accessibility and mobile pass for the token section (S)
+- [ ] **T4** Zone-aware time helper (S)
+- [ ] **T5** Anon client and `modules/mcpevents` (create) (M)
+- [ ] **T6** `create_event` tool, route wiring, `cdt_` redaction (M)
+- [ ] **T7** `modules/apitokens` (create, list, revoke) (M)
+- [ ] **T8** Settings section: create (shown once), list, revoke (M)
 
-### Checkpoint 2: Both slices
-- [ ] Lint, build, bundle budget and all tests pass in CI; token created in the UI works against `/api/mcp` end to end (human)
+### Checkpoint A: First real event
+- [ ] Full CI green; owner creates a token, registers it, tells Claude Code about an event and sees it on the site; repeating it updates, revoking the token blocks the next call
 
-### Phase 3: `vault-integration`
-- [ ] **T15** `docs/CLAUDE_CODE_EVENTS.md`: setup guide and the vault instruction snippet (S)
-- [ ] **T16** Run the nine manual scenarios with real Claude Code and record the results (M, with the owner)
+### Phase 2: Slices B, C, D (independent after A)
+- [ ] **T9** Update: migration and SQL tests (M)
+- [ ] **T10** `update_event` tool and contract tests (M)
+- [ ] **T11** List: migration and SQL tests (S)
+- [ ] **T12** `list_events` tool and contract tests (S)
+- [ ] **T13** Delete: migration and SQL tests (S)
+- [ ] **T14** `delete_event` tool with the `confirm` rule and contract tests (S)
 
-### Checkpoint 3: Done
-- [ ] All nine success criteria of `SPEC.md` met; `CLAUDE.md` updated with the new conventions; all PRs merged
+### Checkpoint B: Four tools
+- [ ] Full CI green; all four tools exercised with real Claude Code
+
+### Phase 3: Slice E, token screen polish
+- [ ] **T15** Optional expiry, empty state, complete EN and VI strings (S)
+- [ ] **T16** Accessibility and mobile pass (S)
+
+### Phase 4: Slice F, vault integration
+- [ ] **T17** Setup guide and vault instruction snippet (S)
+- [ ] **T18** Nine manual scenarios with the owner (M)
+- [ ] **T19** `CLAUDE.md` update, spec status, cleanup (S)
+
+### Checkpoint: Done
+- [ ] All nine success criteria of `SPEC.md` met; all PRs merged; Definition of Done met for every task
 
 ## Parallelization
-- Safe in parallel: T6, T7, T10 (mcp-server prep) with T11 to T14 (token-ui), after Checkpoint 1.
-- Strictly sequential: T0 before anything depends on the library; T1 to T4 in order (same migration file); migration run before any real-database test.
-- Shared contract to fix first: the `mcp_*` function signatures in `SPEC-event-api.md` (both slices call them).
+- After Checkpoint A, slices B, C and D are independent (one migration file and one tool file each). Slice E can run alongside them.
+- Strictly sequential: T0 first; T1 then T2 then T3 (same schema); migrations run in timestamp order; each migration run before any real-database test of its tool.
+- Contract to fix before parallel work: the `mcp_*` function signatures in `SPEC-event-api.md` and the tool registry shape from T6.
 
-## Dependency approvals needed
-Already approved by the owner: `mcp-handler@^2`, `@modelcontextprotocol/server@^2`, `zod@^4.2`.
-**Needs approval before T5:** `@electric-sql/pglite` (dev dependency) so the SQL tests can run in CI. If declined, the SQL tests stay a documented manual script and Checkpoint 1 relies on that.
+## Definition of Done (every task)
+`npm run lint`, `npx tsc --noEmit`, the task's own tests, `npm run build`, `npm run check:bundle`, new text in English and Vietnamese, no token or secret in logs, and one focused commit on the slice's branch.
+
+## Dependency approvals
+Already approved: `mcp-handler@^2`, `@modelcontextprotocol/server@^2`, `zod@^4.2`. **Needs approval before T3:** `@electric-sql/pglite` (dev dependency).
 
 ## Risks and mitigations
 | Risk | Impact | Mitigation |
 |---|---|---|
-| `mcp-handler` 2.x (new, thin auth docs) fails the spike | High | Spike first, time-boxed; fallback to official SDK glue recorded in the spec |
-| Vercel Deployment Protection blocks preview URLs | Med | Check the setting first; use the bypass header or test on production behind our own token |
-| A `security definer` function leaks another user's data | High | Owner always derived from the token; SQL tests prove cross-user isolation and group events untouched |
-| Token leaks via logs or Sentry | High | Never logged; `cdt_` pattern scrubbed; test asserts redaction |
-| Migration breaks the live app | High | Additive only; run only after review; rollback `drop function`/`drop table` lines included |
-| Duplicate or wrong events from misheard dates | Med | `external_id` upsert; Claude states the absolute date; delete needs `confirm: true` |
-| `proxy.ts` exemption widens access | Med | Exact path match only; test that all other routes still redirect |
-| Rate limits conflict (20 events per minute trigger vs 60 calls per minute) | Low | Token limit is coarse; the existing trigger still caps creation; error messages distinguish them |
+| `mcp-handler` 2.x (new, thin auth docs) fails the spike | High | Spike first, time-boxed; fallback recorded in the spec |
+| Vercel Deployment Protection blocks preview URLs | Med | Check first; bypass header, or test on production behind our own token |
+| A `security definer` function leaks another user's data | High | Owner always from the token; SQL tests for isolation and group events |
+| Token leaks via logs or Sentry | High | Never logged; `cdt_` scrubbed (T6); test asserts it |
+| A migration breaks the live app | High | Additive only; one small file per slice; rollback `drop` lines included; run only after review |
+| Weekly event lands on the wrong weekday (server is UTC) | Med | Zone-aware helper with tests, including late-evening Vietnam times |
+| Misheard date creates a wrong or duplicate event | Med | `external_id` upsert; Claude states the absolute date; delete needs `confirm: true` |
+| `proxy.ts` exemption widens access | Med | Exact path only; test every other route still redirects |
+| Weekly-rollover job and DST zones drift an hour | Low | Existing behaviour of the rollover; Vietnam has no DST; documented |
 
 ## Open questions
 None blocking. Decisions are recorded in `SPEC.md`.

@@ -67,13 +67,15 @@ Claude Code (user side; syntax verified in the docs):
 
 ## Project structure (new files only)
 ```
-supabase/migrations/<ts>_mcp_event_tokens.sql   tokens table, events.external_id, mcp_* functions
+supabase/migrations/<ts>_mcp_*.sql                one additive migration per slice: tokens, create, update, list, delete
 modules/apitokens/                              interface/service/repository/dto (same layering as other modules)
 app/api/mcp/route.ts                            MCP endpoint (POST), token auth, no cookies
-lib/mcp/                                        tool definitions, date/time conversion, error mapping
+lib/mcp/                                        tools/ (one file per tool) + registry, zone-aware time helper, error mapping
+lib/supabase/anon.ts                            session-less Supabase client for the MCP route (no cookies)
+modules/mcpevents/                              token-authenticated event calls (interface/service/repository/dto)
 components/ApiTokensSection.tsx                 Settings UI (create, list, revoke)
 lib/i18n/messages.ts                            new EN + VI strings for the token UI
-tests/mcp-*.spec.ts                             unit/contract tests (fake client pattern, as tests/groups-rpc.spec.ts)
+tests/mcp-*.spec.ts, tests/sql/*.spec.ts       unit, contract and SQL tests, all run by the existing Playwright runner
 docs/CLAUDE_CODE_EVENTS.md                      setup guide and the vault instruction snippet
 ```
 
@@ -92,7 +94,7 @@ Conventions: hyphen, never em-dash, in all text; no hardcoded UI strings (EN + V
 ## Testing strategy
 | Level | What | How |
 |---|---|---|
-| SQL | Token hashing, revoked/expired tokens, ownership, `external_id` upsert, rate limit, RLS unchanged | Run the migration on an in-memory Postgres (PGlite) with the app's RLS policies, as was done for `group_with_members` |
+| SQL | Token hashing, revoked/expired tokens, ownership, `external_id` upsert, rate limit, RLS unchanged | Run each migration on an in-memory Postgres (PGlite) with the app's RLS policies, as was done for `group_with_members`; in `tests/sql/`, run by `npx playwright test` |
 | Unit | Date/time conversion (23:59 default, Asia/Ho_Chi_Minh, DST zones), tool input validation, error mapping | Playwright test runner, fake Supabase client |
 | Contract | MCP protocol: initialize, list tools, call each tool, reject bad/missing token | MCP SDK client against the route handler in-process |
 | UI | Token section accessible (axe), create shows token once, revoke asks to confirm | Existing a11y suite plus new cases (signed-in screens need a real project: manual checklist) |

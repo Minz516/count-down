@@ -5,7 +5,8 @@ Part of `SPEC.md`. Depends on: nothing. Used by: `token-ui`, `mcp-server`.
 ## Objective
 Let a holder of a personal access token create, update, list and delete **their own personal events** without a Supabase user session, while keeping row level security as the real boundary and never using the service-role key. Follows the same "controlled write path" pattern as `create_group`, `join_group_by_code` and `delete_group` in `supabase/schema.sql`.
 
-## Data model (migration `<ts>_mcp_event_tokens.sql`)
+## Data model and migrations
+One small additive migration per slice, in this order: `<ts>_mcp_tokens.sql` (T1: `external_id`, token tables, token functions), `<ts>_mcp_create_event.sql` (T2), then `mcp_update_event`, `mcp_list_events` and `mcp_delete_event` each in their own file (T9, T11, T13). Each can be reviewed and run alone.
 
 **events** (existing table, additive):
 - `external_id text` null, `check (char_length(external_id) <= 200)`.
@@ -26,9 +27,9 @@ RLS: enabled. Owners may `select` their rows but column-level grants expose only
 **api_token_usage** (new, rate limit): `(token_id, minute_bucket)` with a call counter; RLS enabled with no policies (functions only).
 
 ## Token format
-`cdt_` followed by 43 base64url characters (256 random bits from `gen_random_bytes(32)`). 256 bits means a fast hash (SHA-256) is appropriate and brute force is infeasible. Generated inside the database function so the plain text exists only in the one response that creates it.
+`cdt_` followed by 64 hex characters built from two `gen_random_uuid()` values (about 244 random bits; Postgres built-ins, so no `pgcrypto` extension is needed), hashed with `sha256`. That much randomness makes a fast hash appropriate and brute force infeasible. Generated inside the database function so the plain text exists only in the one response that creates it.
 
-## Functions (all `security definer`, `set search_path = public, extensions`)
+## Functions (all `security definer`, `set search_path = public`)
 Management (callable by `authenticated` only; act on `auth.uid()`):
 - `create_api_token(p_name text, p_expires_at timestamptz default null) -> (id, token, token_prefix, created_at)`. Max 10 active tokens per user.
 - `revoke_api_token(p_token_id uuid) -> void`. Own tokens only; idempotent.
@@ -62,4 +63,4 @@ Every `mcp_*` function: only rows with `group_id is null` and `user_id = <owner>
 | 9 | Name/description limits and weekly-repeat rule match the app | SQL test |
 | 10 | Existing queries and RLS for events are unchanged | existing app flows plus SQL test comparing policies |
 
-Files likely touched: `supabase/migrations/<ts>_mcp_event_tokens.sql`, `supabase/schema.sql` (fold in later), `types/event.ts` (add `external_id`), `tests/` (SQL verification script runs in CI if PGlite is added as a dev dependency, otherwise documented as a manual step).
+Files likely touched: the migrations above, `supabase/schema.sql` (fold in later), `types/event.ts` (add `external_id`), `tests/sql/mcp-event-api.spec.ts` (runs in the existing Playwright runner on PGlite, which needs `@electric-sql/pglite` as an approved dev dependency; if declined, a documented manual script).

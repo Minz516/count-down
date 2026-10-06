@@ -9,7 +9,8 @@ A remote MCP server, hosted inside this Next.js app, that exposes four tools to 
 - Route `app/api/mcp/route.ts`, `export const dynamic = "force-dynamic"`, Node runtime. MCP Streamable HTTP in **stateless** mode (each request independent; no server session). `GET` returns 405.
 - Auth: `Authorization: Bearer cdt_...`. Missing or malformed header returns HTTP 401 before any database call. The token is passed straight to the `mcp_*` functions, which do the real verification. No cookies, no Supabase user session.
 - `proxy.ts` must let `/api/mcp` through without the sign-in redirect and without cookie refresh (explicit path check, covered by a test). This is the only change to the proxy.
-- Uses the public anon key only (`lib/supabase` helpers); never the service-role key.
+- Uses the public anon key only, through a new session-less client in `lib/supabase/anon.ts` (the existing `lib/supabase/server.ts` reads cookies and is not suitable); never the service-role key.
+- `proxy.ts`: an exact-path early return for `/api/mcp` placed before any session work. It must not be added to `AUTH_ROUTES`, which bounces signed-in users away.
 - Request body size capped (for example 64 KB); no CORS headers (not meant for browsers).
 - **Library: `mcp-handler` 2.x**, built on `@modelcontextprotocol/server` v2 and `zod` v4 (Node 20+). It turns tool definitions into a Web-standard `(Request) => Response` handler, is stateless by design, and answers GET and DELETE with 405. The route reads the `Authorization` header itself and builds the handler per request with the token in a closure, so the library's own OAuth-style `withMcpAuth` is not required. Newer clients get the 2026-07-28 protocol revision and older clients are served by the library's fallback.
 
@@ -38,7 +39,7 @@ Server `instructions` tell Claude the rules: resolve relative dates to absolute 
 
 | Tool | Input | Behaviour | Annotations |
 |---|---|---|---|
-| `create_event` | `name`, `date` (YYYY-MM-DD), `time?` (HH:mm), `timezone?` (IANA, default Asia/Ho_Chi_Minh), `description?`, `external_id?`, `repeats_weekly?` + `day_of_week?` | Creates the event, or updates it if `external_id` already exists. Date-only input becomes 23:59. For weekly repeats the deadline is the next occurrence, using the app's existing helper. Returns action, id, local and UTC deadline | idempotent |
+| `create_event` | `name`, `date` (YYYY-MM-DD), `time?` (HH:mm), `timezone?` (IANA, default Asia/Ho_Chi_Minh), `description?`, `external_id?`, `repeats_weekly?` + `day_of_week?` | Creates the event, or updates it if `external_id` already exists. Date-only input becomes 23:59. For weekly repeats the deadline is the next occurrence of that weekday at that time **in the given time zone**, computed by a zone-aware helper in `lib/mcp/time.ts`. The app's existing `nextDeadlineForDayOfWeek` uses the runtime's local zone, which on Vercel is UTC, so it would pick the wrong weekday for late-night Vietnam times. Returns action, id, local and UTC deadline | idempotent |
 | `update_event` | `id` or `external_id`, plus any of `name`, `date`, `time`, `timezone`, `description`, `repeats_weekly`, `day_of_week` | Partial update. Errors clearly if the event is not found | idempotent |
 | `list_events` | `from?`, `to?`, `query?`, `limit?` | Upcoming personal events by default (limit 50, cap 200). Returns id, external_id, name, local deadline, description, repeat info | read-only |
 | `delete_event` | `id` or `external_id`, `confirm` (boolean) | Refuses unless `confirm` is true. Returns what was deleted | destructive |
