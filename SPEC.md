@@ -23,11 +23,11 @@ When the owner tells Claude Code (terminal) that an event happens on a date, Cla
 | Date-only input | Time 23:59, time zone Asia/Ho_Chi_Minh unless the user says otherwise |
 | Safety | Create and update freely and report back; deletes always wait for the user's yes |
 
-### Assumptions (correct me if wrong)
-1. Only personal events (`group_id` is null) are in scope. Group events are not touched.
-2. Interface language does not matter here: event names are stored exactly as Claude passes them.
-3. The existing weekly-repeat model is enough (`is_recurring` plus `recurrence_day_of_week`); no new recurrence types.
-4. Claude Code can call a remote MCP server over HTTP with a bearer token header (to be verified against current docs at build time).
+### Assumptions
+1. Only personal events (`group_id` is null) are in scope. Group events are not touched. **Confirmed by the owner.**
+2. Interface language does not matter here: event names are stored exactly as Claude passes them. The owner phrases the prompt so Claude extracts the event name. **Confirmed by the owner.**
+3. The existing weekly-repeat model is enough (`is_recurring` plus `recurrence_day_of_week`); no new recurrence types. **Confirmed by the owner.**
+4. Claude Code can call a remote MCP server over HTTP with a bearer token header. **Verified against the current Claude Code docs (code.claude.com/docs/en/mcp):** `claude mcp add --transport http <name> <url> --header "Authorization: Bearer <token>"`; the JSON `type` field also accepts `streamable-http` as an alias for `http`.
 
 ## Capability map
 
@@ -54,8 +54,11 @@ Type-check: npx tsc --noEmit
 Lint:       npm run lint
 Unit tests: npx playwright test tests/<file>.spec.ts
 All checks: npm run lint && npm run check:contrast && npm run build && npm run check:bundle && npm run test:a11y
-Claude Code (user side, verify syntax at build time):
-  claude mcp add --transport http countdown https://<site-domain>/api/mcp --header "Authorization: Bearer <token>"
+Claude Code (user side; syntax verified in the docs):
+  claude mcp add --transport http --scope user countdown https://<site-domain>/api/mcp --header "Authorization: Bearer <token>"
+  claude mcp list        # shows configured servers
+  /mcp                   # inside Claude Code: connection status
+  claude mcp remove countdown
 ```
 
 ## Project structure (new files only)
@@ -109,7 +112,8 @@ CI keeps running lint, contrast, build, bundle budget and the Playwright tests; 
 9. `npm run lint`, `build`, `check:bundle`, and all tests pass in CI.
 
 ## Open questions
-1. **Docs check:** current Claude Code syntax for remote MCP with a header, and whether the MCP SDK's Streamable HTTP transport works in a Next.js route handler as-is or needs `mcp-handler`. Resolve at the start of `mcp-server` (source-driven).
+1. **Library check (still open):** whether the MCP SDK's Streamable HTTP transport works in a Next.js route handler as-is or needs Vercel's `mcp-handler`. Resolve at the start of `mcp-server` by reading the current docs. (The Claude Code side of this question is answered: see assumption 4.)
+1b. **Where the token lives on the owner's machine:** `--scope user` stores the header in `~/.claude.json`, outside any repo (good: it cannot be committed). Using `.mcp.json` with `${COUNTDOWN_TOKEN}` would also work but must never be placed in a synced or committed folder such as the vault. Proposal: user scope, documented in the setup guide.
 2. **Token expiry:** never expire by default, or default to 1 year with a visible expiry? (Proposal: optional expiry, default none, shown in the list.)
 3. **Existing events:** should the first push back-fill events already on the site that match vault notes, or only handle new ones? (Proposal: new only.)
 4. **Vault id field name:** where in the vault note to keep the stable id (proposal: a `countdown_id` frontmatter property).

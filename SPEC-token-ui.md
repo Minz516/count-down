@@ -9,7 +9,7 @@ Give the owner a safe place in Settings to create a token for Claude Code, copy 
 - New section on `/settings`, below the Discord digest card, headed "Claude Code access" (EN) / Vietnamese equivalent.
 - **List:** name, first 8 characters (`cdt_ab12...`), created date, last used (or "never"), status (active, expired, revoked). Revoked tokens stay listed as history.
 - **Create:** a button opens a dialog (uses `useDialog`) with a name field and an optional expiry. On success the dialog shows the full token **once**, with a copy button and the ready-to-paste command:
-  `claude mcp add --transport http countdown <site-url>/api/mcp --header "Authorization: Bearer <token>"`
+  `claude mcp add --transport http --scope user countdown <site-url>/api/mcp --header "Authorization: Bearer <token>"` (user scope, so it works from the vault folder)
   Closing the dialog clears the token from memory. A clear warning explains it cannot be shown again.
 - **Revoke:** `ConfirmDialog` ("Revoke this token? Claude Code will stop working with it"), then the row shows revoked.
 - Empty state explains what a token is for in one sentence and how to create the first one.

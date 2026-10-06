@@ -6,7 +6,7 @@ Part of `SPEC.md`. Depends on: `mcp-server`. Lives mostly in the Obsidian vault,
 Whenever the owner tells Claude Code that an event happens on a date, Claude records it in the vault as it does today and also calls the Countdown tools, with a stable id, safe defaults and honest reporting, without the owner having to remember to ask.
 
 ## What gets delivered
-1. **Setup guide** (`docs/CLAUDE_CODE_EVENTS.md`): create a token in Settings, run the `claude mcp add` command, check with `/mcp`, rotate or revoke a token.
+1. **Setup guide** (`docs/CLAUDE_CODE_EVENTS.md`): create a token in Settings, run the `claude mcp add --transport http --scope user ...` command (user scope so it is available in the vault folder; the token is then stored in `~/.claude.json`, outside any repo), check with `claude mcp list` or `/mcp`, rotate or revoke a token.
 2. **Instruction snippet** to paste into the vault's `CLAUDE.md` (or save as a skill) that tells Claude:
    - **When:** the owner states or changes an event with a date or deadline, or cancels one.
    - **Dates:** resolve "next Friday" or "tomorrow" to an absolute `YYYY-MM-DD` using today's date before calling any tool. If the date is ambiguous, ask first.
