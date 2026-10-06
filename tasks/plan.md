@@ -1,84 +1,96 @@
-# Implementation Plan: Fix navigation lag
+# Implementation Plan: Claude Code to Countdown event bridge (MCP)
+
+Spec: `SPEC.md` plus `SPEC-event-api.md`, `SPEC-token-ui.md`, `SPEC-mcp-server.md`, `SPEC-vault-integration.md`. Task list: `tasks/todo.md`. Status: DRAFT for review, nothing built yet.
 
 ## Overview
-Navigation between pages feels slow. A performance audit (dev server, localhost:3001) measured a ~540ms warm
-per-request floor on every route regardless of page queries. The floor is the remote `supabase.auth.getUser()`
-in `proxy.ts` (runs on every page request and every RSC/soft-nav fetch). Secondary causes: serial query chains in
-the groups module, no per-route loading skeletons (every page is `force-dynamic`), and `Nav` remounting per page.
-Tasks are ordered by measured impact. Tasks tracked in `tasks/todo.md`.
+A hosted MCP server inside this Next.js app (`https://chronocount.vercel.app/api/mcp`) that lets Claude Code create, update, list and delete the owner's personal events using a revocable per-user token. The vault stays the source of truth; each pushed event carries a stable `external_id` (`countdown_id` in the note) so repeats update instead of duplicating.
 
-## Architecture Decisions
-- Measure first (T1): the audit ran on `next dev`; baseline must come from `npm run build && npm run start` so we
-  fix real costs, not Turbopack compile overhead.
-- Proxy auth: switch to `supabase.auth.getClaims()` (local JWT verify via cached JWKS). Requires asymmetric JWT
-  signing keys enabled in the Supabase project; if the project still uses the legacy HS256 secret, `getClaims()`
-  falls back to a network call and gains nothing. Check this before coding (T2). `x-user-id` comes from claims `sub`.
-- Keep RLS as the real boundary (unchanged) - the proxy header is already documented as non-authoritative.
-- Group queries stay inside `groups.repository.ts` (one embedded select/RPC); DTO shape (`GroupDTO.preview_avatars`)
-  must not change so components are untouched.
-- Preserve the existing try/catch in proxy.ts (corrupt-cookie handling from commit 0b0f33b).
+## Architecture decisions
+- **No service-role key.** The route calls token-checked `security definer` functions with the public anon key, the same "controlled write path" pattern as `create_group`. Row level security stays the real boundary.
+- **Token** = `cdt_` plus 256 random bits, stored as SHA-256, shown once, revocable, optional expiry (default none), max 10 active, 60 calls per minute per token.
+- **Library:** `mcp-handler` 2.x on `@modelcontextprotocol/server` v2 and `zod` v4, proven by a spike before anything depends on it. Fallback: official SDK with hand-written route glue.
+- **Migration is additive and safe to run early.** Same approach as the group-members functions: add objects only, never change existing policies.
+- **One branch and one PR per module**, merged in dependency order. Each module leaves `main` working and passing CI.
+- **New module `modules/apitokens/`** (token management) and **`modules/mcpevents/`** (token-authenticated event calls) follow the interface/service/repository layering. The route never calls `supabase.rpc` directly.
 
-## Task List
+## Dependency graph
+```
+spike (mcp-handler works on Vercel + Claude Code)      <- riskiest, no DB needed, goes first
+event-api  (migration: tokens, external_id, mcp_* functions, SQL tests)
+   |-- token-ui   (Settings: create/list/revoke)
+   `-- mcp-server (route, time helper, four tools, scrub, contract tests)   <- also needs the spike result
+            `-- vault-integration (setup guide, instruction snippet, manual scenarios)
+```
 
-### Phase 0: Baseline
-- [x] T1: Production-mode measurement (taken after the fixes, see "Results" below; no pre-fix production baseline exists)
-- [x] T2: Check Supabase JWT signing-key setup (decision gate for T3)
+## Human actions (things only the owner can do)
+| When | Action |
+|---|---|
+| Before Phase 1 ends | Check Vercel project Settings, Deployment Protection (are previews protected?) |
+| Phase 2 checkpoint | Run the reviewed migration in the Supabase SQL editor |
+| Phase 3 checkpoint | Create a real token in Settings (it is shown once); register the server with `claude mcp add` |
+| Phase 5 | Run the nine manual scenarios with real Claude Code and confirm results |
+| Any time | Open and merge each PR (the repo's rules need the owner) |
 
-### Checkpoint: Baseline
-- [x] Numbers recorded; decision made on T3 approach (JWKS publishes an ES256 key, so getClaims() verifies locally)
+## Task list
 
-### Phase 1: Biggest win
-- [x] T3: Replace `getUser()` in proxy with local claims verification
+### Phase 0: Prove the riskiest assumption
+- [ ] **T0** Spike: `mcp-handler` hello tool at `/api/mcp`, proxy exemption, connect Claude Code (S)
 
-### Checkpoint: Proxy
-- [x] lint + build pass; per-route latency re-measured
-- [ ] Not exercised by hand: login, logout, expired-session and corrupted-cookie flows (the try/catch in proxy.ts is unchanged)
+### Checkpoint 0: Spike go/no-go
+- [ ] All five spike checks pass (or fallback chosen and recorded in `SPEC-mcp-server.md`)
 
-### Phase 2: Perceived speed
-- [x] T4: Per-route `loading.tsx` skeletons (groups, groups/[groupId], settings)
-- [-] T5: SKIPPED - force-dynamic has no perf cost and PRODUCTION_READINESS_CHECKLIST §9 wants it explicit; staleTimes rejected by user
+### Phase 1: `event-api` (database layer)
+- [ ] **T1** Schema: `events.external_id`, `api_tokens`, `api_token_usage`, RLS and column grants (S)
+- [ ] **T2** Token functions: `create_api_token`, `revoke_api_token`, internal `api_token_user` with rate limit (M)
+- [ ] **T3** `mcp_create_event` and `mcp_update_event` (M)
+- [ ] **T4** `mcp_list_events` and `mcp_delete_event` (S)
+- [ ] **T5** SQL test harness on PGlite covering the ten criteria of `SPEC-event-api.md` (M)
 
-### Checkpoint: Perceived speed
-- [x] Skeletons stream first (TTFB about 17 ms); no staleTimes was added, so no stale-data risk
+### Checkpoint 1: Database layer
+- [ ] All SQL tests pass; owner reviews and runs the migration in Supabase; manual query check; existing app still works (`npm run build`, groups and events pages load)
 
-### Phase 3: Data fetching
-- [x] T6: Collapse groups list query chain (`listForUser` -> members -> profiles) into one query
-- [x] T7: Group detail page: stop fetching members twice
+### Phase 2: Parallel slices
+`mcp-server` and `token-ui` can proceed independently once Checkpoint 1 passes.
+- [ ] **T6** Time helper `lib/mcp/time.ts` with tests (S)
+- [ ] **T7** `modules/mcpevents` (interface, service, repository, dto) with a fake-client test (M)
+- [ ] **T8** Tools `create_event` and `update_event` plus contract tests (M)
+- [ ] **T9** Tools `list_events` and `delete_event` plus contract tests (M)
+- [ ] **T10** Token redaction in Sentry scrub and log-safety tests (S)
+- [ ] **T11** `modules/apitokens` (interface, service, repository, dto) with a fake-client test (M)
+- [ ] **T12** Settings section: list and empty state, EN + VI strings (M)
+- [ ] **T13** Create dialog (show once, copy, command) and revoke with confirm (M)
+- [ ] **T14** Accessibility and mobile pass for the token section (S)
 
-### Checkpoint: Data
-- [x] /groups and /groups/[id] checked in the browser: member count, preview avatar and member username unchanged; `npx tsc --noEmit` clean
+### Checkpoint 2: Both slices
+- [ ] Lint, build, bundle budget and all tests pass in CI; token created in the UI works against `/api/mcp` end to end (human)
 
-### Phase 4: Optional / needs profiling
-- [ ] T8: (optional, not started) profile hydration + Nav shared layout. Long-task and CLS checks since showed no long tasks and CLS 0, so this is low priority
+### Phase 3: `vault-integration`
+- [ ] **T15** `docs/CLAUDE_CODE_EVENTS.md`: setup guide and the vault instruction snippet (S)
+- [ ] **T16** Run the nine manual scenarios with real Claude Code and record the results (M, with the owner)
 
-## Risks and Mitigations
+### Checkpoint 3: Done
+- [ ] All nine success criteria of `SPEC.md` met; `CLAUDE.md` updated with the new conventions; all PRs merged
+
+## Parallelization
+- Safe in parallel: T6, T7, T10 (mcp-server prep) with T11 to T14 (token-ui), after Checkpoint 1.
+- Strictly sequential: T0 before anything depends on the library; T1 to T4 in order (same migration file); migration run before any real-database test.
+- Shared contract to fix first: the `mcp_*` function signatures in `SPEC-event-api.md` (both slices call them).
+
+## Dependency approvals needed
+Already approved by the owner: `mcp-handler@^2`, `@modelcontextprotocol/server@^2`, `zod@^4.2`.
+**Needs approval before T5:** `@electric-sql/pglite` (dev dependency) so the SQL tests can run in CI. If declined, the SQL tests stay a documented manual script and Checkpoint 1 relies on that.
+
+## Risks and mitigations
 | Risk | Impact | Mitigation |
-|------|--------|------------|
-| Project uses legacy JWT secret, so `getClaims()` still hits network | High | T2 gate; enable asymmetric keys in Supabase dashboard or skip T3 and co-locate regions |
-| Local verification skips revocation checks (session revoked elsewhere stays valid until JWT expiry) | Med | Acceptable: RLS + short JWT expiry; token refresh path still calls Auth |
-| `staleTimes` serves stale lists after mutations | Med | Clients already update local state / refresh; verify per mutation; keep value small (e.g. 30s) |
-| Nav takes an `onAddEvent` prop, so a shared layout is not a simple move | Med | Isolated into T8, only if profiling shows it matters |
-| Changing groups queries breaks `preview_avatars` | Med | Keep GroupDTO unchanged; compare output before/after |
-| Dev-mode numbers mislead | Low | T1 baseline in production mode |
-
-## Open Questions
-- Does the Supabase project have asymmetric JWT signing keys enabled? (T2)
-- Which Supabase region vs. where will the app be deployed? Is the 500ms mostly network distance from this dev machine?
-- Is a group ID available for measuring `/groups/[groupId]` (not yet measured)?
-- Is a ~30s stale window on tab switches acceptable product-wise?
-
-## Results (production build, localhost, single machine)
-| Route | Before (dev, getUser) | After (production) |
 |---|---|---|
-| `/` | about 540 ms | 243 ms warm median |
-| `/groups` | about 540 ms | 381 ms |
-| `/groups/[id]` | about 540 ms | 435 ms |
-| `/settings` | about 540 ms | 199 ms |
+| `mcp-handler` 2.x (new, thin auth docs) fails the spike | High | Spike first, time-boxed; fallback to official SDK glue recorded in the spec |
+| Vercel Deployment Protection blocks preview URLs | Med | Check the setting first; use the bypass header or test on production behind our own token |
+| A `security definer` function leaks another user's data | High | Owner always derived from the token; SQL tests prove cross-user isolation and group events untouched |
+| Token leaks via logs or Sentry | High | Never logged; `cdt_` pattern scrubbed; test asserts redaction |
+| Migration breaks the live app | High | Additive only; run only after review; rollback `drop function`/`drop table` lines included |
+| Duplicate or wrong events from misheard dates | Med | `external_id` upsert; Claude states the absolute date; delete needs `confirm: true` |
+| `proxy.ts` exemption widens access | Med | Exact path match only; test that all other routes still redirect |
+| Rate limits conflict (20 events per minute trigger vs 60 calls per minute) | Low | Token limit is coarse; the existing trigger still caps creation; error messages distinguish them |
 
-CLS 0 and no long tasks on all four routes. The before and after columns mix dev and production, so part of the gain is production mode.
-
-## Open follow-ups
-- A single database function returning a group with its members (needs a migration); the two group routes are still bound by two serial Supabase calls.
-- First-load JS is about 1.25 MB decoded: run a bundle analysis (Sentry and the Supabase client are the likely candidates).
-- Delete the leftover Sentry example routes (`app/sentry-example-page`, `app/api/sentry-example-api`).
-- Not verified: light-theme flash, Lighthouse, group settings modal with nested confirms, login and signup in light mode.
+## Open questions
+None blocking. Decisions are recorded in `SPEC.md`.
