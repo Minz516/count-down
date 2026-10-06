@@ -22,6 +22,10 @@ When the owner tells Claude Code (terminal) that an event happens on a date, Cla
 | Vault relation | One-way push, vault is master, `external_id` prevents duplicates |
 | Date-only input | Time 23:59, time zone Asia/Ho_Chi_Minh unless the user says otherwise |
 | Safety | Create and update freely and report back; deletes always wait for the user's yes |
+| Token expiry | Optional when creating a token, default none (lasts until revoked); the Settings list shows any expiry |
+| Existing events | New only. No back-fill of events already on the site; the first push handles events mentioned from now on |
+| Vault id property | `countdown_id` in each note's frontmatter, for example `countdown_id: vault:Personal/Passport.md#appointment` |
+| Token storage on the owner's machine | `--scope user`, which stores the header in `~/.claude.json` outside any repo. Never in a `.mcp.json` inside the vault or any synced or committed folder |
 
 ### Assumptions
 1. Only personal events (`group_id` is null) are in scope. Group events are not touched. **Confirmed by the owner.**
@@ -112,9 +116,7 @@ CI keeps running lint, contrast, build, bundle budget and the Playwright tests; 
 9. `npm run lint`, `build`, `check:bundle`, and all tests pass in CI.
 
 ## Open questions
-1. **Library check (still open):** whether the MCP SDK's Streamable HTTP transport works in a Next.js route handler as-is or needs Vercel's `mcp-handler`. Resolve at the start of `mcp-server` by reading the current docs. (The Claude Code side of this question is answered: see assumption 4.)
-1b. **Where the token lives on the owner's machine:** `--scope user` stores the header in `~/.claude.json`, outside any repo (good: it cannot be committed). Using `.mcp.json` with `${COUNTDOWN_TOKEN}` would also work but must never be placed in a synced or committed folder such as the vault. Proposal: user scope, documented in the setup guide.
-2. **Token expiry:** never expire by default, or default to 1 year with a visible expiry? (Proposal: optional expiry, default none, shown in the list.)
-3. **Existing events:** should the first push back-fill events already on the site that match vault notes, or only handle new ones? (Proposal: new only.)
-4. **Vault id field name:** where in the vault note to keep the stable id (proposal: a `countdown_id` frontmatter property).
-5. **Domain:** the production URL the token will be used against (needed for the setup guide).
+1. **Library check:** whether the MCP SDK's Streamable HTTP transport works in a Next.js route handler as-is or needs Vercel's `mcp-handler`. Resolve at the start of `mcp-server` by reading the current docs (the Claude Code side is already verified, see assumption 4).
+2. **Production domain:** the URL the token will be used against, needed for the setup guide in `docs/CLAUDE_CODE_EVENTS.md`. To be supplied by the owner.
+
+Resolved in review: token expiry, back-fill, vault id name and token storage (see the decisions table above).

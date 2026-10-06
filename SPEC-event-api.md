@@ -19,7 +19,7 @@ Let a holder of a personal access token create, update, list and delete **their 
 | name | text, 1-60 chars | label such as "Claude Code laptop" |
 | token_hash | bytea unique | SHA-256 of the token; never selectable by clients |
 | token_prefix | text | first 8 characters, for display only |
-| created_at, last_used_at, expires_at (nullable), revoked_at (nullable) | timestamptz | |
+| created_at, last_used_at, expires_at (nullable, default none), revoked_at (nullable) | timestamptz | expiry is optional at creation; no default expiry |
 
 RLS: enabled. Owners may `select` their rows but column-level grants expose only `id, name, token_prefix, created_at, last_used_at, expires_at, revoked_at` (never `token_hash`). No insert/update/delete policy: all writes go through the functions below.
 
