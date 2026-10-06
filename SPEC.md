@@ -25,6 +25,7 @@ When the owner tells Claude Code (terminal) that an event happens on a date, Cla
 | Token expiry | Optional when creating a token, default none (lasts until revoked); the Settings list shows any expiry |
 | Existing events | New only. No back-fill of events already on the site; the first push handles events mentioned from now on |
 | Vault id property | `countdown_id` in each note's frontmatter, for example `countdown_id: vault:Personal/Passport.md#appointment` |
+| MCP library | `mcp-handler` 2.x (Vercel Labs) on `@modelcontextprotocol/server` v2, chosen after comparing 6 options (see `SPEC-mcp-server.md`). A spike proves it first; fallback is the official SDK with hand-written Next.js glue |
 | Token storage on the owner's machine | `--scope user`, which stores the header in `~/.claude.json` outside any repo. Never in a `.mcp.json` inside the vault or any synced or committed folder |
 
 ### Assumptions
@@ -46,9 +47,7 @@ Build order: `event-api` -> `token-ui` and `mcp-server` (parallel) -> `vault-int
 
 ## Tech stack
 Existing: Next.js 16 (App Router), React 19, TypeScript, Supabase (Postgres + RLS), Tailwind v4, Playwright for tests.
-New (each needs approval before install):
-- `@modelcontextprotocol/sdk` for the MCP protocol (Streamable HTTP, stateless). Alternative to evaluate: Vercel's `mcp-handler` adapter. Decide in `mcp-server` after reading the current docs.
-- `zod` (already a dependency of the MCP SDK) for tool input schemas.
+New dependencies, approved by the owner with the library decision: `mcp-handler@^2`, `@modelcontextprotocol/server@^2`, `zod@^4.2` (Node 20+ is already used in CI). Any other new dependency still needs approval.
 
 ## Commands
 ```
@@ -116,7 +115,6 @@ CI keeps running lint, contrast, build, bundle budget and the Playwright tests; 
 9. `npm run lint`, `build`, `check:bundle`, and all tests pass in CI.
 
 ## Open questions
-1. **Library check:** whether the MCP SDK's Streamable HTTP transport works in a Next.js route handler as-is or needs Vercel's `mcp-handler`. Resolve at the start of `mcp-server` by reading the current docs (the Claude Code side is already verified, see assumption 4).
-2. **Production domain:** the URL the token will be used against, needed for the setup guide in `docs/CLAUDE_CODE_EVENTS.md`. To be supplied by the owner.
+1. **Production domain:** the URL the token will be used against, needed for the setup guide in `docs/CLAUDE_CODE_EVENTS.md`. To be supplied by the owner.
 
-Resolved in review: token expiry, back-fill, vault id name and token storage (see the decisions table above).
+Resolved in review: token expiry, back-fill, vault id name, token storage, and the MCP library (see the decisions table above).

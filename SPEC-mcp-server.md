@@ -11,7 +11,27 @@ A remote MCP server, hosted inside this Next.js app, that exposes four tools to 
 - `proxy.ts` must let `/api/mcp` through without the sign-in redirect and without cookie refresh (explicit path check, covered by a test). This is the only change to the proxy.
 - Uses the public anon key only (`lib/supabase` helpers); never the service-role key.
 - Request body size capped (for example 64 KB); no CORS headers (not meant for browsers).
-- Library choice (official SDK transport in a route handler vs Vercel's `mcp-handler`) is decided at the start of this module after checking current documentation.
+- **Library: `mcp-handler` 2.x**, built on `@modelcontextprotocol/server` v2 and `zod` v4 (Node 20+). It turns tool definitions into a Web-standard `(Request) => Response` handler, is stateless by design, and answers GET and DELETE with 405. The route reads the `Authorization` header itself and builds the handler per request with the token in a closure, so the library's own OAuth-style `withMcpAuth` is not required. Newer clients get the 2026-07-28 protocol revision and older clients are served by the library's fallback.
+
+### Library comparison (recorded for the decision, as of the owner's review)
+| Option | Fits inside Next.js? | Notes |
+|---|---|---|
+| `mcp-handler` 2.x (chosen) | Yes, built for route handlers | Least code; stateless; README is thin on auth details |
+| Official SDK v2 + Node adapter | Partly (Node request/response, not Next's) | Most authoritative; more glue to write and test |
+| Official SDK v2 + Hono | Yes, adds a second framework | Extra moving part |
+| xmcp | Yes, via its Next.js adapter | Own conventions and build setup; auth details unverified |
+| FastMCP | No (needs its own long-running server) | Rejected |
+| Hand-written JSON messages | Yes | Most work and compatibility risk; rejected |
+Older generation (`@modelcontextprotocol/sdk` v1, `mcp-handler` 1.x) gets security fixes for at least six months after v2 but is not a good base for new work.
+
+### Spike first (task 1 of this module, time-boxed to half a day)
+Build a "hello" server with one read-only tool at `/api/mcp`, deploy it to a Vercel preview, and prove all of:
+1. `claude mcp add --transport http --scope user ...` connects and `/mcp` shows the server connected.
+2. `tools/list` shows the tool and calling it returns a result.
+3. A missing or wrong `Authorization` header gets HTTP 401 without reaching the database.
+4. The route is reachable through `proxy.ts` only because of the explicit exemption; other routes still redirect to `/login`.
+5. It behaves the same on the deployed preview as locally (cold start, function duration).
+**Go:** all five pass, then continue with the real tools. **No-go:** any of 1 to 3 cannot be made to work within the time box, then switch to the official SDK v2 with hand-written route glue, record why in this file, and re-run the spike.
 
 ## Tools
 Server `instructions` tell Claude the rules: resolve relative dates to absolute ones first, default time 23:59 Asia/Ho_Chi_Minh, always pass a stable `external_id` when one exists, never delete without asking the user.
