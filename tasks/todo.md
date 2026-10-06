@@ -5,14 +5,14 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 ---
 ## Phase 0
 
-### T0: Spike, `mcp-handler` hello tool  [S]  (branch `feat/mcp-spike`)  - code done, owner checks pending
+### T0: Spike, `mcp-handler` hello tool  [S]  (branch `feat/mcp-spike`)  - DONE
 **Description:** Add the approved libraries, a route `app/api/mcp/route.ts` with one read-only `ping` tool, and an exact-path early return for `/api/mcp` in `proxy.ts` placed before any session work (not in `AUTH_ROUTES`, which would bounce signed-in users). Read the `Authorization` header; 401 without it. No database.
 **Acceptance criteria:**
-- [ ] **Owner:** `claude mcp add --transport http ...` connects and `/mcp` shows it connected (see the T0 handoff for the exact command)
+- [x] **Owner (confirmed):** Claude Code connected to the local server, `/mcp` showed it connected and `ping` returned pong
 - [x] `tools/list` shows `ping`; calling it returns a result (tested in-process and over real HTTP on a production build)
 - [x] Missing or wrong header gives 401 before any database code (no database exists in the spike)
 - [x] Only the exact path `/api/mcp` skips the sign-in redirect; `/api/mcp/x`, `/`, `/groups` still redirect when signed out
-- [ ] Same behaviour on a Vercel **preview**, reached with the Protection Bypass header (production stays untouched); the bypass secret is not committed and is revoked afterwards
+- [x] **Owner (confirmed):** same behaviour on a Vercel **preview** reached with the Protection Bypass header; production untouched. Owner to revoke the bypass secret and remove `MCP_SPIKE_TOKEN`
 **Verification:**
 - [x] `npx playwright test tests/mcp-spike.spec.ts` (12 tests: proxy rule, 401s, tools/list, tools/call)
 - [x] `npm run build`, lint, type-check, bundle budget, full suite (32 tests)
@@ -22,8 +22,8 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Scope:** Small. If checks 1 to 3 fail within half a day, switch to the official SDK glue and record why in `SPEC-mcp-server.md`.
 
 ## Checkpoint 0: Spike go/no-go
-- [ ] Library decision confirmed or fallback recorded
-- [ ] Review with owner before proceeding
+- [x] Library decision confirmed: `mcp-handler` 2.x works locally and on a Vercel preview with Claude Code (owner, 2026-10-06)
+- [x] Review with owner before proceeding
 
 ---
 ## Phase 1: Slice A, Claude Code creates a real event end to end  (branch `feat/mcp-slice-a`)
