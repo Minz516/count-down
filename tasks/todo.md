@@ -28,7 +28,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 ---
 ## Phase 1: Slice A, Claude Code creates a real event end to end  (branch `feat/mcp-slice-a`)
 
-### T1: Schema and token functions  [M]
+### T1: Schema and token functions  [M]  - DONE (commit 2205148)
 **Description:** Migration 1 (`<ts>_mcp_tokens.sql`): `events.external_id` with length check and partial unique index `(user_id, external_id)`; tables `api_tokens` (hash `bytea` unique, prefix, name, created, last used, expiry, revoked) and `api_token_usage`; RLS with column-level grants so `token_hash` is never selectable; `create_api_token`, `revoke_api_token`, internal `api_token_user` (hash lookup, revoked and expiry check, 60 calls per minute, `last_used_at` once a minute). Token is `cdt_` plus 64 hex from two `gen_random_uuid()` values, hashed with `sha256`.
 **Acceptance criteria:**
 - [ ] Additive only: no `drop` or `alter policy` on existing objects
@@ -40,7 +40,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `supabase/migrations/<ts>_mcp_tokens.sql`, `types/event.ts`
 **Scope:** Medium.
 
-### T2: `mcp_create_event`  [M]
+### T2: `mcp_create_event`  [M]  - DONE (commit e35df7b)
 **Description:** Migration 2 (`<ts>_mcp_create_event.sql`): create or update-by-`external_id`, personal events only, same validation as the app (name 200, description 2000, weekly-repeat rule), owner always from the token.
 **Acceptance criteria:**
 - [ ] Same `external_id` twice returns `updated`, one row
@@ -51,7 +51,7 @@ Branch convention: one branch per slice from `main` (`feat/mcp-spike`, `feat/mcp
 **Files:** `supabase/migrations/<ts>_mcp_create_event.sql`
 **Scope:** Small to medium.
 
-### T3: SQL tests on PGlite  [M]
+### T3: SQL tests on PGlite  [M]  - DONE (30 tests; six deliberate bugs all caught)
 **Description:** `tests/sql/mcp-event-api.spec.ts` loads a minimal copy of the app's tables and policies into PGlite, runs migrations 1 and 2 unchanged, and asserts the criteria for T1 and T2 (extended by later slices). Add `@electric-sql/pglite` as a dev dependency (needs approval).
 **Acceptance criteria:**
 - [ ] Every T1 and T2 criterion is asserted
