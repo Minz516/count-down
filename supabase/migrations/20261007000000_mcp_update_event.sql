@@ -1,5 +1,5 @@
 -- MCP event bridge, slice B: change fields of one of the owner's personal events.
--- Spec: SPEC-event-api.md. Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
+-- Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
 --
 -- The target is named by id OR external_id (exactly one). Only personal events (group_id is null) of the
 -- token's owner can be found; anything else is reported as "Event not found" so nothing leaks.

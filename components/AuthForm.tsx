@@ -169,8 +169,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     searchParams.get("error") === "oauth_failed" ? t("auth.oauthFailed") : null,
   );
   const [submitting, setSubmitting] = useState(false);
-  // Set instead of redirecting when Supabase Auth's "Confirm email" setting is on
-  // (docs/PRODUCTION_READINESS_CHECKLIST.md §3) - signUp() then returns no session until
+  // Set instead of redirecting when Supabase Auth's "Confirm email" setting is on:
+  // signUp() then returns no session until
   // the confirmation link is clicked, so pushing to "/" would just get bounced back to
   // /login by proxy.ts with no explanation.
   const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);

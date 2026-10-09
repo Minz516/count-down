@@ -40,7 +40,7 @@ function composeIfValid({ day, month, year }: DateParts): string {
 const segmentClass =
   "bg-transparent text-center font-body text-base text-on-surface placeholder:text-text-muted focus:outline-none";
 
-/** Two ways to set a deadline date: type dd/mm/yyyy directly, or open the calendar (docs/DESIGN.md §8.5). */
+/** Two ways to set a deadline date: type dd/mm/yyyy directly, or open the calendar. */
 export function DateField({ value, onChange }: DateFieldProps) {
   const t = useT();
   const [parts, setParts] = useState<DateParts>(() => splitValue(value));
@@ -95,7 +95,7 @@ export function DateField({ value, onChange }: DateFieldProps) {
             // Read the live DOM value, not `parts.day` - if this blur was triggered by the
             // auto-advance `.focus()` call above, it fires synchronously before React has
             // committed that same keystroke's state update, so the closed-over `parts` is
-            // one keystroke stale (see docs/DESIGN.md §8.5).
+            // one keystroke stale.
             const raw = event.target.value;
             if (!raw) return;
             const day = String(Math.min(31, Math.max(1, Number(raw)))).padStart(2, "0");

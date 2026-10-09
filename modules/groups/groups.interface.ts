@@ -1,5 +1,5 @@
 /**
- * The public contract for the `groups` module (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * The public contract for the `groups` module.
  * Pages and components import from here only - never from groups.repository.ts,
  * groups.service.ts, group-settings.repository.ts, or group-settings.service.ts
  * directly, and never call `supabase.from("groups"|"group_members"|"group_settings")`

@@ -12,8 +12,7 @@ const NAME_MAX_LENGTH = 100;
 
 /** Builds a group's DTO, filling in `preview_avatars` from the already-fetched member rows
  * and a profiles lookup - a repository method only ever touches its own table, so the
- * cross-module composition with `profiles` lives here instead (docs/ARCHITECTURE_DESIGN.md
- * §2.3), same as `toGroupDTO`'s doc comment explains. */
+ * cross-module composition with `profiles` lives here instead, same as `toGroupDTO`'s doc comment explains. */
 function previewUserIds({ members }: GroupWithMembers): string[] {
   return members.slice(0, PREVIEW_AVATAR_COUNT).map((member) => member.user_id);
 }
@@ -43,7 +42,7 @@ export const groupsService = {
     return entries.map((entry) => toPreviewDTO(entry, profileMap));
   },
 
-  /** A group plus its member roster (docs/UI_SPEC.md "Group Dashboard" - Members) from a
+  /** A group plus its member roster from a
    * single groups query and a single profiles lookup. A member with no `profiles` row
    * (pre-existing account) still appears, just with `username: null`. `group` is `null` when
    * it doesn't exist or the caller isn't a member (RLS makes those indistinguishable). */
@@ -108,7 +107,7 @@ export const groupsService = {
   /**
    * Translates the join_group_by_code() Postgres function's raised
    * exceptions (supabase/schema.sql) into the friendly, typed errors the UI
-   * expects (docs/UI_SPEC.md) - a raw Postgres error would otherwise surface
+   * expects - a raw Postgres error would otherwise surface
    * as an opaque DatabaseError message.
    */
   async joinGroup(supabase: SupabaseClient, inviteCode: string): Promise<GroupDTO> {
@@ -128,8 +127,7 @@ export const groupsService = {
         throw new ValidationError("That invite code isn't valid.");
       }
       // Rate limit from join_group_by_code()'s group_join_attempts check
-      // (supabase/migrations/20260822000000_production_readiness.sql, docs/
-      // PRODUCTION_READINESS_CHECKLIST.md §8) - brute-forcing invite codes.
+      // (supabase/migrations/20260822000000_production_readiness.sql) - brute-forcing invite codes.
       if (message.includes("Too many join attempts")) {
         throw new ValidationError("Too many attempts. Please wait a few minutes and try again.");
       }

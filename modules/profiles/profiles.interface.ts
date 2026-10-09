@@ -1,5 +1,5 @@
 /**
- * The public contract for the `profiles` module (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * The public contract for the `profiles` module.
  * Pages and components import from here only - never from profiles.repository.ts
  * or profiles.service.ts directly, and never call `supabase.from("profiles")` or
  * `supabase.storage.from("avatars")` themselves.

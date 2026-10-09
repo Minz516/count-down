@@ -1,5 +1,5 @@
 /**
- * The public contract for the `todos` module (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * The public contract for the `todos` module.
  * Pages and components import from here only - never from todos.repository.ts
  * or todos.service.ts directly, and never call `supabase.from("todos")` themselves.
  */

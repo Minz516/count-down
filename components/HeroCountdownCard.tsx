@@ -61,7 +61,7 @@ export function HeroCountdownCard({ event }: { event: EventDTO }) {
   );
 }
 
-/** Nice-to-have per docs/UI_SPEC.md: elapsed time since created_at relative to deadline. */
+/** Nice-to-have: elapsed time since created_at relative to deadline. */
 function ElapsedProgress({
   createdAt,
   deadline,

@@ -13,7 +13,7 @@ import { useLocale, useT } from "./LocaleProvider";
 interface RecurringEventCardProps {
   event: EventDTO;
   todos: TodoDTO[];
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
@@ -36,9 +36,9 @@ export function RecurringEventCard({
   const days = daysUntil(nextOccurrence(event.deadline));
 
   return (
-    // Dashed border distinguishes recurring cards from the Timeline's solid-border rows (docs/UI_SPEC.md).
+    // Dashed border distinguishes recurring cards from the Timeline's solid-border rows.
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
-    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist"). Keyboard-
+    // so they don't also trigger it. Keyboard-
     // operable too (role/tabIndex/onKeyDown + a visible focus ring), not mouse-only.
     <div
       onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}

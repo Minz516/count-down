@@ -1,7 +1,6 @@
 -- Run once in the Supabase SQL editor, after enabling the pg_cron extension
 -- (Database > Extensions). Schedules a daily job that must run server-side,
--- not client-side, since it has to happen even when no one has the app open
--- (docs/ARCHITECTURE.md "Scheduled Cleanup & Recurrence Rollover").
+-- not client-side, since it has to happen even when no one has the app open.
 
 create extension if not exists pg_cron;
 
@@ -29,8 +28,7 @@ begin
   where is_recurring = true
     and deadline < now();
 
-  -- 3. Hard-delete notifications 24h after they were marked read (docs/ARCHITECTURE.md
-  --    "In-App Notifications") - read_at, not created_at, is the clock: an unread
+  -- 3. Hard-delete notifications 24h after they were marked read - read_at, not created_at, is the clock: an unread
   --    notification is kept indefinitely regardless of age.
   delete from public.notifications
   where read_at is not null
@@ -38,8 +36,8 @@ begin
 end;
 $$;
 
--- Scheduling lives in one place, not split across pg_cron and an Edge Function
--- (docs/ARCHITECTURE.md "pick one mechanism" guidance): the `daily-digest` Edge
+-- Scheduling lives in one place, not split across pg_cron and an Edge Function:
+-- the `daily-digest` Edge
 -- Function (supabase/functions/daily-digest/) calls this same function via
 -- `.rpc("cleanup_and_roll_events")` before sending Discord digests, since the
 -- digest send needs outbound HTTP that plain pg_cron/pg_net can't do as simply.

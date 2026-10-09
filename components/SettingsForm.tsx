@@ -16,7 +16,7 @@ interface SettingsFormProps {
 const inputClass =
   "w-full rounded border border-field-border bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
-/** Personal Discord webhook + daily digest preference (docs/UI_SPEC.md "Settings"). */
+/** Personal Discord webhook + daily digest preference. */
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const t = useT();
   // Tracked in state (not read straight from the prop each render) so the

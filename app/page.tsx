@@ -7,13 +7,13 @@ import { todosInterface } from "@/modules/todos/todos.interface";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page renders one
 // signed-in user's own events/todos and must never be cached/statically served to another
-// visitor (docs/PRODUCTION_READINESS_CHECKLIST.md §9).
+// visitor.
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   // Set by proxy.ts from its own already-verified getUser() call - trusting it here
-  // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
+  // avoids a second Supabase Auth round-trip on every navigation.
   const userId = (await headers()).get("x-user-id");
 
   // Defense in depth - middleware already redirects unauthenticated requests,

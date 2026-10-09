@@ -1,5 +1,5 @@
 /**
- * The public contract for the `events` module (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * The public contract for the `events` module.
  * Pages and components import from here only - never from events.repository.ts
  * or events.service.ts directly, and never call `supabase.from("events")` themselves.
  */

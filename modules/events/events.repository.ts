@@ -4,7 +4,7 @@ import type { EventInput, EventEntity } from "@/types/event";
 
 /**
  * All Supabase access for the `events` table lives here - nothing outside this
- * module runs an `events` query directly (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * module runs an `events` query directly.
  *
  * Every method takes the acting user's id and filters on it explicitly, even
  * though Row Level Security (supabase/schema.sql) also enforces it. That's not
@@ -17,8 +17,7 @@ import type { EventInput, EventEntity } from "@/types/event";
  */
 export const eventsRepository = {
   /** `.is("group_id", null)` guards against a group event the caller happens to have
-   * authored themselves leaking into their personal timeline (docs/ARCHITECTURE.md
-   * "Group Countdown") - without it, `user_id = userId` alone isn't enough to mean
+   * authored themselves leaking into their personal timeline - without it, `user_id = userId` alone isn't enough to mean
    * "personal" once group events exist. */
   async listByRecurrence(
     supabase: SupabaseClient,
@@ -77,9 +76,9 @@ export const eventsRepository = {
     if (error) throw new DatabaseError(error.message);
   },
 
-  // --- Group-scoped variants (docs/ARCHITECTURE.md "Group Countdown") ---
+  // --- Group-scoped variants ---
   // Filtered by group_id, not user_id: any member has equal permission to
-  // manage any event in a group they belong to (docs/PRD.md), not just events
+  // manage any event in a group they belong to, not just events
   // they personally authored.
 
   async listByGroupAndRecurrence(

@@ -17,7 +17,7 @@ import { useT } from "./LocaleProvider";
 
 /**
  * Account icon that opens a small menu instead of signing out on the first
- * click (docs/UI_SPEC.md) - shared by Nav.tsx and GroupNav.tsx, which
+ * click - shared by Nav.tsx and GroupNav.tsx, which
  * previously each had their own inline icon-button-signs-out-immediately logic.
  *
  * The user/profile it shows comes from lib/store/sessionSlice.ts, not a local fetch:

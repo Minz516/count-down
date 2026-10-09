@@ -1,5 +1,5 @@
 -- MCP event bridge, slice C: list the owner's personal events.
--- Spec: SPEC-event-api.md. Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
+-- Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
 --
 -- Read-only. Default is upcoming events (deadline from now on), 50 at most; the hard cap is 200.
 -- Only personal events (group_id is null) of the token's owner are ever returned. p_query matches the

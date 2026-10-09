@@ -39,8 +39,8 @@ type ModalState =
 
 /**
  * Group Dashboard - same shape as DashboardClient.tsx, scoped to one group
- * instead of the signed-in user (docs/milestone2/UI_SPEC-milestone-2.md).
- * Group event cards are expandable too now (docs/milestone3/UI_SPEC-milestone-3.md) -
+ * instead of the signed-in user.
+ * Group event cards are expandable too now:
  * `Timeline`/`RecurringEventsSection`/`PastEventsSection` all default
  * `showChecklist` to `true`, so this component no longer overrides it to
  * `false`. Each member's checklist is their own (`TodoChecklist`'s existing

@@ -1,4 +1,4 @@
-/** A row from the `profiles` table (see docs/ARCHITECTURE.md "Auth Flow"). Repository-internal -
+/** A row from the `profiles` table. Repository-internal -
  * see modules/profiles/profiles.dto.ts for the DTO pages/components actually consume. */
 export interface ProfileEntity {
   id: string;

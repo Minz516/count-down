@@ -4,8 +4,7 @@ import type { UserSettingsEntity, UserSettingsInput } from "@/types/settings";
 
 /**
  * All Supabase access for the `user_settings` table lives here - nothing
- * outside this module runs a `user_settings` query directly
- * (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * outside this module runs a `user_settings` query directly.
  */
 export const settingsRepository = {
   /** `null` is a valid result - a user who hasn't opened Settings yet has no row. */

@@ -1,5 +1,5 @@
 -- MCP event bridge, slice A, migration 2 of 2: create (or update by external_id) a personal event.
--- Spec: SPEC-event-api.md. Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
+-- Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
 --
 -- Callable by anon and authenticated because the Next.js route has no user session: the token is the
 -- credential. The acting user always comes from the token (api_token_user), never from an argument.

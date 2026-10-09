@@ -8,13 +8,13 @@ import { useT } from "./LocaleProvider";
 interface RecurringEventsSectionProps {
   events: EventDTO[];
   todosByEvent?: Record<string, TodoDTO[]>;
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
 }
 
-/** Pinned separately from the Timeline; does not participate in its sort order (docs/UI_SPEC.md). */
+/** Pinned separately from the Timeline; does not participate in its sort order. */
 export function RecurringEventsSection({
   events,
   todosByEvent = {},

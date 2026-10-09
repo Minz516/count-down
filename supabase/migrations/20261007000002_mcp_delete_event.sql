@@ -1,5 +1,5 @@
 -- MCP event bridge, slice D: delete one of the owner's personal events.
--- Spec: SPEC-event-api.md. Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
+-- Requires 20261006000000_mcp_tokens.sql. Additive: one new function only.
 --
 -- Deletion is permanent, so it refuses unless p_confirm is exactly true. The target is named by id OR
 -- external_id (exactly one). Only personal events (group_id is null) of the token's owner can be found;

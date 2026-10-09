@@ -98,7 +98,7 @@ export async function proxy(request: NextRequest) {
 
   // Forward the id of the user this middleware already verified (getClaims()) so
   // protected pages can trust it instead of paying for a second getUser() round-trip
-  // (docs/FIX_NAVIGATION_LATENCY.md). Safe to trust: this header is set here, on the
+  // Safe to trust: this header is set here, on the
   // request, after JWT verification - a client-sent "x-user-id" can never survive since
   // this construction always overwrites the header set. Not a new auth boundary - RLS
   // still enforces all actual data access regardless of this header's value.

@@ -30,7 +30,7 @@ function toIsoDate(year: number, month: number, day: number): string {
 }
 
 /** Month-grid date picker, one visual step brighter than its surrounding surface
- * since this app uses tonal layering instead of shadows to separate it (docs/DESIGN.md §5). */
+ * since this app uses tonal layering instead of shadows to separate it. */
 export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopupProps) {
   const t = useT();
   const locale = useLocale();

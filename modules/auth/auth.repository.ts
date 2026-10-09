@@ -18,7 +18,7 @@ export const authRepository = {
   /** Returns whether a session was issued immediately - false when Supabase Auth's
    * "Confirm email" setting is on, since signUp() then returns a user but no session
    * until the confirmation link is clicked (a Dashboard toggle, not something this
-   * codebase controls - see docs/PRODUCTION_READINESS_CHECKLIST.md §3). */
+   * codebase controls). */
   async signUp(
     supabase: SupabaseClient,
     email: string,

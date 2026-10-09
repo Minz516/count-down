@@ -20,13 +20,13 @@ interface TodoChecklistProps {
 }
 
 /**
- * Self-contained, embeddable checklist widget (docs/UI_SPEC.md "Todo Checklist")
+ * Self-contained, embeddable checklist widget
  * - owns its own item list, seeded from `initialTodos`, but not its
  * expand/collapse state: the embedding card (EventListItem/RecurringEventCard/
  * PastEventCard) owns that so the *entire card* can toggle it, not just this
  * header row. Mutations call `todosInterface` directly and update local state
  * instead of `router.refresh()`: todos don't affect sort order, urgency, or
- * anything else on the page (docs/PRD.md), so there's nothing else to keep in
+ * anything else on the page, so there's nothing else to keep in
  * sync - unlike event CRUD, which DashboardClient's handlers refresh for.
  */
 export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded }: TodoChecklistProps) {
@@ -40,9 +40,9 @@ export function TodoChecklist({ event, initialTodos, expanded, onToggleExpanded 
   const doneCount = items.filter((item) => item.is_done).length;
 
   // On a group event, every member gets their own independent checklist (same
-  // todos.user_id scoping as a personal event, unchanged - docs/milestone3/ARCHITECTURE-milestone-3.md).
+  // todos.user_id scoping as a personal event, unchanged).
   // "Bạn" instead of "Checklist" makes that explicit, so nobody mistakes their own
-  // progress for a shared/group-wide one (docs/milestone3/UI_SPEC-milestone-3.md).
+  // progress for a shared/group-wide one.
   const isGroupEvent = event.group_id !== null;
 
   async function handleAdd(formEvent: FormEvent) {

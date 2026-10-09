@@ -12,7 +12,7 @@ export interface SignUpInput {
 
 export const authService = {
   /**
-   * Validates the signup form's rules (docs/UI_SPEC.md "Login / Signup") before ever
+   * Validates the signup form's rules before ever
    * calling Supabase - mirrors `events.service.ts`'s `assertValidInput` shape.
    */
   async signUp(supabase: SupabaseClient, input: SignUpInput): Promise<{ hasSession: boolean }> {
@@ -51,7 +51,7 @@ export const authService = {
   },
 
   /**
-   * Signs in with either an email or a username (docs/UI_SPEC.md "Login / Signup") - an
+   * Signs in with either an email or a username - an
    * "@" is treated as an email; anything else is resolved to an email first via
    * get_email_for_username() (supabase/schema.sql) before ever calling Supabase Auth.
    */
