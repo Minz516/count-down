@@ -1,9 +1,9 @@
 import { formatLocal } from "@/lib/mcp/time";
-import type { McpEventResultEntity } from "@/types/mcpevent";
+import type { McpEventListEntity, McpEventResultEntity } from "@/types/mcpevent";
 
 /** What the MCP tools return to Claude: both clocks, so the owner can see exactly what was stored. */
 export interface McpEventDTO {
-  action: "created" | "updated";
+  action: "created" | "updated" | "deleted";
   id: string;
   externalId: string | null;
   name: string;
@@ -34,5 +34,36 @@ export function toMcpEventDTO(entity: McpEventResultEntity, timezone: string, no
     repeatsWeekly: event.is_recurring,
     dayOfWeek: event.recurrence_day_of_week,
     ...(note ? { note } : {}),
+  };
+}
+
+/** One row of a listing: like McpEventDTO but without an action, since nothing was changed. */
+export type McpListedEventDTO = Omit<McpEventDTO, "action" | "note">;
+
+export interface McpEventListDTO {
+  events: McpListedEventDTO[];
+  /** How many events matched in all; larger than events.length when the limit cut the list. */
+  total: number;
+  timezone: string;
+}
+
+export function toMcpEventListDTO(entity: McpEventListEntity, timezone: string): McpEventListDTO {
+  return {
+    total: entity.total,
+    timezone,
+    events: entity.events.map((event) => {
+      const dto = toMcpEventDTO({ action: "updated", event }, timezone);
+      return {
+        id: dto.id,
+        externalId: dto.externalId,
+        name: dto.name,
+        description: dto.description,
+        deadlineUtc: dto.deadlineUtc,
+        deadlineLocal: dto.deadlineLocal,
+        timezone: dto.timezone,
+        repeatsWeekly: dto.repeatsWeekly,
+        dayOfWeek: dto.dayOfWeek,
+      };
+    }),
   };
 }

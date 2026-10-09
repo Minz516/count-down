@@ -7,7 +7,7 @@ import { GROUP, asAnon, asUser, createDb, makeToken, mcpMigrationFiles } from ".
 
 // Verifies the MCP migrations (supabase/migrations/*_mcp_*.sql) on an in-memory Postgres that has
 // the app's tables, row level security policies and event rate-limit trigger. The migrations are
-// applied unchanged. Specs: SPEC-event-api.md (criteria numbered below).
+// applied unchanged. Criteria are numbered below.
 
 let db: PGlite;
 

@@ -4,7 +4,7 @@ import type { TodoEntity } from "@/types/todo";
 
 /**
  * All Supabase access for the `todos` table lives here - nothing outside this
- * module runs a `todos` query directly (docs/ARCHITECTURE_DESIGN.md §2.1).
+ * module runs a `todos` query directly.
  *
  * Every method takes the acting user's id and filters on it explicitly, same
  * defense-in-depth rationale as `events.repository.ts`.

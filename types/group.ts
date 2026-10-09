@@ -1,4 +1,4 @@
-/** A row from the `groups` table, annotated with a member count (see docs/ARCHITECTURE.md).
+/** A row from the `groups` table, annotated with a member count.
  * Repository-internal - see modules/groups/groups.dto.ts's `GroupDTO` (which adds
  * `preview_avatars`, a cross-module join `groups.repository.ts` never does itself) for the
  * shape pages/components actually consume. */

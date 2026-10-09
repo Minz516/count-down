@@ -1,5 +1,5 @@
 -- MCP event bridge, slice A, migration 1 of 2: personal access tokens.
--- Spec: SPEC-event-api.md. Safe to run at any time: it only ADDS objects (one nullable column, two
+-- Safe to run at any time: it only ADDS objects (one nullable column, two
 -- tables, four functions) and changes no existing table data, policy or function.
 --
 -- A token lets Claude Code act for ONE user without a Supabase session. The Next.js route holds no

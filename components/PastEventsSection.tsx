@@ -8,7 +8,7 @@ import { useT } from "./LocaleProvider";
 interface PastEventsSectionProps {
   events: EventDTO[];
   todosByEvent?: Record<string, TodoDTO[]>;
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
@@ -16,7 +16,7 @@ interface PastEventsSectionProps {
 
 /**
  * Compact tracking area for events whose deadline just passed - pulled out of
- * the main Timeline (docs/UI_SPEC.md) and pinned at the bottom of the page,
+ * the main Timeline and pinned at the bottom of the page,
  * below Recurring, since it's the most transient content on the dashboard.
  * Self-bounding: events only sit here for the 24h grace window before the
  * cleanup cron hard-deletes them, at which point this section disappears on

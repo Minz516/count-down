@@ -8,22 +8,21 @@ import type { EventDTO } from "@/modules/events/events.interface";
 import type { TodoDTO } from "@/modules/todos/todos.interface";
 
 interface TimelineProps {
-  /** Today/soon/later events only - past events live in PastEventsSection instead (docs/UI_SPEC.md). */
+  /** Today/soon/later events only - past events live in PastEventsSection instead. */
   events: EventDTO[];
   todosByEvent?: Record<string, TodoDTO[]>;
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
 }
 
 /**
- * Today and future events, sorted ascending by deadline (docs/UI_SPEC.md). Rows
+ * Today and future events, sorted ascending by deadline. Rows
  * are connected by a vertical rail: each row draws its own line segment down to
  * the next row's dot, so segments compose into one continuous line with no
- * measurement/JS and no glitching during add/remove (docs/DESIGN.md §8.3).
- * Add/remove animates as a soft height collapse so the list never jump-cuts
- * (docs/DESIGN.md §7).
+ * measurement/JS and no glitching during add/remove.
+ * Add/remove animates as a soft height collapse so the list never jump-cuts.
  */
 export function Timeline({ events, todosByEvent = {}, showChecklist = true, onEdit, onDelete }: TimelineProps) {
   // events is already sorted ascending and never contains past events - the

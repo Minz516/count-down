@@ -4,5 +4,5 @@
  * and never call `supabase.rpc(...)` outside the modules tree.
  */
 export { mcpEventsService as mcpEventsInterface } from "./mcpevents.service";
-export type { McpEventDTO } from "./mcpevents.dto";
-export type { McpCreateEventInput } from "@/types/mcpevent";
+export type { McpEventDTO, McpEventListDTO, McpListedEventDTO } from "./mcpevents.dto";
+export type { McpCreateEventInput, McpUpdateEventInput, McpListEventsInput, McpDeleteEventInput } from "@/types/mcpevent";

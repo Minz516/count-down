@@ -14,7 +14,7 @@ export interface McpEventRow {
 }
 
 export interface McpEventResultEntity {
-  action: "created" | "updated";
+  action: "created" | "updated" | "deleted";
   event: McpEventRow;
 }
 
@@ -42,4 +42,64 @@ export interface McpCreateEventInput {
   externalId?: string | null;
   repeatsWeekly?: boolean;
   dayOfWeek?: DayOfWeek;
+}
+
+/** What a tool may send to change an event: name the target by id OR external_id, then only the fields to change. */
+export interface McpUpdateEventInput {
+  id?: string;
+  externalId?: string;
+  name?: string;
+  /** YYYY-MM-DD, local to `timezone`. Changes the deadline; `time` alone is not enough. */
+  date?: string;
+  time?: string;
+  timezone?: string;
+  /** A string sets it, null (or blank) clears it, undefined leaves it alone. */
+  description?: string | null;
+  repeatsWeekly?: boolean;
+  dayOfWeek?: DayOfWeek;
+}
+
+/** The target and patch sent to mcp_update_event, already converted to database terms. */
+export interface McpUpdateEventArgs {
+  id: string | null;
+  externalId: string | null;
+  patch: Record<string, unknown>;
+}
+
+/** What mcp_list_events returns: one page of events plus how many matched in all. */
+export interface McpEventListEntity {
+  events: McpEventRow[];
+  total: number;
+}
+
+export interface McpListEventsInput {
+  /** YYYY-MM-DD, start of that local day. Default: now (upcoming events). */
+  from?: string;
+  /** YYYY-MM-DD, end of that local day (inclusive). */
+  to?: string;
+  /** Plain text matched against name and description. */
+  query?: string;
+  /** Default 50, at most 200. */
+  limit?: number;
+  /** Zone for from/to and for the times shown. Default Asia/Ho_Chi_Minh. */
+  timezone?: string;
+}
+
+export interface McpListEventsArgs {
+  from: string | null;
+  to: string | null;
+  query: string | null;
+  limit: number | null;
+}
+
+export interface McpDeleteEventInput {
+  id?: string;
+  externalId?: string;
+  /** Must be exactly true. Deleting is permanent, so the owner has to have said yes in this conversation. */
+  confirm?: boolean;
+}
+
+export interface McpDeleteEventArgs {
+  id: string | null;
+  externalId: string | null;
 }

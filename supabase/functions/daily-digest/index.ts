@@ -1,11 +1,9 @@
 // Deno Edge Function, deployed separately from the Next.js app
 // (`supabase functions deploy daily-digest`) and scheduled once daily via
-// Supabase Dashboard -> Edge Functions -> Cron (see docs/SETUP.md). This is
-// the "one Edge Function, scheduled once daily, does three things" job from
-// docs/ARCHITECTURE.md "Discord Digest", extended in Milestone 2
-// (docs/milestone2/ARCHITECTURE-milestone-2.md) with a second digest pass for
-// groups, and again for the in-app notification bell
-// (docs/ARCHITECTURE.md "In-App Notifications"):
+// Supabase Dashboard -> Edge Functions -> Cron. This is
+// the "one Edge Function, scheduled once daily, does three things" job: the Discord
+// digest, extended in Milestone 2 with a second digest pass for
+// groups, and again for the in-app notification bell:
 //   1. delete expired non-recurring events + roll recurring ones forward
 //   2. read every user's AND every group's digest preference
 //   3. POST a Discord message per opted-in user/group, all concurrently via
@@ -17,7 +15,7 @@
 //
 // Deliberate exception to this project's anon-key-only rule: everywhere else
 // (lib/supabase/*.ts) uses the anon key + a user's own session, relying on RLS
-// as the real access boundary (docs/ARCHITECTURE_MONOLITH.md). This job has no
+// as the real access boundary. This job has no
 // signed-in user - it must read/act across *all* users and groups - so it
 // uses the service-role key instead, which bypasses RLS by design. That key
 // must never be exposed to the browser; it only ever lives in this function's
@@ -122,7 +120,7 @@ async function sendPersonalDigests(
   );
 }
 
-/** Group digests (docs/milestone2/ARCHITECTURE-milestone-2.md "Scheduled Daily Job") -
+/** Group digests: one message per opted-in group covering
  * every event with that `group_id`, regardless of which member authored it. */
 async function sendGroupDigests(
   supabase: SupabaseClient,
@@ -187,8 +185,7 @@ interface NotificationInsertRow {
 }
 
 /** Personal event -> just its owner; group event -> every member, not just whoever
- * created it (docs/ARCHITECTURE.md "In-App Notifications" - same "everyone's concern,
- * not the creator's alone" rule as equal edit permissions and the shared Discord digest). */
+ * created it. */
 async function resolveRecipients(supabase: SupabaseClient, event: NotificationEventRow): Promise<string[]> {
   if (!event.group_id) return [event.user_id];
 
@@ -265,19 +262,19 @@ async function generateNotifications(supabase: SupabaseClient, now: Date): Promi
   return { inserted: rows.length };
 }
 
-// Optional shared secret (docs/PRODUCTION_READINESS_CHECKLIST.md §1): Supabase's default
+// Optional shared secret: Supabase's default
 // per-function JWT verification only proves the caller holds *some* valid Supabase JWT -
 // the public anon key (shipped to every browser) satisfies that trivially, so without this,
 // anyone could trigger this job on demand. Set via `supabase secrets set
 // DIGEST_CRON_SECRET=<random value>` and configure the cron invocation to send it as the
-// `x-cron-secret` header (see docs/SETUP.md) - the check is skipped (not enforced) if the
+// `x-cron-secret` header - the check is skipped (not enforced) if the
 // secret is left unset, so an existing deployment doesn't start failing merely by
 // redeploying this file before that secret is configured.
 const CRON_SECRET = Deno.env.get("DIGEST_CRON_SECRET");
 
 /** Posts a one-line failure alert to a separate, dedicated health-check webhook (distinct
- * from any user's/group's own digest webhook) - opt-in via `HEALTH_WEBHOOK_URL`
- * (docs/PRODUCTION_READINESS_CHECKLIST.md §11), since a silently broken daily job could
+ * from any user's/group's own digest webhook) - opt-in via `HEALTH_WEBHOOK_URL`,
+ * since a silently broken daily job could
  * otherwise go unnoticed for weeks. Swallows its own errors - a failed alert must never
  * mask the original failure by throwing over it. */
 async function postHealthAlert(message: string): Promise<void> {
@@ -341,7 +338,7 @@ Deno.serve(async (req) => {
   const sent = results.filter((result) => result.sent).length;
   const failures = results.flatMap((result) => (result.failure ? [result.failure] : []));
 
-  // Logged on success too, not just failure (docs/PRODUCTION_READINESS_CHECKLIST.md §11) -
+  // Logged on success too, not just failure:
   // otherwise there's no way to confirm the job actually ran short of inferring it from the
   // absence of a complaint.
   console.log(`daily-digest: run complete - sent ${sent}, ${failures.length} failure(s), ${notificationsResult.inserted} notification(s) inserted`);

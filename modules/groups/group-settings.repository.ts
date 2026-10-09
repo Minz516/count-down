@@ -5,7 +5,7 @@ import type { GroupSettingsEntity, GroupSettingsInput } from "@/types/group";
 /**
  * All Supabase access for `group_settings` lives here - structurally
  * identical to `modules/settings/settings.repository.ts`, just keyed by
- * `group_id` instead of `user_id` (docs/ARCHITECTURE.md "Group Countdown").
+ * `group_id` instead of `user_id`.
  */
 export const groupSettingsRepository = {
   async get(supabase: SupabaseClient, groupId: string): Promise<GroupSettingsEntity | null> {

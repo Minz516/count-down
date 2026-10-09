@@ -1,4 +1,4 @@
-/** A row from the `notifications` table (see docs/ARCHITECTURE.md "In-App Notifications"). */
+/** A row from the `notifications` table. */
 export type NotificationType = "event_passed" | "due_soon";
 
 /** Repository-internal - see modules/notifications/notifications.dto.ts for the DTO

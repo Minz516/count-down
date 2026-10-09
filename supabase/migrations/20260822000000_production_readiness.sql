@@ -1,9 +1,8 @@
--- Production readiness pass (docs/PRODUCTION_READINESS_CHECKLIST.md sections 2 and 8).
+-- Production readiness pass.
 -- Run this once in the SQL Editor against a database that already has supabase/schema.sql
 -- applied. This is the first file in supabase/migrations/ - going forward, schema changes
--- should be added as new timestamped files here (docs/PRODUCTION_READINESS_CHECKLIST.md
--- §6) rather than only edited into schema.sql; schema.sql has also been updated in place
--- so a brand-new project setup (docs/SETUP.md) gets all of this from one file, with no
+-- should be added as new timestamped files here rather than only edited into schema.sql; schema.sql has also been updated in place
+-- so a brand-new project setup gets all of this from one file, with no
 -- need to separately apply this migration.
 
 -- 2. Database & Storage: length caps on free-form text so one bad request can't insert a

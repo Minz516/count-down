@@ -1,4 +1,4 @@
--- Production readiness pass, continued (docs/PRODUCTION_READINESS_CHECKLIST.md §8): a
+-- Production readiness pass, continued: a
 -- basic sanity cap on event creation per user, to prevent accidental or malicious spam
 -- from one account. Run this once in the SQL Editor; schema.sql has also been updated in
 -- place so a brand-new project setup gets this from one file.

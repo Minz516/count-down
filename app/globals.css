@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Design tokens sourced 1:1 from docs/THEME.md (Obsidian Chronos).
+/* Design tokens (Obsidian Chronos).
    Dark is the base set. The light set below is built from the same cool slate family
    (one palette, one accent: slate blue) and applies when the OS prefers light unless the
    user picked a theme explicitly (data-theme on <html>, set by the inline script in

@@ -4,8 +4,7 @@ import type { GroupEntity } from "@/types/group";
 
 /**
  * All Supabase access for `groups`/`group_members` lives here - nothing
- * outside this module queries those tables directly (docs/ARCHITECTURE_DESIGN.md
- * §2.1). Creating and joining a group both go through `security definer`
+ * outside this module queries those tables directly. Creating and joining a group both go through `security definer`
  * Postgres functions (`supabase/schema.sql`) rather than raw inserts - neither
  * table has a client-facing insert policy, so `.rpc()` is the only write path.
  */
@@ -24,7 +23,7 @@ interface GroupRow {
 /** Normalizes PostgREST's raw embedded-count wire shape into the flat entity - `preview_avatars`
  * isn't part of this at all: it's filled in only in `GroupDTO`, by groups.service.ts's
  * attachPreviewAvatars() (a cross-module join with `profiles` that a repository, scoped to
- * its own table, never does - docs/ARCHITECTURE_DESIGN.md §2.1). */
+ * its own table, never does). */
 function toGroupEntity(row: GroupRow): GroupEntity {
   return {
     id: row.id,
@@ -183,7 +182,7 @@ export const groupsRepository = {
    * Every group the caller belongs to with its first `previewLimit` members' profiles, in a single
    * call. Deliberately returns profile columns even though `profiles` belongs to another module:
    * the point is one round trip, and the function runs as the caller so RLS still decides what is
-   * visible (docs/ARCHITECTURE_DESIGN.md section 2.3 is otherwise unchanged).
+   * visible.
    */
   listWithMemberProfiles(
     supabase: SupabaseClient,

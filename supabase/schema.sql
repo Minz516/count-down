@@ -1,4 +1,4 @@
--- Run once in the Supabase SQL editor. See docs/ARCHITECTURE.md for the schema rationale.
+-- Run once in the Supabase SQL editor.
 
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
@@ -13,7 +13,7 @@ create table if not exists public.events (
 
 create index if not exists events_user_id_deadline_idx on public.events (user_id, deadline);
 
--- Length caps (docs/PRODUCTION_READINESS_CHECKLIST.md §2) so one bad request can't insert a
+-- Length caps so one bad request can't insert a
 -- multi-megabyte row - mirrored by matching checks in modules/events/events.service.ts.
 alter table public.events
   add constraint events_name_length check (char_length(name) <= 200),
@@ -21,7 +21,7 @@ alter table public.events
 
 alter table public.events enable row level security;
 
--- Each user may only ever see/create/edit/delete their own events (docs/PRD.md hard requirement).
+-- Each user may only ever see/create/edit/delete their own events.
 create policy "Users can view their own events" on public.events
   for select using (auth.uid() = user_id);
 
@@ -34,7 +34,7 @@ create policy "Users can update their own events" on public.events
 create policy "Users can delete their own events" on public.events
   for delete using (auth.uid() = user_id);
 
--- Rate limiting (docs/PRODUCTION_READINESS_CHECKLIST.md §8): a basic sanity cap so one
+-- Rate limiting: a basic sanity cap so one
 -- account can't spam event creation, accidentally or otherwise. Fires on every insert
 -- regardless of whether it came through the personal or group-scoped path - both always
 -- set user_id to the acting user (events.repository.ts), so one trigger covers both. No
@@ -59,7 +59,7 @@ create trigger enforce_event_creation_rate_limit
 before insert on public.events
 for each row execute function public.check_event_creation_rate_limit();
 
--- Personal todo checklist attached to an event (docs/ARCHITECTURE.md "Todo Checklist").
+-- Personal todo checklist attached to an event.
 -- `user_id` is included even though every event is personal today - forward-compatible
 -- with a future shared-event milestone without a schema change later.
 create table if not exists public.todos (
@@ -70,14 +70,14 @@ create table if not exists public.todos (
   is_done boolean not null default false,
   position integer not null default 0,
   created_at timestamptz not null default now(),
-  -- Length cap (docs/PRODUCTION_READINESS_CHECKLIST.md §2) - mirrors the matching check in
+  -- Length cap - mirrors the matching check in
   -- modules/todos/todos.service.ts.
   constraint todos_content_length check (char_length(content) <= 500)
 );
 
 create index if not exists todos_event_id_position_idx on public.todos (event_id, position);
 -- todos.repository.ts's listAllForUser filters on user_id alone, not covered by the
--- composite index above (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+-- composite index above.
 create index if not exists todos_user_id_idx on public.todos (user_id);
 
 alter table public.todos enable row level security;
@@ -94,8 +94,7 @@ create policy "Users can update their own todos" on public.todos
 create policy "Users can delete their own todos" on public.todos
   for delete using (auth.uid() = user_id);
 
--- One row per user: their personal Discord webhook + digest preference
--- (docs/ARCHITECTURE.md "Discord Digest").
+-- One row per user: their personal Discord webhook + digest preference.
 create table if not exists public.user_settings (
   user_id uuid primary key references auth.users (id) on delete cascade,
   discord_webhook_url text,
@@ -113,7 +112,7 @@ create policy "Users can insert their own settings" on public.user_settings
 create policy "Users can update their own settings" on public.user_settings
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Milestone 2: Group Countdown (docs/ARCHITECTURE.md "Group Countdown").
+-- Milestone 2: Group Countdown.
 -- A shared timeline multiple invited members can view and edit together.
 
 create table if not exists public.groups (
@@ -124,7 +123,7 @@ create table if not exists public.groups (
   created_at timestamptz not null default now()
 );
 
--- Length cap (docs/PRODUCTION_READINESS_CHECKLIST.md §2) - mirrors the matching check in
+-- Length cap - mirrors the matching check in
 -- modules/groups/groups.service.ts.
 alter table public.groups add constraint groups_name_length check (char_length(name) <= 100);
 
@@ -133,7 +132,7 @@ alter table public.groups enable row level security;
 -- events.group_id: null = personal event, set = belongs to that group.
 alter table public.events add column if not exists group_id uuid references public.groups (id) on delete cascade;
 -- events.repository.ts's listByGroupAndRecurrence filters on group_id alone, not covered
--- by the events(user_id, deadline) index above (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+-- by the events(user_id, deadline) index above.
 create index if not exists events_group_id_idx on public.events (group_id);
 
 create table if not exists public.group_members (
@@ -143,8 +142,7 @@ create table if not exists public.group_members (
   primary key (group_id, user_id)
 );
 
--- The primary key above leads with group_id, so it doesn't serve a user_id-only lookup
--- (docs/PRODUCTION_READINESS_CHECKLIST.md §2).
+-- The primary key above leads with group_id, so it doesn't serve a user_id-only lookup.
 create index if not exists group_members_user_id_idx on public.group_members (user_id);
 
 alter table public.group_members enable row level security;
@@ -175,8 +173,7 @@ as $$
 $$;
 
 -- No insert/update/delete policy - joining only happens via
--- join_group_by_code() below (docs/ARCHITECTURE.md "avoids exposing group_id
--- values or letting the RLS policy be the only gate on joining").
+-- join_group_by_code() below.
 create policy "Members can view fellow members" on public.group_members
   for select using (public.is_group_member(group_id));
 
@@ -330,7 +327,7 @@ begin
 end;
 $$;
 
--- Rate limiting for invite-code join attempts (docs/PRODUCTION_READINESS_CHECKLIST.md §8):
+-- Rate limiting for invite-code join attempts:
 -- groups.invite_code is only 8 characters, so without a cap it's brute-forceable through
 -- repeated calls to join_group_by_code() directly - RLS/policies don't limit call
 -- frequency. Logs every attempt regardless of outcome, since what's being capped is
@@ -383,7 +380,7 @@ begin
 end;
 $$;
 
--- Username support (docs/ARCHITECTURE.md "Auth Flow"). auth.users can't be extended with
+-- Username support. auth.users can't be extended with
 -- custom columns, so username lives in its own table, populated automatically at signup -
 -- not via a client insert - by the trigger below.
 create table if not exists public.profiles (
@@ -403,8 +400,7 @@ create policy "Users can view their own profile" on public.profiles
 -- (`supabase.auth.signUp({ options: { data: { username } } })`) into profiles.
 -- security definer so it can write to profiles despite that table having no
 -- insert policy of its own.
--- OAuth sign-in (Google/Facebook/Discord/GitHub, docs/PRODUCTION_READINESS_CHECKLIST.md-era
--- addition) doesn't collect a username the way AuthForm.tsx's signup form does, so this
+-- OAuth sign-in (Google/Facebook/Discord/GitHub) doesn't collect a username the way AuthForm.tsx's signup form does, so this
 -- derives one automatically for that path while leaving the username/password path (which
 -- always sets raw_user_meta_data->>'username') untouched.
 create or replace function public.handle_new_user()
@@ -484,8 +480,7 @@ $$;
 
 grant execute on function public.get_email_for_username(text) to anon, authenticated;
 
--- Profile editing (avatar + username) and cross-member visibility
--- (docs/ARCHITECTURE.md "Group Countdown" - member list, group card avatar previews).
+-- Profile editing (avatar + username) and cross-member visibility.
 
 alter table public.profiles add column if not exists avatar_url text;
 
@@ -508,7 +503,7 @@ create policy "Users can view fellow group members' profiles" on public.profiles
   );
 
 -- Avatar images live in Storage, not a table - public read (avatars aren't sensitive),
--- writes restricted to each user's own folder (docs/ARCHITECTURE.md "Auth Flow").
+-- writes restricted to each user's own folder.
 insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do nothing;

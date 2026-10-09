@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 }
 
-// docs/DESIGN.md §8.6 - no shadows, active state is a scale press, contrast verified per variant.
+// No shadows, active state is a scale press, contrast verified per variant.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-primary-container text-on-primary-container hover:bg-primary-container/90",
   ghost:

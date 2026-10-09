@@ -27,8 +27,7 @@ const inputClass =
   "w-full rounded border border-field-border bg-surface-container-lowest px-3 py-2 font-body text-base text-on-surface placeholder:text-text-muted focus:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary/50";
 
 /**
- * Invite code + member count + the group's own Discord webhook (docs/milestone2/UI_SPEC-milestone-2.md
- * "Group Settings") - a modal rather than a separate route/tab, since the spec allows either
+ * Invite code + member count + the group's own Discord webhook - a modal rather than a separate route/tab, since the spec allows either
  * and this avoids a new page for what's a small, single-purpose panel.
  */
 export function GroupSettingsModal({

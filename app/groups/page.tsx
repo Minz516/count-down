@@ -8,14 +8,14 @@ import { getT } from "@/lib/i18n/server";
 
 // Explicit, not just incidental via cookies()'s implicit opt-out - this page lists one
 // signed-in user's own groups and must never be cached/statically served to another
-// visitor (docs/PRODUCTION_READINESS_CHECKLIST.md §9).
+// visitor.
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
   const t = await getT();
   const supabase = await createClient();
   // Set by proxy.ts from its own already-verified getUser() call - trusting it here
-  // avoids a second Supabase Auth round-trip on every navigation (docs/FIX_NAVIGATION_LATENCY.md).
+  // avoids a second Supabase Auth round-trip on every navigation.
   const userId = (await headers()).get("x-user-id");
 
   // Defense in depth - proxy.ts already redirects unauthenticated requests,

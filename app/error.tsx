@@ -7,8 +7,8 @@ import { useT } from "@/components/LocaleProvider";
 /**
  * Next.js error boundary for this route segment - catches anything thrown by
  * `app/page.tsx` (e.g. a `DatabaseError` from the events module) instead of a
- * blank screen. Matches docs/ARCHITECTURE_DESIGN.md §6's "failure as a
- * first-class state" principle, adapted to Next's own error-boundary convention
+ * blank screen. Treats failure as a
+ * first-class state, adapted to Next's own error-boundary convention
  * rather than a formatted HTTP error envelope.
  */
 export default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {

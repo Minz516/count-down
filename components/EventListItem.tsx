@@ -14,13 +14,13 @@ interface EventListItemProps {
   event: EventDTO;
   status: EventStatusInfo;
   todos: TodoDTO[];
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
 }
 
-/** Card content only - the status dot + connecting rail are owned by Timeline (docs/DESIGN.md §8.3). */
+/** Card content only - the status dot + connecting rail are owned by Timeline. */
 export function EventListItem({
   event,
   status,
@@ -34,7 +34,7 @@ export function EventListItem({
 
   return (
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
-    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist"). Keyboard-
+    // so they don't also trigger it. Keyboard-
     // operable too (role/tabIndex/onKeyDown + a visible focus ring), not mouse-only.
     <div
       onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}

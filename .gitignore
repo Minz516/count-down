@@ -49,6 +49,10 @@ next-env.d.ts
 /.claude
 /docs
 /references
+/tasks
+/SPEC*.md
+/.vscode
+/repomix-output.xml
 
 # supabase local CLI state (machine-specific link info)
 /supabase/.temp

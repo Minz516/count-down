@@ -7,7 +7,7 @@ import { ValidationError } from "@/modules/shared/errors";
 // supabase/migrations/20260822000000_production_readiness.sql.
 const CONTENT_MAX_LENGTH = 500;
 
-/** Splits one flat `listAllForUser` result into per-event lists - see docs/ARCHITECTURE.md. */
+/** Splits one flat `listAllForUser` result into per-event lists. */
 export function groupByEvent(todos: TodoDTO[]): Record<string, TodoDTO[]> {
   const grouped: Record<string, TodoDTO[]> = {};
   for (const todo of todos) {

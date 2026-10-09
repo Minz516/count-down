@@ -1,4 +1,4 @@
-/** A row from the `user_settings` table (see docs/ARCHITECTURE.md). Repository-internal -
+/** A row from the `user_settings` table. Repository-internal -
  * see modules/settings/settings.dto.ts for the DTO pages/components actually consume. */
 export interface UserSettingsEntity {
   user_id: string;

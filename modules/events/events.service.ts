@@ -25,9 +25,7 @@ const NAME_MAX_LENGTH = 200;
 const DESCRIPTION_MAX_LENGTH = 2000;
 
 /**
- * Re-validates what the form already checked client-side (docs/ARCHITECTURE_DESIGN.md
- * §2.3: "controllers assume already-valid input", but the service layer is the
- * boundary that must not trust its caller blindly).
+ * Re-validates what the form already checked client-side.
  */
 function assertValidInput(input: EventInput): void {
   if (!input.name.trim()) {
@@ -49,7 +47,7 @@ function assertValidInput(input: EventInput): void {
 
 /**
  * Translates `check_event_creation_rate_limit()`'s raised exception
- * (supabase/schema.sql, docs/PRODUCTION_READINESS_CHECKLIST.md §8) into the friendly,
+ * (supabase/schema.sql) into the friendly,
  * typed error the UI expects - same pattern as groups.service.ts's joinGroup. Any other
  * error passes through unchanged.
  */
@@ -63,7 +61,7 @@ function translateRateLimitError(err: unknown): Error {
 
 export const eventsService = {
   async getDashboardData(supabase: SupabaseClient, userId: string): Promise<DashboardData> {
-    // Two independent queries per docs/ARCHITECTURE.md: the Timeline never
+    // Two independent queries: the Timeline never
     // includes recurring events, and the recurring section never joins the
     // Timeline's sort order.
     const [timelineEntities, recurringEntities] = await Promise.all([
@@ -102,7 +100,7 @@ export const eventsService = {
     return eventsRepository.remove(supabase, userId, id);
   },
 
-  // --- Group-scoped variants (docs/ARCHITECTURE.md "Group Countdown") ---
+  // --- Group-scoped variants ---
 
   async getGroupDashboardData(supabase: SupabaseClient, groupId: string): Promise<GroupDashboardData> {
     const [timelineEntities, recurringEntities] = await Promise.all([

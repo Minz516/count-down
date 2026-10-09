@@ -2,6 +2,9 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { mcpEventsInterface } from "@/modules/mcpevents/mcpevents.interface";
 import { registerCreateEvent } from "./tools/create-event";
+import { registerDeleteEvent } from "./tools/delete-event";
+import { registerListEvents } from "./tools/list-events";
+import { registerUpdateEvent } from "./tools/update-event";
 
 /** What every tool needs: the caller's token (never logged), a session-less database client, and the events module. */
 export interface ToolContext {
@@ -15,4 +18,7 @@ export interface ToolContext {
 /** One line per tool, one file per tool (lib/mcp/tools/), so slices add tools without touching each other. */
 export function registerTools(server: McpServer, context: ToolContext): void {
   registerCreateEvent(server, context);
+  registerUpdateEvent(server, context);
+  registerListEvents(server, context);
+  registerDeleteEvent(server, context);
 }

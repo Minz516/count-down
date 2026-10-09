@@ -74,7 +74,7 @@ export function DashboardClient({
   const hasAnyEvents = initialEvents.length > 0 || initialRecurringEvents.length > 0;
 
   // Past events are pulled out of the Timeline into their own compact section
-  // (docs/UI_SPEC.md) - status is presentational/client-side only, so this
+  // - status is presentational/client-side only, so this
   // split is just a render-time filter, no service/DB change involved.
   const activeEvents = initialEvents.filter((event) => getEventStatus(event.deadline).status !== "past");
   const pastEvents = initialEvents.filter((event) => getEventStatus(event.deadline).status === "past");

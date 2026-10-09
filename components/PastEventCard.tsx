@@ -12,7 +12,7 @@ import { useT } from "./LocaleProvider";
 interface PastEventCardProps {
   event: EventDTO;
   todos: TodoDTO[];
-  /** false on the Group Dashboard - group event cards aren't expandable yet (docs/milestone2/UI_SPEC-milestone-2.md). */
+  /** false on the Group Dashboard - group event cards aren't expandable yet. */
   showChecklist?: boolean;
   onEdit: (event: EventDTO) => void;
   onDelete: (event: EventDTO) => void;
@@ -20,7 +20,7 @@ interface PastEventCardProps {
 
 /**
  * Compact, de-emphasized row - no status dot/chip since the section itself
- * already conveys "past" (docs/DESIGN.md §8.7). Only ever lives here for the
+ * already conveys "past". Only ever lives here for the
  * 24h grace window before `supabase/cleanup_and_rollover.sql` hard-deletes it.
  */
 export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDelete }: PastEventCardProps) {
@@ -29,7 +29,7 @@ export function PastEventCard({ event, todos, showChecklist = true, onEdit, onDe
 
   return (
     // The whole card toggles the checklist - Edit/Delete below stopPropagation
-    // so they don't also trigger it (docs/UI_SPEC.md "Todo Checklist"). Keyboard-
+    // so they don't also trigger it. Keyboard-
     // operable too (role/tabIndex/onKeyDown + a visible focus ring), not mouse-only.
     <div
       onClick={showChecklist ? () => setChecklistExpanded((value) => !value) : undefined}
