@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { McpCreateEventArgs, McpEventResultEntity, McpUpdateEventArgs } from "@/types/mcpevent";
+import type { McpCreateEventArgs, McpEventListEntity, McpEventResultEntity, McpListEventsArgs, McpUpdateEventArgs } from "@/types/mcpevent";
 
 /**
  * All Supabase access for the token-authenticated event calls. Unlike the other repositories these do
@@ -34,5 +34,17 @@ export const mcpEventsRepository = {
     });
     if (error) throw new DatabaseError(error.message);
     return data as McpEventResultEntity;
+  },
+
+  async listEvents(supabase: SupabaseClient, token: string, args: McpListEventsArgs): Promise<McpEventListEntity> {
+    const { data, error } = await supabase.rpc("mcp_list_events", {
+      p_token: token,
+      p_from: args.from,
+      p_to: args.to,
+      p_query: args.query,
+      p_limit: args.limit,
+    });
+    if (error) throw new DatabaseError(error.message);
+    return data as McpEventListEntity;
   },
 };

@@ -140,7 +140,7 @@ test.describe("protocol", () => {
     const { result } = await messageOf(await handle(request(rpc("tools/list"))));
     const tools = result?.tools as { name: string; description: string; inputSchema: { properties: Record<string, unknown>; required?: string[] }; annotations?: Record<string, unknown> }[];
 
-    expect(tools.map((tool) => tool.name)).toEqual(["create_event", "update_event"]);
+    expect(tools.map((tool) => tool.name)).toEqual(["create_event", "update_event", "list_events"]);
     const tool = tools.find((t) => t.name === "create_event")!;
     expect(Object.keys(tool.inputSchema.properties).sort()).toEqual(
       ["date", "day_of_week", "description", "external_id", "name", "repeats_weekly", "time", "timezone"],

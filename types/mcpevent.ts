@@ -65,3 +65,29 @@ export interface McpUpdateEventArgs {
   externalId: string | null;
   patch: Record<string, unknown>;
 }
+
+/** What mcp_list_events returns: one page of events plus how many matched in all. */
+export interface McpEventListEntity {
+  events: McpEventRow[];
+  total: number;
+}
+
+export interface McpListEventsInput {
+  /** YYYY-MM-DD, start of that local day. Default: now (upcoming events). */
+  from?: string;
+  /** YYYY-MM-DD, end of that local day (inclusive). */
+  to?: string;
+  /** Plain text matched against name and description. */
+  query?: string;
+  /** Default 50, at most 200. */
+  limit?: number;
+  /** Zone for from/to and for the times shown. Default Asia/Ho_Chi_Minh. */
+  timezone?: string;
+}
+
+export interface McpListEventsArgs {
+  from: string | null;
+  to: string | null;
+  query: string | null;
+  limit: number | null;
+}
