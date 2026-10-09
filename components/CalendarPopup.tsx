@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
 import { motion, useReducedMotion } from "motion/react";
+import { POPOVER_SPRING } from "@/lib/motion";
 import { useLocale, useT } from "./LocaleProvider";
 
 interface CalendarPopupProps {
@@ -69,10 +70,11 @@ export function CalendarPopup({ selectedDate, onSelect, onClose }: CalendarPopup
       role="dialog"
       aria-modal="false"
       aria-label={t("date.chooseDate")}
-      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.15 }}
-      className="absolute top-full left-0 z-20 mt-2 w-64 rounded-lg border border-primary-container/15 bg-surface-container-high p-3"
+      transition={POPOVER_SPRING}
+      style={{ transformOrigin: "top left" }}
+      className="glass-surface absolute top-full left-0 z-20 mt-2 w-64 rounded-lg border border-primary-container/15 p-3"
     >
       <div className="flex items-center justify-between">
         <button

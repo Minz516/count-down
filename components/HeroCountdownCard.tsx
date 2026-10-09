@@ -1,6 +1,8 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useCountdown, type Countdown } from "@/lib/useCountdown";
+import { TICK_SPRING } from "@/lib/motion";
 import { LocalDate } from "./LocalDate";
 import type { EventDTO } from "@/modules/events/events.interface";
 import { useT } from "./LocaleProvider";
@@ -18,7 +20,7 @@ export function HeroCountdownCard({ event }: { event: EventDTO }) {
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-primary-container/15 bg-surface-container bg-gradient-to-b from-primary-container/5 to-transparent px-5 py-10 text-center sm:px-8">
-      <h2 className="text-balance font-display text-2xl font-semibold text-on-surface sm:text-[32px]">
+      <h2 className="text-balance font-display text-2xl font-semibold tracking-tight text-on-surface sm:text-[32px]">
         {event.name}
       </h2>
       <p className="mt-2 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
@@ -37,8 +39,19 @@ export function HeroCountdownCard({ event }: { event: EventDTO }) {
               </span>
             )}
             <div className="flex flex-col items-center">
-              <span className="font-display text-5xl font-bold tracking-tight tabular-nums text-primary sm:text-6xl lg:text-5xl">
-                {countdown ? String(countdown[key]).padStart(2, "0") : "--"}
+              <span className="relative inline-grid overflow-hidden font-display text-5xl font-bold tracking-tight tabular-nums text-primary sm:text-6xl lg:text-5xl">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={countdown ? countdown[key] : "placeholder"}
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -10, opacity: 0 }}
+                    transition={TICK_SPRING}
+                    className="col-start-1 row-start-1"
+                  >
+                    {countdown ? String(countdown[key]).padStart(2, "0") : "--"}
+                  </motion.span>
+                </AnimatePresence>
               </span>
               <span className="mt-1 font-mono text-xs tracking-[0.1em] text-text-muted uppercase">
                 {t(label)}

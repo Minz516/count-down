@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCircle, Trash } from "@phosphor-icons/react/ssr";
 import { clsx } from "clsx";
+import { AnimatePresence, motion } from "motion/react";
+import { POPOVER_SPRING } from "@/lib/motion";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
   fetchNotifications,
@@ -105,10 +107,16 @@ export function NotificationBell() {
         )}
       </button>
 
+      <AnimatePresence>
       {open && (
-        <div
+        <motion.div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-primary-container/15 bg-surface-elevated"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={POPOVER_SPRING}
+          style={{ transformOrigin: "top right" }}
+          className="glass-surface absolute right-0 top-full z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-primary-container/15"
         >
           <div className="flex items-center justify-between px-3 py-2.5">
             <span className="font-mono text-xs font-medium tracking-[0.1em] text-text-muted uppercase">
@@ -186,8 +194,9 @@ export function NotificationBell() {
               ))
             )}
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

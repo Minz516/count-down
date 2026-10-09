@@ -4,6 +4,7 @@ import { useId } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Button } from "./Button";
+import { DIALOG_SPRING } from "@/lib/motion";
 import { useDialog } from "@/lib/useDialog";
 import { useT } from "./LocaleProvider";
 
@@ -25,7 +26,7 @@ export function ConfirmDialog({ title, description, onConfirm, onCancel, confirm
   // transform, and a transformed ancestor would otherwise become the containing block for `fixed`.
   // Only ever mounted after a user action, so `document` always exists here.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
+    <div className="modal-scrim fixed inset-0 z-50 flex items-center justify-center overscroll-contain px-4">
       <motion.div
         ref={dialogRef}
         role="dialog"
@@ -35,7 +36,7 @@ export function ConfirmDialog({ title, description, onConfirm, onCancel, confirm
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.15 }}
+        transition={DIALOG_SPRING}
         className="w-full max-w-sm rounded-lg border border-primary-container/15 bg-surface-container p-6"
       >
         <h2 id={titleId} className="text-balance font-display text-lg font-semibold text-on-surface">{title}</h2>

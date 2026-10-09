@@ -52,7 +52,7 @@ export default async function SettingsPage() {
       <Nav />
 
       <main id="main" className="content-rise mx-auto flex max-w-[560px] flex-col gap-6 px-4 pt-8 pb-28 sm:px-8 sm:pb-12">
-        <h1 className="font-display text-2xl font-semibold text-on-surface">{t("settings.title")}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-on-surface">{t("settings.title")}</h1>
         <SettingsForm initialSettings={settings} />
         <ApiTokensSection userId={userId} initialTokens={tokens} loadFailed={tokensFailed} />
       </main>

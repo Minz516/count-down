@@ -90,7 +90,7 @@ export function Nav({ onAddEvent }: NavProps) {
 
       <nav
         aria-label={t("nav.primary")}
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-primary-container/15 bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
+        className="glass-surface fixed inset-x-0 bottom-0 z-30 border-t border-primary-container/15 pb-[env(safe-area-inset-bottom)] sm:hidden"
       >
         <ul className="mx-auto grid max-w-md grid-cols-2">
           {TABS.map(({ href, label, icon: Icon, isActive }) => {

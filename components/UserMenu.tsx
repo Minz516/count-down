@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Gear, PencilSimple, SignOut } from "@phosphor-icons/react/ssr";
+import { AnimatePresence, motion } from "motion/react";
 import { Avatar } from "./Avatar";
 import { EditProfileModal } from "./EditProfileModal";
 import { LanguageMenuItem } from "./LanguageToggle";
 import { ThemeMenuItem } from "./ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
+import { POPOVER_SPRING } from "@/lib/motion";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { notificationsCleared } from "@/lib/store/notificationsSlice";
 import { fetchSession, profileUpdated, sessionCleared } from "@/lib/store/sessionSlice";
@@ -88,10 +90,16 @@ export function UserMenu() {
         <Avatar src={profile?.avatar_url ?? null} alt="" size={26} />
       </button>
 
+      <AnimatePresence>
       {open && (
-        <div
+        <motion.div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-primary-container/15 bg-surface-elevated py-1"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={POPOVER_SPRING}
+          style={{ transformOrigin: "top right" }}
+          className="glass-surface absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-primary-container/15 py-1"
         >
           {profile && (
             <p className="truncate px-3 py-1.5 font-body text-xs text-text-muted">{profile.username}</p>
@@ -129,8 +137,9 @@ export function UserMenu() {
             <SignOut aria-hidden="true" size={16} />
             {t("menu.logOut")}
           </button>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {editOpen && userId && (
         <EditProfileModal

@@ -5,6 +5,7 @@ import { X } from "@phosphor-icons/react/ssr";
 import { motion } from "motion/react";
 import { Button } from "./Button";
 import { DateField } from "./DateField";
+import { DIALOG_SPRING } from "@/lib/motion";
 import { TimeField } from "./TimeField";
 import {
   dayOfWeekLabel,
@@ -93,7 +94,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
   const dialogRef = useDialog<HTMLDivElement>(onCancel);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-surface-deep/70 px-4">
+    <div className="modal-scrim fixed inset-0 z-50 flex items-center justify-center overscroll-contain px-4">
       <motion.div
         ref={dialogRef}
         role="dialog"
@@ -103,7 +104,7 @@ export function EventForm({ initialEvent, onSubmit, onCancel }: EventFormProps) 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.15 }}
+        transition={DIALOG_SPRING}
         className="w-full max-w-md rounded-lg border border-primary-container/15 bg-surface-container p-6"
       >
         <div className="flex items-start justify-between">

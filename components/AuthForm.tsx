@@ -229,7 +229,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="mb-3 flex items-center gap-2.5">
           <Image src="/logo.png" alt="" width={36} height={36} priority className="rounded-lg" />
-          <h1 translate="no" className="font-display text-2xl font-bold text-on-surface">Countdown</h1>
+          <h1 translate="no" className="font-display text-2xl font-bold tracking-tight text-on-surface">Countdown</h1>
         </div>
         <p className="font-body text-sm text-text-muted">{t("auth.tagline")}</p>
       </div>

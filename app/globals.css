@@ -208,3 +208,32 @@ body {
     transition: none;
   }
 }
+
+/* Materials (apple-design: translucent layers, not flat panels). Content keeps showing
+   through at a hint of the surface tone instead of being fully hidden behind it. */
+
+/* Dims and blurs whatever a blocking dialog sits on top of (dim to focus the task). */
+.modal-scrim {
+  background: color-mix(in srgb, var(--surface-deep) 70%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+/* Floating chrome that sits above scrollable content: dropdowns, popovers, the
+   mobile tab bar. Lighter weight than the modal scrim since it isn't blocking anything. */
+.glass-surface {
+  background: color-mix(in srgb, var(--surface-elevated) 85%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* prefers-reduced-transparency: reduce → frostier/solid instead of blurred (apple-design
+   accessibility: not "no feedback", a non-translucent equivalent). */
+@media (prefers-reduced-transparency: reduce) {
+  .modal-scrim {
+    background: var(--surface-deep);
+    backdrop-filter: none;
+  }
+  .glass-surface {
+    background: var(--surface-elevated);
+    backdrop-filter: none;
+  }
+}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Manrope } from "next/font/google";
+import { MotionConfig } from "motion/react";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { StoreProvider } from "@/components/StoreProvider";
 import { getLocale, getT } from "@/lib/i18n/server";
@@ -68,7 +69,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {t("app.skipToMain")}
         </a>
         <LocaleProvider locale={locale}>
-          <StoreProvider>{children}</StoreProvider>
+          <StoreProvider>
+            {/* One place to honor prefers-reduced-motion for every motion/react animation
+                in the app (dialogs, popovers, the countdown digit tick) - individual
+                components don't each need their own useReducedMotion() guard. */}
+            <MotionConfig reducedMotion="user">{children}</MotionConfig>
+          </StoreProvider>
         </LocaleProvider>
       </body>
     </html>
