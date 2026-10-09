@@ -3,7 +3,7 @@ import type { McpEventListEntity, McpEventResultEntity } from "@/types/mcpevent"
 
 /** What the MCP tools return to Claude: both clocks, so the owner can see exactly what was stored. */
 export interface McpEventDTO {
-  action: "created" | "updated";
+  action: "created" | "updated" | "deleted";
   id: string;
   externalId: string | null;
   name: string;

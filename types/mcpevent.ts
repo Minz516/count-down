@@ -14,7 +14,7 @@ export interface McpEventRow {
 }
 
 export interface McpEventResultEntity {
-  action: "created" | "updated";
+  action: "created" | "updated" | "deleted";
   event: McpEventRow;
 }
 
@@ -90,4 +90,16 @@ export interface McpListEventsArgs {
   to: string | null;
   query: string | null;
   limit: number | null;
+}
+
+export interface McpDeleteEventInput {
+  id?: string;
+  externalId?: string;
+  /** Must be exactly true. Deleting is permanent, so the owner has to have said yes in this conversation. */
+  confirm?: boolean;
+}
+
+export interface McpDeleteEventArgs {
+  id: string | null;
+  externalId: string | null;
 }

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { McpCreateEventArgs, McpEventListEntity, McpEventResultEntity, McpListEventsArgs, McpUpdateEventArgs } from "@/types/mcpevent";
+import type { McpCreateEventArgs, McpDeleteEventArgs, McpEventListEntity, McpEventResultEntity, McpListEventsArgs, McpUpdateEventArgs } from "@/types/mcpevent";
 
 /**
  * All Supabase access for the token-authenticated event calls. Unlike the other repositories these do
@@ -46,5 +46,17 @@ export const mcpEventsRepository = {
     });
     if (error) throw new DatabaseError(error.message);
     return data as McpEventListEntity;
+  },
+
+  /** Always sends p_confirm = true: the service has already refused anything else. */
+  async deleteEvent(supabase: SupabaseClient, token: string, args: McpDeleteEventArgs): Promise<McpEventResultEntity> {
+    const { data, error } = await supabase.rpc("mcp_delete_event", {
+      p_token: token,
+      p_id: args.id,
+      p_external_id: args.externalId,
+      p_confirm: true,
+    });
+    if (error) throw new DatabaseError(error.message);
+    return data as McpEventResultEntity;
   },
 };

@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { mcpEventsInterface } from "@/modules/mcpevents/mcpevents.interface";
 import { registerCreateEvent } from "./tools/create-event";
+import { registerDeleteEvent } from "./tools/delete-event";
 import { registerListEvents } from "./tools/list-events";
 import { registerUpdateEvent } from "./tools/update-event";
 
@@ -19,4 +20,5 @@ export function registerTools(server: McpServer, context: ToolContext): void {
   registerCreateEvent(server, context);
   registerUpdateEvent(server, context);
   registerListEvents(server, context);
+  registerDeleteEvent(server, context);
 }

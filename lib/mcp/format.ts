@@ -7,7 +7,7 @@ const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
  * instant, so the owner can catch a wrong date or zone immediately.
  */
 export function describeEvent(event: McpEventDTO): string {
-  const verb = event.action === "created" ? "Created" : "Updated";
+  const verb = event.action === "created" ? "Created" : event.action === "deleted" ? "Deleted" : "Updated";
   const when = event.repeatsWeekly
     ? `every ${WEEKDAY_NAMES[event.dayOfWeek ?? 0]} at ${event.deadlineLocal.slice(11)}, next on ${event.deadlineLocal}`
     : event.deadlineLocal;

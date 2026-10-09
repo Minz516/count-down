@@ -5,4 +5,4 @@
  */
 export { mcpEventsService as mcpEventsInterface } from "./mcpevents.service";
 export type { McpEventDTO, McpEventListDTO, McpListedEventDTO } from "./mcpevents.dto";
-export type { McpCreateEventInput, McpUpdateEventInput, McpListEventsInput } from "@/types/mcpevent";
+export type { McpCreateEventInput, McpUpdateEventInput, McpListEventsInput, McpDeleteEventInput } from "@/types/mcpevent";
