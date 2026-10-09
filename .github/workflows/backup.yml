@@ -1,36 +1,80 @@
 name: Database Backup
 
-# Weekly manual-backup habit (docs/PRODUCTION_READINESS_CHECKLIST.md §12) - a supplement to
-# whatever backup/retention Supabase's own plan provides, since free-tier retention is
-# limited. Also runnable on demand via workflow_dispatch for a backup before a risky change
-# (e.g. right before running a new migration).
+# Weekly encrypted backup of the Supabase database, a supplement to whatever backup and retention
+# Supabase's own plan provides. Also runnable on demand via workflow_dispatch (for example right
+# before a risky migration).
+#
+# This repository is PUBLIC and workflow artifacts are downloadable by any signed-in GitHub user, so
+# the dump is encrypted inside the job and ONLY the encrypted file is uploaded. A guard step fails the
+# run if the file about to be uploaded is readable as a PostgreSQL dump.
+#
+# Secrets (Settings > Secrets and variables > Actions > Repository secrets):
+#   SUPABASE_DB_URL     Session pooler URI (Dashboard > Connect > Session pooler, port 5432, user
+#                       postgres.<project-ref>). The direct host is IPv6-only and GitHub runners are
+#                       IPv4-only; the transaction pooler (6543) does not suit pg_dump.
+#   BACKUP_PASSPHRASE   Long random passphrase. Keep a copy in a password manager: without it the
+#                       backups cannot be opened.
+#
+# Restore: gpg --decrypt backup.dump.gpg > backup.dump, then pg_restore -d <database> --no-owner backup.dump
 on:
   schedule:
     - cron: "0 2 * * 0" # Sundays at 02:00 UTC
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # The runner's default client is older than the server (PostgreSQL 17); pg_dump refuses a newer
+      # server, so install the matching client from the PostgreSQL project's own repository.
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
 
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      # -Fc (custom format) is already compressed and restorable with pg_restore, including
-      # selective/parallel restore - no separate gzip step needed. Use the *direct* database
-      # connection string (Supabase Dashboard > Project Settings > Database > Connection
-      # string > URI, port 5432), not the pgbouncer/pooler URL - pg_dump needs session-level
-      # features the transaction pooler doesn't support.
-      - name: Dump database
+      # -Fc (custom format) is already compressed and restorable with pg_restore. The plaintext dump
+      # is deleted as soon as it is encrypted. The passphrase goes in on stdin, not on the command line.
+      - name: Dump and encrypt
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: pg_dump "$SUPABASE_DB_URL" -Fc -f backup.dump
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL" || { echo "SUPABASE_DB_URL is not set"; exit 1; }
+          test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE is not set"; exit 1; }
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" -Fc -f backup.dump
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o backup.dump.gpg backup.dump
+          rm -f backup.dump
 
-      - name: Upload backup artifact
+      # Two checks before anything leaves the job: the file is NOT a readable dump, and it DOES decrypt
+      # into a valid one (so a backup that cannot be restored is caught now, not during an emergency).
+      - name: Verify encryption and restorability
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -s backup.dump.gpg
+          if /usr/lib/postgresql/17/bin/pg_restore -l backup.dump.gpg > /dev/null 2>&1; then
+            echo "backup.dump.gpg is readable as a plaintext dump, refusing to upload"
+            exit 1
+          fi
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --decrypt -o check.dump backup.dump.gpg
+          /usr/lib/postgresql/17/bin/pg_restore -l check.dump > /dev/null
+          rm -f check.dump
+          ls -l backup.dump.gpg
+
+      - name: Upload encrypted backup
         uses: actions/upload-artifact@v4
         with:
-          name: countdown-db-backup-${{ github.run_id }}
-          path: backup.dump
+          name: countdown-db-backup-${{ github.run_id }}-encrypted
+          path: backup.dump.gpg
+          if-no-files-found: error
           retention-days: 90
