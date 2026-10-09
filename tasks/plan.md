@@ -85,7 +85,7 @@ Slice F vault integration (T17 guide + snippet, T18 manual scenarios, T19 docs +
 - [x] **T10** `update_event` tool and contract tests (M)
 - [x] **T11** List: migration and SQL tests (S)
 - [x] **T12** `list_events` tool and contract tests (S)
-- [ ] **T13** Delete: migration and SQL tests (S)
+- [x] **T13** Delete: migration and SQL tests (S)
 - [ ] **T14** `delete_event` tool with the `confirm` rule and contract tests (S)
 
 ### Checkpoint B: Four tools
