@@ -81,7 +81,7 @@ Slice F vault integration (T17 guide + snippet, T18 manual scenarios, T19 docs +
 - [ ] Full CI green; owner creates a token, registers it, tells Claude Code about an event and sees it on the site; repeating it updates, revoking the token blocks the next call
 
 ### Phase 2: Slices B, C, D (independent after A)
-- [ ] **T9** Update: migration and SQL tests (M)
+- [x] **T9** Update: migration and SQL tests (M)
 - [ ] **T10** `update_event` tool and contract tests (M)
 - [ ] **T11** List: migration and SQL tests (S)
 - [ ] **T12** `list_events` tool and contract tests (S)
