@@ -82,7 +82,7 @@ Slice F vault integration (T17 guide + snippet, T18 manual scenarios, T19 docs +
 
 ### Phase 2: Slices B, C, D (independent after A)
 - [x] **T9** Update: migration and SQL tests (M)
-- [ ] **T10** `update_event` tool and contract tests (M)
+- [x] **T10** `update_event` tool and contract tests (M)
 - [ ] **T11** List: migration and SQL tests (S)
 - [ ] **T12** `list_events` tool and contract tests (S)
 - [ ] **T13** Delete: migration and SQL tests (S)

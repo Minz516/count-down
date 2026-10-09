@@ -43,3 +43,25 @@ export interface McpCreateEventInput {
   repeatsWeekly?: boolean;
   dayOfWeek?: DayOfWeek;
 }
+
+/** What a tool may send to change an event: name the target by id OR external_id, then only the fields to change. */
+export interface McpUpdateEventInput {
+  id?: string;
+  externalId?: string;
+  name?: string;
+  /** YYYY-MM-DD, local to `timezone`. Changes the deadline; `time` alone is not enough. */
+  date?: string;
+  time?: string;
+  timezone?: string;
+  /** A string sets it, null (or blank) clears it, undefined leaves it alone. */
+  description?: string | null;
+  repeatsWeekly?: boolean;
+  dayOfWeek?: DayOfWeek;
+}
+
+/** The target and patch sent to mcp_update_event, already converted to database terms. */
+export interface McpUpdateEventArgs {
+  id: string | null;
+  externalId: string | null;
+  patch: Record<string, unknown>;
+}

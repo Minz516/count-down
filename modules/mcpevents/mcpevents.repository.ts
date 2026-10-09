@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseError } from "@/modules/shared/errors";
-import type { McpCreateEventArgs, McpEventResultEntity } from "@/types/mcpevent";
+import type { McpCreateEventArgs, McpEventResultEntity, McpUpdateEventArgs } from "@/types/mcpevent";
 
 /**
  * All Supabase access for the token-authenticated event calls. Unlike the other repositories these do
@@ -21,6 +21,17 @@ export const mcpEventsRepository = {
 
     // The message is whatever the database function raised; it never contains the token. The service
     // decides what is safe to show.
+    if (error) throw new DatabaseError(error.message);
+    return data as McpEventResultEntity;
+  },
+
+  async updateEvent(supabase: SupabaseClient, token: string, args: McpUpdateEventArgs): Promise<McpEventResultEntity> {
+    const { data, error } = await supabase.rpc("mcp_update_event", {
+      p_token: token,
+      p_id: args.id,
+      p_external_id: args.externalId,
+      p_patch: args.patch,
+    });
     if (error) throw new DatabaseError(error.message);
     return data as McpEventResultEntity;
   },
