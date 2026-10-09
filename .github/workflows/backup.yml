@@ -11,7 +11,8 @@ name: Database Backup
 # Secrets (Settings > Secrets and variables > Actions > Repository secrets):
 #   SUPABASE_DB_URL     Session pooler URI (Dashboard > Connect > Session pooler, port 5432, user
 #                       postgres.<project-ref>). The direct host is IPv6-only and GitHub runners are
-#                       IPv4-only; the transaction pooler (6543) does not suit pg_dump.
+#                       IPv4-only; the transaction pooler (6543) does not suit pg_dump. Paste only the
+#                       URI itself: no quotes, no "export" prefix.
 #   BACKUP_PASSPHRASE   Long random passphrase. Keep a copy in a password manager: without it the
 #                       backups cannot be opened.
 #
@@ -48,7 +49,14 @@ jobs:
           set -euo pipefail
           test -n "$SUPABASE_DB_URL" || { echo "SUPABASE_DB_URL is not set"; exit 1; }
           test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE is not set"; exit 1; }
-          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" -Fc -f backup.dump
+          # A pasted secret often carries quotes, spaces or a newline. libpq then does not recognise a URI and
+          # silently tries the local socket, so strip them and check the shape (never echo the value).
+          url="$(printf '%s' "$SUPABASE_DB_URL" | tr -d '\015\012' | sed -e "s/^[[:space:]'\"]*//" -e "s/[[:space:]'\"]*$//")"
+          case "$url" in
+            postgresql://*|postgres://*) ;;
+            *) echo "SUPABASE_DB_URL must start with postgresql:// (check for pasted quotes, an 'export' prefix or a missing scheme)"; exit 1 ;;
+          esac
+          /usr/lib/postgresql/17/bin/pg_dump "$url" -Fc -f backup.dump
           printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
             --symmetric --cipher-algo AES256 -o backup.dump.gpg backup.dump
           rm -f backup.dump
